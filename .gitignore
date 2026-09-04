@@ -1,0 +1,28 @@
+# upstream clones — reproduced by README.md, never tracked here
+IsaacLab/
+tron1-rl-isaaclab/
+tron1-mujoco-sim/
+tron1-rl-deploy-python/
+
+# training output
+logs/
+outputs/
+runs/**/*.mp4
+runs/**/*.pt
+runs/**/*.onnx
+
+# model weights — use GitHub Releases for the ones worth keeping
+*.pt
+*.pth
+*.onnx
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+
+# editors / os
+.vscode/
+.idea/
+.DS_Store
