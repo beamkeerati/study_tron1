@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tron1 ตอน deploy · Architecture</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&family=Noto+Sans+Thai:wght@400;500;600&family=Noto+Serif+Thai:wght@400&display=swap" rel="stylesheet">
+  <script src="mathjax/tex-svg.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --color-paper:   #f5f5f5;
+      --color-ink:     #2d3142;
+      --color-muted:   #4f5d75;
+      --color-accent:  #eb6c36;
+      --font-sans:     'Geist', 'Noto Sans Thai', system-ui, sans-serif;
+      --font-serif:    'Instrument Serif', 'Noto Serif Thai', serif;
+      --font-mono:     'Geist Mono', 'Noto Sans Thai', ui-monospace, monospace;
+    }
+    body {
+      font-family: var(--font-sans);
+      background: var(--color-paper);
+      color: var(--color-ink);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 2rem;
+    }
+    .frame { max-width: 1200px; width: 100%; }
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.66rem;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--color-muted);
+      margin-bottom: 0.5rem;
+    }
+    h1 {
+      font-family: var(--font-serif);
+      font-size: clamp(1.5rem, 2.4vw + 0.75rem, 2rem);
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      color: var(--color-ink);
+      margin-bottom: 0.5rem;
+    }
+    .sub {
+      font-family: var(--font-sans);
+      font-size: 0.9rem;
+      color: var(--color-muted);
+      margin-bottom: 1.5rem;
+      line-height: 1.5;
+    }
+    /* --- MathJax-in-SVG: math labels live in foreignObject --- */
+    foreignObject { overflow: visible; }
+    .fo {
+      display: block; width: 100%; height: 100%;
+      text-align: center; white-space: nowrap;
+      font-family: var(--font-mono);
+    }
+    .fo.left  { text-align: left; }
+    .fo.right { text-align: right; }
+    .fo mjx-container { margin: 0 !important; display: inline-block !important; }
+    .fo .tx { font-family: var(--font-mono); }
+    .fo .th { font-family: var(--font-sans); }
+    .name {
+      font-family: var(--font-sans); font-weight: 600; font-size: 12px; color: var(--color-ink);
+    }
+    .name .tx { font-family: var(--font-sans); }
+
+    svg { width: 100%; min-width: 900px; display: block; }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Architecture · Tron1 deploy · โน้ต 05 หัวข้อ 2.6 และ 4.1</p>
+    <h1>Tron1 ตอน deploy — เหลืออะไร และ advantage หายไปไหน</h1>
+    <p class="sub">รูปเดียวกับ <em>Actor-Critic บน Tron1</em> แต่ตัดทุกอย่างที่ไม่ได้ลงหุ่นออก:
+      critic, GAE และ PPO จางลงเพราะมัน<strong>ไม่มีอยู่จริง</strong>บนหุ่น · ค่า
+      <span style="color:#eb6c36">advantage</span> ถูกใช้หมดไปแล้วตั้งแต่ตอนเทรน — สิ่งที่มันทิ้งไว้คือตัวเลขใน θ</p>
+
+    <svg viewBox="0 0 1000 620" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="tron1-deploy-title tron1-deploy-desc">
+      <title id="tron1-deploy-title">Tron1 ตอน deploy — เหลืออะไร และ advantage หายไปไหน</title>
+      <desc id="tron1-deploy-desc">แผนภาพฝั่ง deploy ของ Tron1: แถบบนคือ critic, GAE และ PPO ที่จางลงเพราะใช้เฉพาะตอนเทรนและไม่ได้ export ลงหุ่น; ลูกศรสีส้มชี้ลงจาก PPO ไปยัง actor แสดงว่า advantage ถูกแปลงเป็นค่า weight θ ไปแล้ว; แถวล่างคือเส้นทางจริงบนหุ่น: เซนเซอร์ส่ง observation ไปยัง encoder.onnx และ policy.onnx ซึ่งคืนค่า mean โดยไม่สุ่ม แล้วผ่านการสเกลและ PD controller กลับไปเป็นแรงบิดที่มอเตอร์</desc>
+      <defs>
+        <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker>
+        <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#eb6c36"/></marker>
+        <marker id="arrow-ghost" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="rgba(45,49,66,0.28)"/></marker>
+      </defs>
+
+      <rect width="100%" height="100%" fill="#f5f5f5"/>
+
+      <!-- Ghost zone: exists only during training -->
+      <rect x="88" y="72" width="824" height="120" rx="8" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.10)" stroke-width="0.8" stroke-dasharray="4,4"/>
+      <rect x="352" y="76" width="296" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="500" y="85" fill="rgba(45,49,66,0.40)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.14em">TRAINING ONLY — ไม่ได้ถูก export ลงหุ่น</text>
+
+      <!-- ghost chain: critic → GAE → PPO -->
+      <line x1="272" y1="136" x2="392" y2="136" stroke="rgba(45,49,66,0.28)" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow-ghost)"/>
+      <line x1="576" y1="136" x2="696" y2="136" stroke="rgba(45,49,66,0.28)" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow-ghost)"/>
+      <!-- FOCAL: the advantage, already spent, arriving as frozen weights -->
+      <path d="M 784,192 V 216 Q 784,224 776,224 H 496 Q 488,224 488,232 V 258"
+            fill="none" stroke="#eb6c36" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#arrow-accent)"/>
+      <!-- live path -->
+      <line x1="192" y1="440" x2="192" y2="348" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <line x1="488" y1="440" x2="488" y2="348" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <line x1="336" y1="304" x2="396" y2="304" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <line x1="640" y1="304" x2="700" y2="304" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <line x1="784" y1="344" x2="784" y2="436" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <rect x="308" y="114" width="56" height="12" rx="2" fill="#f5f5f5"/>
+      <foreignObject x="308" y="112.12" width="56" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:8px;color:rgba(45,49,66,0.34);line-height:16px;">\(V(s_t)\)</div></foreignObject>
+      <rect x="612" y="114" width="56" height="12" rx="2" fill="#f5f5f5"/>
+      <foreignObject x="612" y="112.12" width="56" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:8px;color:rgba(45,49,66,0.34);line-height:16px;">\(A_t\)</div></foreignObject>
+      <rect x="496" y="236" width="186" height="12" rx="2" fill="#f5f5f5"/>
+      <foreignObject x="496" y="234.12" width="186" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo left" style="font-size:8px;color:#eb6c36;line-height:16px;">\(A_t\)<span class="tx">&#160;</span><span class="th">ถูกใช้ไปแล้ว → กลายเป็น</span><span class="tx">&#160;</span>\(\theta\)</div></foreignObject>
+      <rect x="88" y="388" width="96" height="12" rx="2" fill="#f5f5f5"/>
+      <foreignObject x="88" y="386.12" width="96" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo right" style="font-size:8px;color:#4f5d75;line-height:16px;">\(\mathrm{hist}\ 10\times 36\)</div></foreignObject>
+      <rect x="496" y="388" width="108" height="12" rx="2" fill="#f5f5f5"/>
+      <foreignObject x="496" y="386.12" width="108" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo left" style="font-size:8px;color:#4f5d75;line-height:16px;">\(\mathrm{obs}\,36 + \mathrm{cmd}\,3\)</div></foreignObject>
+      <rect x="792" y="388" width="88" height="12" rx="2" fill="#f5f5f5"/>
+      <foreignObject x="792" y="386.12" width="88" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo left" style="font-size:8px;color:#4f5d75;line-height:16px;">\(\tau\ (8)\)<span class="tx">&#160;· 200 Hz</span></div></foreignObject>
+      <rect x="342" y="282" width="48" height="12" rx="2" fill="#f5f5f5"/>
+      <foreignObject x="342" y="279.12" width="48" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:8px;color:#4f5d75;line-height:16px;">\(z\,(3)\)</div></foreignObject>
+      <rect x="594" y="282" width="92" height="12" rx="2" fill="#f5f5f5"/>
+      <foreignObject x="624" y="280.12" width="92" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:8px;color:#4f5d75;line-height:16px;">\(a=\mu\ (8)\)</div></foreignObject>
+
+      <!-- ghost: critic -->
+      <rect x="112" y="96" width="160" height="80" rx="6" fill="#f5f5f5"/>
+      <rect x="112" y="96" width="160" height="80" rx="6" fill="rgba(45,49,66,0.015)" stroke="rgba(45,49,66,0.16)" stroke-width="1" stroke-dasharray="4,3"/>
+      <rect x="120" y="104" width="44" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.22)" stroke-width="0.8"/>
+      <text x="142.0" y="113" fill="rgba(45,49,66,0.34)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">CRITIC</text>
+      <text x="192" y="132" fill="rgba(45,49,66,0.34)" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans Thai', sans-serif" text-anchor="middle">Critic</text>
+      <foreignObject x="116" y="136.76" width="152" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:9px;color:rgba(45,49,66,0.34);line-height:16px;">\(V_\phi(s)\)</div></foreignObject>
+      <foreignObject x="116" y="152.76" width="152" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:9px;color:rgba(45,49,66,0.34);line-height:16px;"><span class="th">ไม่ถูก export</span></div></foreignObject>
+
+      <!-- ghost: GAE -->
+      <rect x="400" y="96" width="176" height="80" rx="6" fill="#f5f5f5"/>
+      <rect x="400" y="96" width="176" height="80" rx="6" fill="rgba(45,49,66,0.015)" stroke="rgba(45,49,66,0.16)" stroke-width="1" stroke-dasharray="4,3"/>
+      <rect x="408" y="104" width="28" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.22)" stroke-width="0.8"/>
+      <text x="422.0" y="113" fill="rgba(45,49,66,0.34)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">GAE</text>
+      <text x="488" y="132" fill="rgba(45,49,66,0.34)" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans Thai', sans-serif" text-anchor="middle">Advantage</text>
+      <foreignObject x="404" y="136.76" width="168" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:9px;color:rgba(45,49,66,0.34);line-height:16px;">\(A_t=\sum_{k\ge 0}(\gamma\lambda)^k\delta_{t+k}\)</div></foreignObject>
+      <foreignObject x="404" y="152.76" width="168" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:9px;color:rgba(45,49,66,0.34);line-height:16px;"><span class="th">ไม่ถูกคำนวณอีกเลย</span></div></foreignObject>
+
+      <!-- ghost: PPO -->
+      <rect x="704" y="96" width="160" height="80" rx="6" fill="#f5f5f5"/>
+      <rect x="704" y="96" width="160" height="80" rx="6" fill="rgba(45,49,66,0.015)" stroke="rgba(45,49,66,0.16)" stroke-width="1" stroke-dasharray="4,3"/>
+      <rect x="712" y="104" width="28" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.22)" stroke-width="0.8"/>
+      <text x="726.0" y="113" fill="rgba(45,49,66,0.34)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">PPO</text>
+      <text x="784" y="132" fill="rgba(45,49,66,0.34)" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans Thai', sans-serif" text-anchor="middle">Update</text>
+      <foreignObject x="708" y="136.76" width="152" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:9px;color:rgba(45,49,66,0.34);line-height:16px;">\(\theta \leftarrow \theta - \alpha\nabla_\theta L\)</div></foreignObject>
+      <foreignObject x="708" y="152.76" width="152" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:9px;color:rgba(45,49,66,0.34);line-height:16px;"><span class="th">หยุดที่ it = 15 000</span></div></foreignObject>
+
+      <!-- encoder.onnx -->
+      <rect x="112" y="264" width="224" height="80" rx="6" fill="#f5f5f5"/>
+      <rect x="112" y="264" width="224" height="80" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="120" y="272" width="52" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+      <text x="146.0" y="281" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">ENCODER</text>
+      <text x="224" y="300" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans Thai', sans-serif" text-anchor="middle">encoder.onnx</text>
+      <foreignObject x="116" y="304.76" width="216" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:9px;color:#4f5d75;line-height:16px;">\(360 \to 256 \to 128 \to 3\)</div></foreignObject>
+      <foreignObject x="116" y="320.76" width="216" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:9px;color:#7a8399;line-height:16px;"><span class="th">เดาสิ่งที่เซนเซอร์วัดไม่ได้</span></div></foreignObject>
+
+      <!-- policy.onnx — FOCAL: this is where the advantage ended up -->
+      <rect x="396" y="264" width="244" height="80" rx="6" fill="#f5f5f5"/>
+      <rect x="396" y="264" width="244" height="80" rx="6" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+      <rect x="404" y="272" width="48" height="12" rx="2" fill="transparent" stroke="rgba(235,108,54,0.50)" stroke-width="0.8"/>
+      <text x="428.0" y="281" fill="#eb6c36" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">ACTOR</text>
+      <text x="518" y="300" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans Thai', sans-serif" text-anchor="middle">policy.onnx · θ แช่แข็ง</text>
+      <foreignObject x="400" y="304.76" width="236" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:9px;color:#4f5d75;line-height:16px;">\(42 \to 512 \to 256 \to 128 \to 8\)</div></foreignObject>
+      <foreignObject x="400" y="320.76" width="236" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:9px;color:#7a8399;line-height:16px;">\(a=\mu_\theta(s)\)<span class="tx">&#160;·&#160;</span><span class="th">ไม่สุ่ม ไม่มี</span><span class="tx">&#160;</span>\(\sigma\)</div></foreignObject>
+
+      <!-- action pipeline + PD -->
+      <rect x="700" y="264" width="200" height="80" rx="6" fill="#f5f5f5"/>
+      <rect x="700" y="264" width="200" height="80" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="708" y="272" width="24" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+      <text x="720.0" y="281" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">PD</text>
+      <text x="800" y="300" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans Thai', sans-serif" text-anchor="middle">สเกล + PD</text>
+      <foreignObject x="704" y="304.76" width="192" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:9px;color:#4f5d75;line-height:16px;">\(q^{*}=0.25\,a+q_{\mathrm{def}}\)</div></foreignObject>
+      <foreignObject x="704" y="320.76" width="192" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:9px;color:#7a8399;line-height:16px;">\(\tau=k_p(q^{*}-q)-k_d\dot q\)</div></foreignObject>
+
+      <!-- the real robot -->
+      <rect x="112" y="440" width="788" height="80" rx="6" fill="#f5f5f5"/>
+      <rect x="112" y="440" width="788" height="80" rx="6" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+      <rect x="120" y="448" width="44" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.22)" stroke-width="0.8"/>
+      <text x="142.0" y="457" fill="#7a8399" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">ROBOT</text>
+      <text x="506" y="476" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans Thai', sans-serif" text-anchor="middle">TRON1 ตัวจริง · IMU + joint encoders · คำสั่ง 50 Hz</text>
+      <foreignObject x="126" y="480.76" width="760" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:9px;color:#4f5d75;line-height:16px;">\(s=\{\mathrm{obs}\,36,\ \mathrm{cmd}\,3,\ \mathrm{hist}\,360\}\)<span class="tx">&#160;·&#160;</span><span class="th">ไม่มี privileged 227 ให้ใช้อีกแล้ว</span></div></foreignObject>
+      <foreignObject x="126" y="496.76" width="760" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:9px;color:#7a8399;line-height:16px;"><span class="th">ไม่มี reward · ไม่มี done · ไม่มี reset — หุ่นล้มก็คือล้มจริง</span></div></foreignObject>
+
+      <line x1="40" y1="544" x2="960" y2="544" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+      <text x="40" y="560" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.18em">LEGEND</text>
+
+      <rect x="40" y="572" width="14" height="10" rx="2" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+      <text x="60" y="581" fill="#4f5d75" font-size="10" font-family="'Geist', 'Noto Sans Thai', sans-serif">ที่เดียวที่ advantage ยังอยู่ — ในรูปตัวเลข θ ที่แช่แข็งแล้ว</text>
+
+      <rect x="440" y="572" width="14" height="10" rx="2" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <text x="460" y="581" fill="#4f5d75" font-size="10" font-family="'Geist', 'Noto Sans Thai', sans-serif">โค้ดที่รันจริงบนหุ่น</text>
+
+      <rect x="720" y="572" width="14" height="10" rx="2" fill="rgba(45,49,66,0.015)" stroke="rgba(45,49,66,0.16)" stroke-width="1" stroke-dasharray="4,3"/>
+      <text x="740" y="581" fill="rgba(45,49,66,0.55)" font-size="10" font-family="'Geist', 'Noto Sans Thai', sans-serif">ไม่มีอยู่บนหุ่น (วาดไว้เทียบเฉยๆ)</text>
+
+      <line x1="40" y1="597" x2="68" y2="597" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <text x="76" y="601" fill="#4f5d75" font-size="10" font-family="'Geist', 'Noto Sans Thai', sans-serif">ข้อมูลไหลจริง ทุก 20 ms</text>
+
+      <line x1="300" y1="597" x2="328" y2="597" stroke="#eb6c36" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#arrow-accent)"/>
+      <text x="336" y="601" fill="#4f5d75" font-size="10" font-family="'Geist', 'Noto Sans Thai', sans-serif">เกิดขึ้นตอนเทรน จบไปแล้ว — ไม่เกิดซ้ำตอน deploy</text>
+    </svg>
+  </div>
+</body>
+</html>

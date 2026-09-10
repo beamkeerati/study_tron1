@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>1 iteration ของ PPO บน Tron1 · Flowchart</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&family=Noto+Sans+Thai:wght@400;500;600&family=Noto+Serif+Thai:wght@400&display=swap" rel="stylesheet">
+  <script src="mathjax/tex-svg.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --color-paper:   #f5f5f5;
+      --color-ink:     #2d3142;
+      --color-muted:   #4f5d75;
+      --color-accent:  #eb6c36;
+      --font-sans:     'Geist', 'Noto Sans Thai', system-ui, sans-serif;
+      --font-serif:    'Instrument Serif', 'Noto Serif Thai', serif;
+      --font-mono:     'Geist Mono', 'Noto Sans Thai', ui-monospace, monospace;
+    }
+    body {
+      font-family: var(--font-sans);
+      background: var(--color-paper);
+      color: var(--color-ink);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 2rem;
+    }
+    .frame { max-width: 1200px; width: 100%; }
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.66rem;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--color-muted);
+      margin-bottom: 0.5rem;
+    }
+    h1 {
+      font-family: var(--font-serif);
+      font-size: clamp(1.5rem, 2.4vw + 0.75rem, 2rem);
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      color: var(--color-ink);
+      margin-bottom: 0.5rem;
+    }
+    .sub {
+      font-family: var(--font-sans);
+      font-size: 0.9rem;
+      color: var(--color-muted);
+      margin-bottom: 1.5rem;
+      line-height: 1.5;
+    }
+    /* --- MathJax-in-SVG: math labels live in foreignObject --- */
+    foreignObject { overflow: visible; }
+    .fo {
+      display: block; width: 100%; height: 100%;
+      text-align: center; white-space: nowrap;
+      font-family: var(--font-mono);
+    }
+    .fo.left  { text-align: left; }
+    .fo.right { text-align: right; }
+    .fo mjx-container { margin: 0 !important; display: inline-block !important; }
+    .fo .tx { font-family: var(--font-mono); }
+    .fo .th { font-family: var(--font-sans); }
+    .name {
+      font-family: var(--font-sans); font-weight: 600; font-size: 12px; color: var(--color-ink);
+    }
+    .name .tx { font-family: var(--font-sans); }
+
+    svg { width: 100%; min-width: 900px; display: block; }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Flowchart · rsl_rl on_policy_runner.py · โน้ต 05 หัวข้อ 4.6</p>
+    <h1>หนึ่ง iteration ของ PPO บน Tron1 — Algorithm 1 วาดเป็นภาพ</h1>
+    <p class="sub">โครงสร้างเดียวกับ Algorithm 1 ใน PPO paper (Schulman 2017): เก็บข้อมูลด้วย policy เก่า → คำนวณ advantage → อัปเดต K epochs → วนซ้ำ
+      รูปร่างบอกชนิด: วงรี = เริ่ม/จบ · สี่เหลี่ยม = ขั้นตอน · ข้าวหลามตัด = ตัดสินใจ · จุด = จุดรวม</p>
+
+    <svg viewBox="0 0 1000 900" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="tron1-ppo-iteration-title tron1-ppo-iteration-desc">
+      <title id="tron1-ppo-iteration-title">หนึ่ง iteration ของ PPO บน Tron1</title>
+      <desc id="tron1-ppo-iteration-desc">ผังงานของหนึ่ง iteration การฝึก PPO: เริ่มจาก weight สุ่ม, เก็บข้อมูล 24 steps จาก 2048 environments, คำนวณ advantage ด้วย GAE, อัปเดต weight 20 ครั้งด้วย clipped surrogate loss, บันทึกล็อก, แล้วตรวจว่าครบ 15000 iterations หรือยัง ถ้ายังวนกลับไปเก็บข้อมูลใหม่ ถ้าครบแล้ว export actor เป็น ONNX</desc>
+      <defs>
+        <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker>
+        <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#eb6c36"/></marker>
+        <marker id="arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker>
+      </defs>
+
+      <rect width="100%" height="100%" fill="#f5f5f5"/>
+
+      <!-- ===== Arrows first ===== -->
+      <!-- spine -->
+      <line x1="500" y1="88"  x2="500" y2="116" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <line x1="500" y1="124" x2="500" y2="152" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <line x1="500" y1="232" x2="500" y2="272" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <line x1="500" y1="352" x2="500" y2="392" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <line x1="500" y1="472" x2="500" y2="512" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <line x1="500" y1="592" x2="500" y2="624" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <!-- YES → End -->
+      <line x1="500" y1="704" x2="500" y2="744" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <!-- NO → loop back to merge dot (focal: this return IS the iteration) -->
+      <path d="M 440,664 H 288 Q 280,664 280,656 V 128 Q 280,120 288,120 H 494"
+            fill="none" stroke="#eb6c36" stroke-width="1.4" marker-end="url(#arrow-accent)"/>
+
+      <!-- ===== Arrow labels ===== -->
+      <rect x="508" y="716" width="28" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="522" y="725" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">YES</text>
+
+      <rect x="172" y="388" width="100" height="12" rx="2" fill="#f5f5f5"/>
+      <foreignObject x="172" y="385.12" width="100" height="18"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:8px;color:#eb6c36;line-height:18px;"><span class="tx">NO&#160;·&#160;</span>\(\theta_{\mathrm{old}} \leftarrow \theta\)</div></foreignObject>
+
+      <!-- ===== Nodes ===== -->
+
+      <!-- Start (oval) -->
+      <rect x="380" y="40" width="240" height="48" rx="24" fill="#f5f5f5"/>
+      <rect x="380" y="40" width="240" height="48" rx="24" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <text x="500" y="60" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans Thai', sans-serif" text-anchor="middle">เริ่ม · θ, φ ← สุ่ม · it = 0</text>
+      <foreignObject x="380" y="63.76" width="240" height="18"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:9px;color:#4f5d75;line-height:18px;">\(\mathrm{logstd}=0\ \to\ \sigma=1.0\)</div></foreignObject>
+
+      <!-- Merge dot -->
+      <circle cx="500" cy="120" r="4" fill="#2d3142"/>
+
+      <!-- A · Collect -->
+      <rect x="320" y="152" width="360" height="80" rx="6" fill="#f5f5f5"/>
+      <rect x="320" y="152" width="360" height="80" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="328" y="160" width="20" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+      <text x="338" y="169" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">A</text>
+      <foreignObject x="320" y="174.68" width="360" height="18"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:12px;color:#2d3142;font-family:var(--font-sans);font-weight:600;line-height:18px;"><span class="th">Collect&#160;·&#160;</span><span class="th">เก็บข้อมูลด้วย</span>&#160;\(\pi_{\theta_{\mathrm{old}}}\)</div></foreignObject>
+      <foreignObject x="320" y="191.76" width="360" height="18"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:9px;color:#4f5d75;line-height:18px;"><span class="tx">24 steps × 2048 envs&#160;·&#160;act()</span>&#160;<span class="th">สุ่ม</span>&#160;\(a=\mu+\sigma\varepsilon\)</div></foreignObject>
+      <foreignObject x="320" y="207.76" width="360" height="18"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:9px;color:#7a8399;line-height:18px;">\(\mathrm{buffer} \leftarrow (s,\,a,\,r,\,\mathrm{done},\,V,\,\log\pi_{\mathrm{old}})\)<span class="tx">&#160;·&#160;49,152 rows</span></div></foreignObject>
+
+      <!-- B · GAE -->
+      <rect x="320" y="272" width="360" height="80" rx="6" fill="#f5f5f5"/>
+      <rect x="320" y="272" width="360" height="80" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="328" y="280" width="20" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+      <text x="338" y="289" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">B</text>
+      <text x="500" y="308" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans Thai', sans-serif" text-anchor="middle">GAE · คำนวณ advantage ย้อนหลัง</text>
+      <foreignObject x="320" y="311.76" width="360" height="18"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:9px;color:#4f5d75;line-height:18px;">\(\mathrm{bootstrap}\ V(s_{24})\)<span class="tx">&#160;·&#160;</span>\(t=23 \to 0\)<span class="tx">&#160;·&#160;</span>\(\delta_t = r_t + \gamma V_{t+1} - V_t\)</div></foreignObject>
+      <foreignObject x="320" y="327.76" width="360" height="18"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:9px;color:#7a8399;line-height:18px;">\(A_t=\delta_t+\gamma\lambda A_{t+1}\)<span class="tx">&#160;·&#160;</span>\(R_t=A_t+V_t\)<span class="tx">&#160;·&#160;</span>\(A \leftarrow (A-\mathrm{mean})/\mathrm{std}\)</div></foreignObject>
+
+      <!-- C · PPO update — FOCAL -->
+      <rect x="320" y="392" width="360" height="80" rx="6" fill="#f5f5f5"/>
+      <rect x="320" y="392" width="360" height="80" rx="6" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+      <rect x="328" y="400" width="20" height="12" rx="2" fill="transparent" stroke="rgba(235,108,54,0.50)" stroke-width="0.8"/>
+      <text x="338" y="409" fill="#eb6c36" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">C</text>
+      <text x="500" y="428" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans Thai', sans-serif" text-anchor="middle">Update · ปรับ weight — ตรงนี้คือการเรียนรู้</text>
+      <foreignObject x="320" y="431.76" width="360" height="18"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:9px;color:#4f5d75;line-height:18px;">\(5\ \mathrm{epochs} \times 4\ \mathrm{minibatch}\ (12{,}288) = 20 \times \mathrm{Adam\ step}\)</div></foreignObject>
+      <foreignObject x="320" y="447.76" width="360" height="18"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:9px;color:#7a8399;line-height:18px;">\(L = L^{\mathrm{CLIP}}(\rho, A) + 1.0\,L^{V} - 0.01\,H\)<span class="tx">&#160;·&#160;KL →&#160;</span><span class="th">ปรับ</span>&#160;<span class="tx">lr</span></div></foreignObject>
+
+      <!-- D · Log & checkpoint -->
+      <rect x="320" y="512" width="360" height="80" rx="6" fill="#f5f5f5"/>
+      <rect x="320" y="512" width="360" height="80" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="328" y="520" width="20" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+      <text x="338" y="529" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">D</text>
+      <text x="500" y="548" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans Thai', sans-serif" text-anchor="middle">Log · บันทึกผล</text>
+      <text x="500" y="564" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">tensorboard: reward · episode length · mean_noise_std · mean_kl</text>
+      <text x="500" y="580" fill="#7a8399" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">ทุก 500 iterations → model_&lt;it&gt;.pt</text>
+
+      <!-- Decision (diamond) -->
+      <polygon points="500,624 560,664 500,704 440,664" fill="#f5f5f5"/>
+      <polygon points="500,624 560,664 500,704 440,664" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <foreignObject x="444" y="654.68" width="112" height="18"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:12px;color:#2d3142;font-family:var(--font-sans);font-weight:600;line-height:18px;">\(\mathrm{it} = 15\,000\ ?\)</div></foreignObject>
+
+      <!-- End (oval) -->
+      <rect x="380" y="744" width="240" height="48" rx="24" fill="#f5f5f5"/>
+      <rect x="380" y="744" width="240" height="48" rx="24" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <text x="500" y="764" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans Thai', sans-serif" text-anchor="middle">จบ · export actor + encoder</text>
+      <text x="500" y="780" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">policy.onnx → หุ่นจริง (act_inference, ไม่สุ่ม)</text>
+
+      <!-- ===== Legend strip ===== -->
+      <line x1="40" y1="816" x2="960" y2="816" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+      <text x="40" y="832" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.18em">LEGEND</text>
+
+      <rect x="40" y="846" width="20" height="10" rx="5" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <text x="68" y="855" fill="#4f5d75" font-size="10" font-family="'Geist', 'Noto Sans Thai', sans-serif">เริ่ม / จบ</text>
+
+      <rect x="200" y="846" width="14" height="10" rx="2" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <text x="222" y="855" fill="#4f5d75" font-size="10" font-family="'Geist', 'Noto Sans Thai', sans-serif">ขั้นตอน (phase)</text>
+
+      <polygon points="387,846 394,851 387,856 380,851" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <text x="402" y="855" fill="#4f5d75" font-size="10" font-family="'Geist', 'Noto Sans Thai', sans-serif">ตัดสินใจ</text>
+
+      <circle cx="527" cy="851" r="4" fill="#2d3142"/>
+      <text x="540" y="855" fill="#4f5d75" font-size="10" font-family="'Geist', 'Noto Sans Thai', sans-serif">จุดรวมกิ่ง (loop กลับเข้าที่นี่)</text>
+
+      <rect x="40" y="870" width="14" height="10" rx="2" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+      <text x="62" y="879" fill="#4f5d75" font-size="10" font-family="'Geist', 'Noto Sans Thai', sans-serif">phase ที่ weight เปลี่ยน — ที่เดียวที่ "เรียนรู้" จริง</text>
+
+      <line x1="440" y1="875" x2="468" y2="875" stroke="#eb6c36" stroke-width="1.4" marker-end="url(#arrow-accent)"/>
+      <text x="476" y="879" fill="#4f5d75" font-size="10" font-family="'Geist', 'Noto Sans Thai', sans-serif">การวนกลับ = ความหมายของคำว่า "iteration" · ทำซ้ำ 15 000 รอบ</text>
+    </svg>
+  </div>
+</body>
+</html>

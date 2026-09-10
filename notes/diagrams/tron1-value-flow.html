@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>สายส่งค่า E1–E15 · Value flow</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&family=Noto+Sans+Thai:wght@400;500;600&family=Noto+Serif+Thai:wght@400&display=swap" rel="stylesheet">
+  <script src="mathjax/tex-svg.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --color-paper:   #f5f5f5;
+      --color-ink:     #2d3142;
+      --color-muted:   #4f5d75;
+      --color-accent:  #eb6c36;
+      --font-sans:     'Geist', 'Noto Sans Thai', system-ui, sans-serif;
+      --font-serif:    'Instrument Serif', 'Noto Serif Thai', serif;
+      --font-mono:     'Geist Mono', 'Noto Sans Thai', ui-monospace, monospace;
+    }
+    body {
+      font-family: var(--font-sans);
+      background: var(--color-paper);
+      color: var(--color-ink);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 2rem;
+    }
+    .frame { max-width: 1200px; width: 100%; }
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.66rem;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--color-muted);
+      margin-bottom: 0.5rem;
+    }
+    h1 {
+      font-family: var(--font-serif);
+      font-size: clamp(1.5rem, 2.4vw + 0.75rem, 2rem);
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      color: var(--color-ink);
+      margin-bottom: 0.5rem;
+    }
+    .sub {
+      font-family: var(--font-sans);
+      font-size: 0.9rem;
+      color: var(--color-muted);
+      margin-bottom: 1.5rem;
+      line-height: 1.5;
+    }
+    /* --- MathJax-in-SVG: math labels live in foreignObject --- */
+    foreignObject { overflow: visible; }
+    .fo {
+      display: block; width: 100%; height: 100%;
+      text-align: center; white-space: nowrap;
+      font-family: var(--font-mono);
+    }
+    .fo.left  { text-align: left; }
+    .fo.right { text-align: right; }
+    .fo mjx-container { margin: 0 !important; display: inline-block !important; }
+    .fo .tx { font-family: var(--font-mono); }
+    .fo .th { font-family: var(--font-sans); }
+    .name {
+      font-family: var(--font-sans); font-weight: 600; font-size: 12px; color: var(--color-ink);
+    }
+    .name .tx { font-family: var(--font-sans); }
+
+    svg { width: 100%; min-width: 900px; display: block; }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Value flow · Tron1 PPO · โน้ต 06 §3.5</p>
+    <h1>สายส่งค่า E1 → E15 — จาก observation ถึง gradient</h1>
+    <p class="sub">ทุกกล่องคือหนึ่งสมการ ทุกลูกศรกำกับด้วย shape ที่ไหลผ่านจริง · กล่องส้มสองใบคือจุดที่
+      <em>ชนิดของข้อมูลเปลี่ยน</em> — tensor กลายเป็น distribution (E5) และ 8 มิติยุบเหลือเลขเดียว (E9) ·
+      ตัวเลขจริงและสคริปต์ตรวจอยู่ในโน้ต 06 §3.5.5 และ §3.5.7</p>
+
+    <svg viewBox="0 0 1000 1620" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="vf-title vf-desc">
+      <title id="vf-title">สายส่งค่า E1 ถึง E15 ของ PPO บน Tron1</title>
+      <desc id="vf-desc">ผังแนวตั้ง 15 สมการเรียงจากบนลงล่าง: encoder, ต่อ observation, actor คายค่ากลาง, ความกว้างการสุ่ม, ประกอบเป็นการแจกแจงเกาส์เซียน, สุ่ม action, สูตรความหนาแน่น, log ของความหนาแน่น, ผลรวม 8 มิติ, เก็บใส่ buffer, ประกอบการแจกแจงใหม่, ประเมิน action เดิม, อัตราส่วน, loss แบบ clip, และ gradient ที่ย้อนกลับไปยังค่ากลาง พร้อมลูกศรเส้นประวนกลับจาก gradient ไปยังสมการที่สาม</desc>
+      <defs>
+        <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker>
+        <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#eb6c36"/></marker>
+        <marker id="arrow-soft" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="rgba(45,49,66,0.45)"/></marker>
+      </defs>
+
+      <rect width="100%" height="100%" fill="#f5f5f5"/>
+
+      <!-- gradient loop: E15 → E3 -->
+      <path d="M 760,1452.0 H 832 Q 840,1452.0 840,1444.0 V 308.0 Q 840,300.0 832,300.0 H 766" fill="none" stroke="rgba(45,49,66,0.45)" stroke-width="1.1" stroke-dasharray="5,4" marker-end="url(#arrow-soft)"/>
+
+      <line x1="500.0" y1="140" x2="500.0" y2="168" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <rect x="512" y="148" width="188" height="14" rx="2" fill="#f5f5f5"/>
+      <foreignObject x="512" y="146" width="188" height="18"><div xmlns="http://www.w3.org/1999/xhtml" class="fo left" style="font-size:9px;color:#4f5d75;line-height:18px;">\(z\)<span class="tx">&#160;(B, 3)</span></div></foreignObject>
+      <line x1="500.0" y1="236" x2="500.0" y2="264" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <rect x="512" y="244" width="188" height="14" rx="2" fill="#f5f5f5"/>
+      <foreignObject x="512" y="242" width="188" height="18"><div xmlns="http://www.w3.org/1999/xhtml" class="fo left" style="font-size:9px;color:#4f5d75;line-height:18px;">\(s\)<span class="tx">&#160;(B, 42)</span></div></foreignObject>
+      <line x1="500.0" y1="332" x2="500.0" y2="360" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <rect x="512" y="340" width="188" height="14" rx="2" fill="#f5f5f5"/>
+      <foreignObject x="512" y="338" width="188" height="18"><div xmlns="http://www.w3.org/1999/xhtml" class="fo left" style="font-size:9px;color:#4f5d75;line-height:18px;">\(\mu\)<span class="tx">&#160;(B, 8)</span></div></foreignObject>
+      <line x1="500.0" y1="428" x2="500.0" y2="456" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <rect x="512" y="436" width="188" height="14" rx="2" fill="#f5f5f5"/>
+      <foreignObject x="512" y="434" width="188" height="18"><div xmlns="http://www.w3.org/1999/xhtml" class="fo left" style="font-size:9px;color:#4f5d75;line-height:18px;">\(\sigma\)<span class="tx">&#160;(B, 8) broadcast</span></div></foreignObject>
+      <line x1="500.0" y1="524" x2="500.0" y2="552" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <rect x="512" y="532" width="188" height="14" rx="2" fill="#f5f5f5"/>
+      <foreignObject x="512" y="530" width="188" height="18"><div xmlns="http://www.w3.org/1999/xhtml" class="fo left" style="font-size:9px;color:#4f5d75;line-height:18px;"><span class="tx">object — ไม่ใช่ tensor</span></div></foreignObject>
+      <line x1="500.0" y1="620" x2="500.0" y2="648" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <rect x="512" y="628" width="188" height="14" rx="2" fill="#f5f5f5"/>
+      <foreignObject x="512" y="626" width="188" height="18"><div xmlns="http://www.w3.org/1999/xhtml" class="fo left" style="font-size:9px;color:#4f5d75;line-height:18px;">\(a\)<span class="tx">&#160;(B, 8)</span></div></foreignObject>
+      <rect x="240" y="530" width="250" height="14" rx="2" fill="#f5f5f5"/>
+      <foreignObject x="240" y="528" width="250" height="18"><div xmlns="http://www.w3.org/1999/xhtml" class="fo left" style="font-size:9px;color:rgba(45,49,66,0.55);line-height:18px;letter-spacing:0.04em;"><span class="tx">ช่วง B&#160;·&#160;</span>\(\pi_\theta\) ไปเป็น action จริง</div></foreignObject>
+      <line x1="500.0" y1="716" x2="500.0" y2="744" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <rect x="512" y="724" width="188" height="14" rx="2" fill="#f5f5f5"/>
+      <foreignObject x="512" y="722" width="188" height="18"><div xmlns="http://www.w3.org/1999/xhtml" class="fo left" style="font-size:9px;color:#4f5d75;line-height:18px;"><span class="tx">เข้า log</span></div></foreignObject>
+      <rect x="240" y="626" width="250" height="14" rx="2" fill="#f5f5f5"/>
+      <foreignObject x="240" y="624" width="250" height="18"><div xmlns="http://www.w3.org/1999/xhtml" class="fo left" style="font-size:9px;color:rgba(45,49,66,0.55);line-height:18px;letter-spacing:0.04em;"><span class="tx">ช่วง C&#160;·&#160;</span>\(\pi_\theta\) ไปเป็น \(\pi_\theta(a\mid s)\)</div></foreignObject>
+      <line x1="500.0" y1="812" x2="500.0" y2="840" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <rect x="512" y="820" width="188" height="14" rx="2" fill="#f5f5f5"/>
+      <foreignObject x="512" y="818" width="188" height="18"><div xmlns="http://www.w3.org/1999/xhtml" class="fo left" style="font-size:9px;color:#4f5d75;line-height:18px;"><span class="tx">(B, 8) — ยังไม่ยุบ</span></div></foreignObject>
+      <line x1="500.0" y1="908" x2="500.0" y2="936" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <rect x="512" y="916" width="188" height="14" rx="2" fill="#f5f5f5"/>
+      <foreignObject x="512" y="914" width="188" height="18"><div xmlns="http://www.w3.org/1999/xhtml" class="fo left" style="font-size:9px;color:#4f5d75;line-height:18px;"><span class="tx">(B,) — เหลือเลขเดียว</span></div></foreignObject>
+      <line x1="500.0" y1="1004" x2="500.0" y2="1032" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <rect x="512" y="1012" width="188" height="14" rx="2" fill="#f5f5f5"/>
+      <foreignObject x="512" y="1010" width="188" height="18"><div xmlns="http://www.w3.org/1999/xhtml" class="fo left" style="font-size:9px;color:#4f5d75;line-height:18px;"><span class="tx">แช่แข็งทั้ง iteration</span></div></foreignObject>
+      <rect x="240" y="914" width="250" height="14" rx="2" fill="#f5f5f5"/>
+      <foreignObject x="240" y="912" width="250" height="18"><div xmlns="http://www.w3.org/1999/xhtml" class="fo left" style="font-size:9px;color:rgba(45,49,66,0.55);line-height:18px;letter-spacing:0.04em;"><span class="tx">ช่วง D&#160;·&#160;</span><span class="th">log-prob ไปเป็น gradient</span></div></foreignObject>
+      <line x1="500.0" y1="1100" x2="500.0" y2="1128" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <rect x="512" y="1108" width="188" height="14" rx="2" fill="#f5f5f5"/>
+      <foreignObject x="512" y="1106" width="188" height="18"><div xmlns="http://www.w3.org/1999/xhtml" class="fo left" style="font-size:9px;color:#4f5d75;line-height:18px;"><span class="tx">object ใหม่ · ทำ E3, E5 ซ้ำ</span></div></foreignObject>
+      <line x1="500.0" y1="1196" x2="500.0" y2="1224" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <rect x="512" y="1204" width="188" height="14" rx="2" fill="#f5f5f5"/>
+      <foreignObject x="512" y="1202" width="188" height="18"><div xmlns="http://www.w3.org/1999/xhtml" class="fo left" style="font-size:9px;color:#4f5d75;line-height:18px;"><span class="tx">(MB,) · </span>\(a\)<span class="tx"> ตัวเดิม</span></div></foreignObject>
+      <line x1="500.0" y1="1292" x2="500.0" y2="1320" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <rect x="512" y="1300" width="188" height="14" rx="2" fill="#f5f5f5"/>
+      <foreignObject x="512" y="1298" width="188" height="18"><div xmlns="http://www.w3.org/1999/xhtml" class="fo left" style="font-size:9px;color:#4f5d75;line-height:18px;">\(\rho\)<span class="tx">&#160;(MB,)</span></div></foreignObject>
+      <line x1="500.0" y1="1388" x2="500.0" y2="1416" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <rect x="512" y="1396" width="188" height="14" rx="2" fill="#f5f5f5"/>
+      <foreignObject x="512" y="1394" width="188" height="18"><div xmlns="http://www.w3.org/1999/xhtml" class="fo left" style="font-size:9px;color:#4f5d75;line-height:18px;"><span class="tx">scalar ตัวเดียว</span></div></foreignObject>
+      <foreignObject x="240" y="46" width="250" height="18"><div xmlns="http://www.w3.org/1999/xhtml" class="fo left" style="font-size:9px;color:rgba(45,49,66,0.55);line-height:18px;letter-spacing:0.04em;"><span class="tx">ช่วง A&#160;·&#160;</span><span class="th">จาก state ไปถึง \(\pi_\theta\)</span></div></foreignObject>
+
+      <rect x="240" y="76" width="520" height="64" rx="6" fill="#f5f5f5"/>
+      <rect x="240" y="76" width="520" height="64" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="250" y="84" width="26" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+      <text x="263" y="93" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">E1</text>
+      <foreignObject x="284" y="82" width="432" height="40"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:12px;color:#2d3142;line-height:40px;">\(z = f_\psi(h)\)</div></foreignObject>
+      <foreignObject x="284" y="124" width="432" height="14"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:8px;color:#7a8399;line-height:14px;"><span class="tx">ppo.py:136</span></div></foreignObject>
+
+      <rect x="240" y="172" width="520" height="64" rx="6" fill="#f5f5f5"/>
+      <rect x="240" y="172" width="520" height="64" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="250" y="180" width="26" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+      <text x="263" y="189" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">E2</text>
+      <foreignObject x="284" y="178" width="432" height="40"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:12px;color:#2d3142;line-height:40px;">\(s = [\,z\;;\;o\;;\;c\,]\)</div></foreignObject>
+      <foreignObject x="284" y="220" width="432" height="14"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:8px;color:#7a8399;line-height:14px;"><span class="tx">ppo.py:138</span></div></foreignObject>
+
+      <rect x="240" y="268" width="520" height="64" rx="6" fill="#f5f5f5"/>
+      <rect x="240" y="268" width="520" height="64" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="250" y="276" width="26" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+      <text x="263" y="285" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">E3</text>
+      <foreignObject x="284" y="274" width="432" height="40"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:12px;color:#2d3142;line-height:40px;">\(\mu = \mu_\theta(s)\)</div></foreignObject>
+      <foreignObject x="284" y="316" width="432" height="14"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:8px;color:#7a8399;line-height:14px;"><span class="tx">actor_critic.py:156</span></div></foreignObject>
+
+      <rect x="240" y="364" width="520" height="64" rx="6" fill="#f5f5f5"/>
+      <rect x="240" y="364" width="520" height="64" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="250" y="372" width="26" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+      <text x="263" y="381" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">E4</text>
+      <foreignObject x="284" y="370" width="432" height="40"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:12px;color:#2d3142;line-height:40px;">\(\sigma = \exp(\ell)\)</div></foreignObject>
+      <foreignObject x="284" y="412" width="432" height="14"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:8px;color:#7a8399;line-height:14px;"><span class="tx">actor_critic.py:157</span></div></foreignObject>
+
+      <rect x="240" y="460" width="520" height="64" rx="6" fill="#f5f5f5"/>
+      <rect x="240" y="460" width="520" height="64" rx="6" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+      <rect x="250" y="468" width="26" height="12" rx="2" fill="transparent" stroke="rgba(235,108,54,0.50)" stroke-width="0.8"/>
+      <text x="263" y="477" fill="#eb6c36" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">E5</text>
+      <foreignObject x="284" y="466" width="432" height="40"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:12px;color:#2d3142;line-height:40px;">\(\pi_\theta(\cdot \mid s) = \mathcal{N}(\mu,\ \sigma)\)</div></foreignObject>
+      <foreignObject x="284" y="508" width="432" height="14"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:8px;color:#7a8399;line-height:14px;"><span class="tx">actor_critic.py:157</span></div></foreignObject>
+
+      <rect x="240" y="556" width="520" height="64" rx="6" fill="#f5f5f5"/>
+      <rect x="240" y="556" width="520" height="64" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="250" y="564" width="26" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+      <text x="263" y="573" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">E6</text>
+      <foreignObject x="284" y="562" width="432" height="40"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:12px;color:#2d3142;line-height:40px;">\(a = \mu + \sigma \odot \varepsilon,\quad \varepsilon \sim \mathcal{N}(0, I_8)\)</div></foreignObject>
+      <foreignObject x="284" y="604" width="432" height="14"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:8px;color:#7a8399;line-height:14px;"><span class="tx">actor_critic.py:161</span></div></foreignObject>
+
+      <rect x="240" y="652" width="520" height="64" rx="6" fill="#f5f5f5"/>
+      <rect x="240" y="652" width="520" height="64" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="250" y="660" width="26" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+      <text x="263" y="669" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">E7</text>
+      <foreignObject x="284" y="658" width="432" height="40"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:12px;color:#2d3142;line-height:40px;">\(\displaystyle \mathcal{N}(a_i) = \frac{1}{\sigma_i\sqrt{2\pi}}\,e^{-\frac{(a_i-\mu_i)^2}{2\sigma_i^2}}\)</div></foreignObject>
+      <foreignObject x="284" y="700" width="432" height="14"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:8px;color:#7a8399;line-height:14px;"><span class="tx">นิยาม Gaussian</span></div></foreignObject>
+
+      <rect x="240" y="748" width="520" height="64" rx="6" fill="#f5f5f5"/>
+      <rect x="240" y="748" width="520" height="64" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="250" y="756" width="26" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+      <text x="263" y="765" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">E8</text>
+      <foreignObject x="284" y="754" width="432" height="40"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:12px;color:#2d3142;line-height:40px;">\(\displaystyle \log\mathcal{N}(a_i) = -\frac{(a_i-\mu_i)^2}{2\sigma_i^2} - \log\sigma_i - \tfrac{1}{2}\log 2\pi\)</div></foreignObject>
+      <foreignObject x="284" y="796" width="432" height="14"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:8px;color:#7a8399;line-height:14px;"><span class="tx">normal.py:88-92</span></div></foreignObject>
+
+      <rect x="240" y="844" width="520" height="64" rx="6" fill="#f5f5f5"/>
+      <rect x="240" y="844" width="520" height="64" rx="6" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+      <rect x="250" y="852" width="26" height="12" rx="2" fill="transparent" stroke="rgba(235,108,54,0.50)" stroke-width="0.8"/>
+      <text x="263" y="861" fill="#eb6c36" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">E9</text>
+      <foreignObject x="284" y="850" width="432" height="40"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:12px;color:#2d3142;line-height:40px;">\(\log\pi_\theta(a\mid s) = \sum_{i=1}^{8}\log\mathcal{N}(a_i)\)</div></foreignObject>
+      <foreignObject x="284" y="892" width="432" height="14"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:8px;color:#7a8399;line-height:14px;"><span class="tx">actor_critic.py:164</span></div></foreignObject>
+
+      <rect x="240" y="940" width="520" height="64" rx="6" fill="#f5f5f5"/>
+      <rect x="240" y="940" width="520" height="64" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="250" y="948" width="26" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+      <text x="263" y="957" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">E10</text>
+      <foreignObject x="284" y="946" width="432" height="40"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:12px;color:#2d3142;line-height:40px;">\(\log\pi_{\theta_{\mathrm{old}}}(a\mid s) \longrightarrow \mathrm{storage}\)</div></foreignObject>
+      <foreignObject x="284" y="988" width="432" height="14"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:8px;color:#7a8399;line-height:14px;"><span class="tx">ppo.py:147</span></div></foreignObject>
+
+      <rect x="240" y="1036" width="520" height="64" rx="6" fill="#f5f5f5"/>
+      <rect x="240" y="1036" width="520" height="64" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="250" y="1044" width="26" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+      <text x="263" y="1053" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">E11</text>
+      <foreignObject x="284" y="1042" width="432" height="40"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:12px;color:#2d3142;line-height:40px;">\(\pi_{\theta_{\mathrm{new}}}(\cdot\mid s) = \mathcal{N}\big(\mu_{\theta_{\mathrm{new}}}(s),\ \sigma\big)\)</div></foreignObject>
+      <foreignObject x="284" y="1084" width="432" height="14"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:8px;color:#7a8399;line-height:14px;"><span class="tx">ppo.py:205</span></div></foreignObject>
+
+      <rect x="240" y="1132" width="520" height="64" rx="6" fill="#f5f5f5"/>
+      <rect x="240" y="1132" width="520" height="64" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="250" y="1140" width="26" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+      <text x="263" y="1149" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">E12</text>
+      <foreignObject x="284" y="1138" width="432" height="40"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:12px;color:#2d3142;line-height:40px;">\(\log\pi_{\theta_{\mathrm{new}}}(a\mid s)\)</div></foreignObject>
+      <foreignObject x="284" y="1180" width="432" height="14"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:8px;color:#7a8399;line-height:14px;"><span class="tx">ppo.py:212</span></div></foreignObject>
+
+      <rect x="240" y="1228" width="520" height="64" rx="6" fill="#f5f5f5"/>
+      <rect x="240" y="1228" width="520" height="64" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="250" y="1236" width="26" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+      <text x="263" y="1245" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">E13</text>
+      <foreignObject x="284" y="1234" width="432" height="40"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:12px;color:#2d3142;line-height:40px;">\(\rho = \exp\big(\log\pi_{\mathrm{new}} - \log\pi_{\mathrm{old}}\big)\)</div></foreignObject>
+      <foreignObject x="284" y="1276" width="432" height="14"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:8px;color:#7a8399;line-height:14px;"><span class="tx">ppo.py:252</span></div></foreignObject>
+
+      <rect x="240" y="1324" width="520" height="64" rx="6" fill="#f5f5f5"/>
+      <rect x="240" y="1324" width="520" height="64" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="250" y="1332" width="26" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+      <text x="263" y="1341" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">E14</text>
+      <foreignObject x="284" y="1330" width="432" height="40"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:12px;color:#2d3142;line-height:40px;">\(\displaystyle L = \frac{1}{MB}\sum \max\big(-\hat{A}\rho,\ -\hat{A}\,\mathrm{clip}(\rho,\,0.8,\,1.2)\big)\)</div></foreignObject>
+      <foreignObject x="284" y="1372" width="432" height="14"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:8px;color:#7a8399;line-height:14px;"><span class="tx">ppo.py:260</span></div></foreignObject>
+
+      <rect x="240" y="1420" width="520" height="64" rx="6" fill="#f5f5f5"/>
+      <rect x="240" y="1420" width="520" height="64" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="250" y="1428" width="26" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+      <text x="263" y="1437" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">E15</text>
+      <foreignObject x="284" y="1426" width="432" height="40"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:12px;color:#2d3142;line-height:40px;">\(\displaystyle \frac{\partial L}{\partial \mu_i} = -\hat{A}\,\rho\,\frac{a_i-\mu_i}{\sigma_i^2}\)</div></foreignObject>
+      <foreignObject x="284" y="1468" width="432" height="14"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:8px;color:#7a8399;line-height:14px;"><span class="tx">loss.backward()</span></div></foreignObject>
+
+      <!-- ทิศ ② : อ่าน μ, σ กลับจาก object -->
+      <line x1="240" y1="492" x2="228" y2="492" stroke="rgba(45,49,66,0.45)" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow-soft)"/>
+      <rect x="40" y="468" width="176" height="48" rx="6" fill="#f5f5f5"/>
+      <rect x="40" y="468" width="176" height="48" rx="6" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.20)" stroke-width="1" stroke-dasharray="4,3"/>
+      <foreignObject x="48" y="472" width="160" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:10px;color:#4f5d75;line-height:16px;"><span class="th">ทิศ ② อ่านฉลากกลับ</span></div></foreignObject>
+      <foreignObject x="48" y="488" width="160" height="14"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:9px;color:#7a8399;line-height:14px;"><span class="tx">.mean → </span>\(\mu\)</div></foreignObject>
+      <foreignObject x="48" y="502" width="160" height="14"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:9px;color:#7a8399;line-height:14px;"><span class="tx">.stddev → </span>\(\sigma\)</div></foreignObject>
+
+      <!-- action ออกไปคุมหุ่น -->
+      <line x1="240" y1="588" x2="228" y2="588" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <rect x="40" y="564" width="176" height="48" rx="6" fill="#f5f5f5"/>
+      <rect x="40" y="564" width="176" height="48" rx="6" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+      <foreignObject x="48" y="568" width="160" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:10px;color:#4f5d75;line-height:16px;"><span class="th">ออกไปคุมหุ่น</span></div></foreignObject>
+      <foreignObject x="48" y="584" width="160" height="14"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:9px;color:#7a8399;line-height:14px;">\(q^{*}=0.25\,a+q_{\mathrm{def}}\)</div></foreignObject>
+      <foreignObject x="48" y="598" width="160" height="14"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:9px;color:#7a8399;line-height:14px;"><span class="tx">→ PD 200 Hz → </span>\(\tau\)</div></foreignObject>
+
+      <rect x="852" y="826.0" width="108" height="36" rx="2" fill="#f5f5f5"/>
+      <foreignObject x="852" y="826" width="108" height="18"><div xmlns="http://www.w3.org/1999/xhtml" class="fo left" style="font-size:9px;color:#4f5d75;line-height:18px;">\(\theta \leftarrow \theta - \alpha\nabla_\theta L\)</div></foreignObject>
+      <foreignObject x="852" y="844" width="108" height="18"><div xmlns="http://www.w3.org/1999/xhtml" class="fo left" style="font-size:9px;color:#7a8399;line-height:18px;"><span class="th">แล้ววน E3 ใหม่ ×20</span></div></foreignObject>
+
+      <line x1="40" y1="1528" x2="960" y2="1528" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+      <text x="40" y="1544" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.18em">LEGEND</text>
+
+      <rect x="40" y="1556" width="14" height="10" rx="2" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+      <text x="60" y="1565" fill="#4f5d75" font-size="10" font-family="'Geist', 'Noto Sans Thai', sans-serif">จุดที่ชนิดข้อมูลเปลี่ยน — tensor → distribution (E5) และ 8 มิติ → 1 ค่า (E9)</text>
+
+      <rect x="560" y="1556" width="14" height="10" rx="2" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <text x="580" y="1565" fill="#4f5d75" font-size="10" font-family="'Geist', 'Noto Sans Thai', sans-serif">หนึ่งสมการ · บรรทัดล่างคือโค้ดที่ทำสมการนั้น</text>
+
+      <line x1="40" y1="1585" x2="68" y2="1585" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <text x="76" y="1589" fill="#4f5d75" font-size="10" font-family="'Geist', 'Noto Sans Thai', sans-serif">ค่าไหลต่อ — ป้ายข้างลูกศรคือ shape ที่ไหลผ่านจริง</text>
+
+      <line x1="560" y1="1585" x2="588" y2="1585" stroke="rgba(45,49,66,0.45)" stroke-width="1.1" stroke-dasharray="5,4" marker-end="url(#arrow-soft)"/>
+      <text x="596" y="1589" fill="#4f5d75" font-size="10" font-family="'Geist', 'Noto Sans Thai', sans-serif">gradient / การอ่านกลับ — ไม่ใช่การไหลของข้อมูลไปข้างหน้า</text>
+    </svg>
+  </div>
+</body>
+</html>
