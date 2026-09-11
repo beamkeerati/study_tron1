@@ -66,7 +66,7 @@ observation, so the actor's real input is 42:
 
 ```
 actor : 42  -> 512 -> 256 -> 128 -> 8     (ELU)
-critic: 230 -> 512 -> 256 -> 128 -> 1     (227 + 3 latent)
+critic: 230 -> 512 -> 256 -> 128 -> 1     (227 + 3 commands)
 ```
 
 The encoder is LimX's addition on top of stock rsl_rl (`modules/mlp_encoder.py`),
