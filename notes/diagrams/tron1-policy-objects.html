@@ -75,12 +75,15 @@
   <div class="frame">
     <p class="eyebrow">Data flow · โน้ต 06 หัวข้อ 3.5.0</p>
     <h1>จาก policy ถึง action ต้องผ่านสองขั้น — และแต่ละช่วงเป็นวัตถุคนละชนิด</h1>
-    <p class="sub"><strong>ทุกกล่องคือวัตถุ · ทุกลูกศรคือบรรทัดโค้ดที่ทำงาน</strong> —
+    <p class="sub"><strong>กล่อง = วัตถุที่มีตัวตนในหน่วยความจำ · ลูกศร = สิ่งที่เกิดขึ้นระหว่างกล่อง</strong>
+      (ป้ายบนลูกศรบอกทั้งค่าที่ไหลผ่าน และบรรทัดโค้ดที่ทำให้มันเกิด) —
       กรอบเส้นประบอกว่าช่วงนั้นเป็นวัตถุชนิดอะไร: ตัวเลขที่ไหลผ่าน, NN ที่เรียนได้,
       หรือ<span style="color:#eb6c36">อ็อบเจกต์การแจกแจงที่สร้างใหม่ทุกสเต็ป</span> ·
       จุดที่คนสับสนที่สุดคือช่วงที่สาม เพราะ <em>ขั้นที่ 1 ไม่ได้คืน action — มันคืนระฆัง</em> ·
       สังเกตวงเล็บสองอันล่างสุด: <strong>NN เดี่ยว ๆ ยังไม่ใช่ policy ตอนเทรน</strong>
-      เพราะมันคืนเวกเตอร์ ไม่ใช่การแจกแจง — แต่<strong>ตอน deploy มันเป็น policy เต็มตัว</strong></p>
+      เพราะมันคืนเวกเตอร์ ไม่ใช่การแจกแจง — แต่<strong>ตอน deploy มันเป็น policy เต็มตัว</strong> ·
+      <em>shape ทุกตัวในรูปเป็น &ldquo;ต่อ 1 env&rdquo; — ในโค้ดจริงมี B นำหน้าทุกก้อน และ
+      <code>self.distribution</code> ถือระฆัง B&times;8 ใบพร้อมกัน ไม่ใช่ใบเดียว</em></p>
 
     <svg viewBox="0 0 1200 592" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="po-title po-desc">
       <title id="po-title">จาก policy ถึง action ต้องผ่านสองขั้น — และแต่ละช่วงเป็นวัตถุคนละชนิด</title>
@@ -118,6 +121,8 @@
       <path d="M 836,262 H 852 Q 860,262 860,270 V 308 Q 860,316 868,316 H 928" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
 
       <!-- ============ connector labels ============ -->
+      <rect x="218" y="258" width="76" height="12" rx="2" fill="#f5f5f5"/>
+      <foreignObject x="218" y="256.12" width="76" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:6.5px;color:#7a8399;line-height:16px;"><span class="tx">actor_critic.py:156</span></div></foreignObject>
       <rect x="222" y="222" width="64" height="12" rx="2" fill="#f5f5f5"/>
       <foreignObject x="222" y="220.12" width="64" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:8px;color:#4f5d75;line-height:16px;">\(s\ (42,)\)</div></foreignObject>
 
@@ -128,9 +133,13 @@
       <rect x="506" y="258" width="116" height="12" rx="2" fill="#f5f5f5"/>
       <foreignObject x="506" y="256.12" width="116" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:8px;color:#7a8399;line-height:16px;"><span class="tx">actor_critic.py:157</span></div></foreignObject>
 
+      <rect x="864" y="192" width="68" height="12" rx="2" fill="#f5f5f5"/>
+      <foreignObject x="864" y="190.12" width="68" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:6.5px;color:#7a8399;line-height:16px;"><span class="tx">:161</span></div></foreignObject>
       <rect x="864" y="168" width="68" height="12" rx="2" fill="#f5f5f5"/>
       <foreignObject x="864" y="166.12" width="68" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:8px;color:#4f5d75;line-height:16px;"><span class="th">สุ่ม</span></div></foreignObject>
 
+      <rect x="864" y="326" width="68" height="12" rx="2" fill="#f5f5f5"/>
+      <foreignObject x="864" y="324.12" width="68" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:6.5px;color:#7a8399;line-height:16px;"><span class="tx">:164</span></div></foreignObject>
       <rect x="864" y="294" width="68" height="12" rx="2" fill="#f5f5f5"/>
       <foreignObject x="864" y="292.12" width="68" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:8px;color:#4f5d75;line-height:16px;"><span class="th">แทนค่า</span>&#160;\(a\)</div></foreignObject>
 
@@ -171,14 +180,16 @@
       <rect x="944" y="148" width="68" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.28)" stroke-width="0.8"/>
       <text x="978" y="157" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">TENSOR (8,)</text>
       <foreignObject x="940" y="164" width="208" height="24"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:13px;color:#2d3142;line-height:24px;">\(a\sim\pi_\theta(\cdot\mid s)\)</div></foreignObject>
-      <foreignObject x="940" y="190" width="208" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:9px;color:#2d3142;line-height:16px;"><span class="tx">distribution.sample()</span>&#160;<span class="tx">:161</span></div></foreignObject>
+      <foreignObject x="940" y="190" width="208" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:9px;color:#2d3142;line-height:16px;"><span class="tx">distribution.sample()</span></div></foreignObject>
       <foreignObject x="940" y="208" width="208" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:8.5px;color:#4f5d75;line-height:16px;">\([0.61,-0.37,0.505,\dots]\)</div></foreignObject>
       <foreignObject x="940" y="224" width="208" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:8.5px;color:#7a8399;line-height:16px;"><span class="th">เรียกซ้ำได้ค่าใหม่ — ไม่ใช่ฟังก์ชัน</span></div></foreignObject>
 
       <!-- the a that gets evaluated: during rollout it is the one just sampled -->
       <line x1="1044" y1="240" x2="1044" y2="260" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
-      <rect x="1052" y="242" width="100" height="12" rx="2" fill="#f5f5f5"/>
-      <foreignObject x="1052" y="240.12" width="100" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo left" style="font-size:8px;color:#4f5d75;line-height:16px;">\(a\)&#160;<span class="th">ตัวที่เพิ่งสุ่ม</span></div></foreignObject>
+      <rect x="960" y="245" width="76" height="12" rx="2" fill="#f5f5f5"/>
+      <foreignObject x="960" y="243.12" width="76" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo right" style="font-size:7px;color:#7a8399;line-height:16px;"><span class="tx">ppo.py:147-149</span></div></foreignObject>
+      <rect x="1052" y="245" width="100" height="12" rx="2" fill="#f5f5f5"/>
+      <foreignObject x="1052" y="243.12" width="100" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo left" style="font-size:8px;color:#4f5d75;line-height:16px;">\(a\)&#160;<span class="th">ตัวที่เพิ่งสุ่ม</span></div></foreignObject>
 
       <!-- ============ CARD E — evaluate ============ -->
       <rect x="936" y="264" width="216" height="104" rx="6" fill="#f5f5f5"/>
@@ -186,7 +197,7 @@
       <rect x="944" y="272" width="42" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.28)" stroke-width="0.8"/>
       <text x="965" y="281" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">SCALAR</text>
       <foreignObject x="940" y="288" width="208" height="24"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:13px;color:#2d3142;line-height:24px;">\(\pi_\theta(a\mid s)\)</div></foreignObject>
-      <foreignObject x="940" y="312" width="208" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:9px;color:#2d3142;line-height:16px;"><span class="tx">.log_prob(a).sum(-1)</span>&#160;<span class="tx">:164</span></div></foreignObject>
+      <foreignObject x="940" y="312" width="208" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:9px;color:#2d3142;line-height:16px;"><span class="tx">.log_prob(a).sum(-1)</span></div></foreignObject>
       <foreignObject x="940" y="328" width="208" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:8.5px;color:#4f5d75;line-height:16px;">\(0.03352\ \Rightarrow\ \log=-3.3955\)</div></foreignObject>
       <foreignObject x="940" y="344" width="208" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:8.5px;color:#7a8399;line-height:16px;"><span class="th">ต้องป้อน</span>&#160;\(a\)&#160;<span class="th">เข้าไป — ไม่ได้ผลิต</span>&#160;\(a\)&#160;<span class="th">เอง</span></div></foreignObject>
 
@@ -201,7 +212,7 @@
       <foreignObject x="844" y="416" width="324" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo left" style="font-size:9px;color:#2d3142;line-height:16px;"><span class="th">ตอนเทรน</span>&#160;\(\pi_\theta:\mathcal{S}\to\Delta(\mathcal{A})\)&#160;<span class="th">= ①+②+③</span></div></foreignObject>
 
       <path d="M 296,444 V 452 H 504 V 444" fill="none" stroke="#4f5d75" stroke-width="1" stroke-dasharray="5,4"/>
-      <foreignObject x="512" y="444" width="560" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo left" style="font-size:8.5px;color:#2d3142;line-height:16px;"><span class="th">ตอน deploy</span>&#160;\(\pi_\theta(s)=\mu_\theta(s)\)&#160;<span class="th">= ① อย่างเดียว (② ถูกทิ้ง · ③ ไม่ถูกใช้) — ตรงนี้เรียก NN ว่า policy ได้ถูกต้อง</span></div></foreignObject>
+      <foreignObject x="512" y="444" width="560" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo left" style="font-size:8.5px;color:#2d3142;line-height:16px;"><span class="th">ตอน deploy</span>&#160;\(\pi_\theta(s)=\mu_\theta(s)\)&#160;<span class="th">= ① เท่านั้น — ② ที่อยู่ในกล่องนี้ถูกทิ้ง · ③ ไม่ถูกเรียก · ตรงนี้เรียก NN ว่า policy ได้ถูกต้อง</span></div></foreignObject>
 
       <!-- ============ legend ============ -->
       <line x1="32" y1="482" x2="1168" y2="482" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
@@ -217,7 +228,7 @@
       <text x="52" y="545" fill="#4f5d75" font-size="10" font-family="'Geist', 'Noto Sans Thai', sans-serif">อ็อบเจกต์การแจกแจง — จุดที่คนสับสนที่สุด เพราะขั้นที่ 1 คืนสิ่งนี้ ไม่ได้คืน action</text>
 
       <line x1="32" y1="567" x2="60" y2="567" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
-      <text x="68" y="571" fill="#4f5d75" font-size="10" font-family="'Geist', 'Noto Sans Thai', sans-serif">ลูกศร = บรรทัดโค้ดที่ทำงาน (ไม่ใช่วัตถุ)</text>
+      <text x="68" y="571" fill="#4f5d75" font-size="10" font-family="'Geist', 'Noto Sans Thai', sans-serif">ลูกศร = การส่งค่า / การเรียกโค้ด — ไม่ใช่วัตถุที่ค้างอยู่</text>
 
       <rect x="520" y="562" width="14" height="10" rx="2" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.10)" stroke-width="0.8" stroke-dasharray="4,4"/>
       <text x="540" y="571" fill="#4f5d75" font-size="10" font-family="'Geist', 'Noto Sans Thai', sans-serif">กรอบเส้นประ = ช่วงของวัตถุชนิดเดียวกัน</text>
