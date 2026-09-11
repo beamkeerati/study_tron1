@@ -7,12 +7,46 @@
 > observation ถึง gradient ทีละสมการ (E1–E15) พร้อมโค้ด 1:1 และตัวเลขจริง (§3.5)
 > (4) ชี้จุดที่ walkthrough หลวมหรือผิด — **ทุกข้ออ้างในโน้ตนี้ตรวจกับโค้ดใน `tron1-rl-isaaclab/` แล้ว**
 >
-> ไดอะแกรมประกอบสี่ชิ้น เปิดใน browser (สมการ render ด้วย MathJax):
+> ไดอะแกรมประกอบห้าชิ้น เปิดใน browser (สมการ render ด้วย MathJax):
 > **A** [`tron1-actor-critic.html`](diagrams/tron1-actor-critic.html) ·
 > **B** [`tron1-ppo-iteration.html`](diagrams/tron1-ppo-iteration.html) ·
 > **C** [`tron1-value-flow.html`](diagrams/tron1-value-flow.html) ·
 > **D** [`tron1-deploy.html`](diagrams/tron1-deploy.html) ·
 > **E** [`tron1-policy-objects.html`](diagrams/tron1-policy-objects.html)
+
+---
+
+## ตัวย่อทั้งหมดในโน้ตนี้
+
+อ่านก่อนเริ่ม · โน้ตนี้ใช้ตัวย่อเยอะและใช้ตั้งแต่บรรทัดแรก ๆ ตารางนี้กางให้ครบทีเดียว
+จะได้ไม่ต้องเดา
+
+| ตัวย่อ | ย่อมาจาก | คือ |
+| --- | --- | --- |
+| **RL** | Reinforcement Learning | การเรียนรู้แบบเสริมกำลัง — เรียนจากรางวัล ไม่ใช่จากเฉลย |
+| **PPO** | **P**roximal **P**olicy **O**ptimization | อัลกอริทึมที่ Tron1 ใช้เทรน · "proximal" = ห้ามขยับไกลจากของเดิม |
+| **TRPO** | Trust Region Policy Optimization | รุ่นพี่ของ PPO · บังคับระยะด้วยข้อจำกัดแทนการ clip |
+| **SAC** · **DDPG** · **TD3** | Soft Actor-Critic · Deep Deterministic Policy Gradient · Twin Delayed DDPG | อัลกอริทึมตระกูลอื่น · โน้ตนี้อ้างถึงเพื่อ**เทียบ**เท่านั้น ไม่ได้ใช้ |
+| **MDP** · **POMDP** | (Partially Observable) **M**arkov **D**ecision **P**rocess | กรอบคณิตศาสตร์ของปัญหา · "PO" = มองเห็นไม่ครบ ซึ่งเป็นกรณีของ Tron1 |
+| **GAE** | **G**eneralized **A**dvantage **E**stimation | วิธีประมาณ advantage ที่ Tron1 ใช้ |
+| **TD** | **T**emporal **D**ifference | "ผลจริงก้าวนี้ ต่างจากที่ critic เดาเท่าไร" |
+| **KL** | **K**ullback–**L**eibler divergence | ตัววัดว่าการแจกแจงสองอันต่างกันแค่ไหน — **ชื่อคนสองคน ไม่ใช่ตัวย่อศัพท์** · §3.4 |
+| **MSE** | **M**ean **S**quared **E**rror | ค่าเฉลี่ยของกำลังสองของส่วนต่าง — วิธีวัดว่าทำนายพลาดแค่ไหน |
+| **lr** | **l**earning **r**ate | ก้าวยาวแค่ไหนต่อหนึ่งสเต็ป · เขียนแทนด้วย $\alpha$ ก็ได้ · §3.4 |
+| **SGD** | **S**tochastic **G**radient **D**escent | กฎอัปเดตแบบง่ายสุด "ไถลลงเนิน" · §3.4 |
+| **SNR** | **S**ignal-to-**N**oise **R**atio | อัตราส่วนสัญญาณต่อสัญญาณรบกวน · ใช้อธิบายพฤติกรรมของ Adam · §3.4 |
+| **RNG** | **R**andom **N**umber **G**enerator | ตัวสร้างเลขสุ่มของเครื่อง |
+| **MLP** | **M**ulti-**L**ayer **P**erceptron | โครงข่ายประสาทแบบชั้นซ้อนธรรมดา (ไม่มี convolution ไม่มี recurrence) |
+| **NN** | **N**eural **N**etwork | โครงข่ายประสาทเทียม |
+| **ELU** | **E**xponential **L**inear **U**nit | ฟังก์ชันกระตุ้นที่ Tron1 ใช้ (`activation="elu"`) |
+| **VAE** | **V**ariational **A**uto**E**ncoder | สถาปัตยกรรมที่ encoder ของ repo นี้ **ปิดไว้** (`is_vae = False`) |
+| **ONNX** | **O**pen **N**eural **N**etwork **E**xchange | รูปแบบไฟล์กลางสำหรับ export โมเดลไปรันที่อื่น |
+| **PD** | **P**roportional–**D**erivative controller | ตัวคุมมอเตอร์ชั้นล่างสุด แปลงมุมเป้าหมายเป็นแรงบิด |
+| **IMU** | **I**nertial **M**easurement Unit | เซนเซอร์วัดความเร่งและอัตราหมุน |
+| **GPU** · **VRAM** | Graphics Processing Unit · Video RAM | การ์ดจอและหน่วยความจำบนการ์ด |
+
+> **Adam ไม่ใช่ตัวย่อ** — เป็นชื่อเรียกของ optimizer (มาจาก *adaptive moment estimation*
+> แต่ในทางปฏิบัติใช้เป็นชื่อเฉพาะ) · §3.4 อธิบายว่ามันทำอะไร
 
 ---
 
@@ -77,20 +111,20 @@ $$\text{actor input} = 3 + 36 + 3 = 42 \qquad \text{critic input} = 227 + 3 = 23
 
 | walkthrough | ทำอะไร | shape | โน้ต 05 | สมการ | โค้ด |
 | --- | --- | --- | --- | --- | --- |
-| 1.1 | อ่านเซนเซอร์ 4 ก้อน | `(B,36)` `(B,3)` `(B,360)` `(B,230)` | 2.1 ใครเห็นอะไร · 1.3 POMDP | — | `ObservationsCfg` |
+| 1.1 | อ่านเซนเซอร์ 4 ก้อน | `(B,36)` `(B,3)` `(B,360)` `(B,230)` | 2.1 ใครเห็นอะไร · 1.3 POMDP | — | [`ObservationsCfg`](../tron1-rl-isaaclab/exts/bipedal_locomotion/bipedal_locomotion/tasks/locomotion/cfg/SF/limx_base_env_cfg.py#L227) |
 | 1.2 | encoder: ประวัติ → latent | `(B,360)→(B,3)` | 4.3 | — | [ppo.py:136](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L136) |
 | 1.3 | concat เป็น actor input | `(B,42)` | 2.2 (แก้แล้ว) · §1 ข้างบน | — | [ppo.py:138](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L138) |
-| 1.4 | actor MLP → $\mu$ | `(B,42)→(B,8)` | 2.2 node/layer · ทำไมชั้นสุดท้ายไม่มี activation | (5) | `actor_critic.py` actor layers |
+| 1.4 | actor MLP → $\mu$ | `(B,42)→(B,8)` | 2.2 node/layer · ทำไมชั้นสุดท้ายไม่มี activation | (5) | [actor_critic.py:69-90](../tron1-rl-isaaclab/rsl_rl/rsl_rl/modules/actor_critic.py#L69-L90) |
 | 1.5 | สุ่ม $a=\mu+\sigma\varepsilon$ · คำนวณ $\log\pi$ | `(B,8)` · `(B,1)` | 2.3 μ/a/π · 2.4 ทำไมต้องสุ่ม | (7) (8) | [actor_critic.py:155-164](../tron1-rl-isaaclab/rsl_rl/rsl_rl/modules/actor_critic.py#L155-L164) |
-| 1.6 | critic → $V(s)$ | `(B,230)→(B,1)` | 2.1 · 1.6 · 4.1 | (2) | `actor_critic.py` evaluate |
+| 1.6 | critic → $V(s)$ | `(B,230)→(B,1)` | 2.1 · 1.6 · 4.1 | (2) | [actor_critic.py:170-172](../tron1-rl-isaaclab/rsl_rl/rsl_rl/modules/actor_critic.py#L170-L172) |
 | 1.7 | ×0.25 → PD → physics → reward | `(B,8)→(B,1)` | 2.5 ท่อ 5 ขั้น | (9) | [joint_actions.py:134,160](../IsaacLab/source/isaaclab/isaaclab/envs/mdp/actions/joint_actions.py#L134) |
-| 1.8 | เก็บลง buffer ×24 | `(24,B,·)` | 4.6 ช่วง A | — | `rollout_storage.py` |
+| 1.8 | เก็บลง buffer ×24 | `(24,B,·)` | 4.6 ช่วง A | — | [rollout_storage.py:131](../tron1-rl-isaaclab/rsl_rl/rsl_rl/storage/rollout_storage.py#L131) `add_transitions` |
 
 ### ช่วง B — advantage (walkthrough §2)
 
 | walkthrough | ทำอะไร | shape | โน้ต 05 | สมการ | โค้ด |
 | --- | --- | --- | --- | --- | --- |
-| 2.1 | bootstrap $V(s_{24})$ | `(B,1)` | 3.2 bootstrapping · 4.6 ช่วง B | (3) | `on_policy_runner.py` → `compute_returns(last_values)` |
+| 2.1 | bootstrap $V(s_{24})$ | `(B,1)` | 3.2 bootstrapping · 4.6 ช่วง B | (3) | [on_policy_runner.py:221-225](../tron1-rl-isaaclab/rsl_rl/rsl_rl/runner/on_policy_runner.py#L221-L225) → [ppo.py:176](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L176) → [rollout_storage.py:187](../tron1-rl-isaaclab/rsl_rl/rsl_rl/storage/rollout_storage.py#L187) |
 | 2.2 | ไล่ย้อน $t=23\to0$: $\delta_t$, $A_t$, $R_t$ | `(24,B,1)` | 4.4 | (10) (11) | [rollout_storage.py:187-201](../tron1-rl-isaaclab/rsl_rl/rsl_rl/storage/rollout_storage.py#L187-L201) |
 | 2.3 | normalize $A\leftarrow(A-\bar A)/\sigma_A$ | `(24,B,1)` | 4.4 (ไม่ได้พูดตรง ๆ — ดู §4 ด้านล่าง) | — | [rollout_storage.py:204-206](../tron1-rl-isaaclab/rsl_rl/rsl_rl/storage/rollout_storage.py#L204-L206) |
 
@@ -98,15 +132,15 @@ $$\text{actor input} = 3 + 36 + 3 = 42 \qquad \text{critic input} = 227 + 3 = 23
 
 | walkthrough | ทำอะไร | shape | โน้ต 05 | สมการ | โค้ด |
 | --- | --- | --- | --- | --- | --- |
-| 3.0 | flatten → 4 minibatch × 5 epochs | `(49152,·)→(12288,·)` | 4.6 กายวิภาค · ทำไม 24 steps | — | `mini_batch_generator` |
+| 3.0 | flatten → 4 minibatch × 5 epochs | `(49152,·)→(12288,·)` | 4.6 กายวิภาค · ทำไม 24 steps | — | [rollout_storage.py:222](../tron1-rl-isaaclab/rsl_rl/rsl_rl/storage/rollout_storage.py#L222) `mini_batch_generator` |
 | 3.1 | $\rho=\exp(\log\pi_{new}-\log\pi_{old})$ | `(MB,)` | 4.5 ρ ใช้ตอนไหน | (12) | [ppo.py:252](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L252) |
 | 3.2 | clipped surrogate | scalar | 4.5 (ก) | (12) | [ppo.py:256-260](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L256-L260) |
 | 3.3 | value loss (clipped MSE) | scalar | 4.2 critic เรียนจาก reward | (4) | [ppo.py:263-268](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L263-L268) |
-| 3.4 | entropy $H$ | scalar | 4.5 (ค) · 2.4 σ | — | `actor_critic.py` entropy |
-| 3.5 | รวม loss → backward → Adam | — | 2.2 gradient descent | (6) | `ppo.py` `loss.backward()` |
+| 3.4 | entropy $H$ | scalar | 4.5 (ค) · 2.4 σ | — | [actor_critic.py:151-153](../tron1-rl-isaaclab/rsl_rl/rsl_rl/modules/actor_critic.py#L151-L153) |
+| 3.5 | รวม loss → backward → Adam | — | 2.2 gradient descent | (6) | [ppo.py:287-290](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L287-L290) |
 | 3.6 | KL-adaptive lr (÷1.5 / ×1.5) | — | 4.5 (ข) | — | [ppo.py:236-244](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L236-L244) |
 | (encoder) | MSE(latent, base_lin_vel) แยก optimizer | — | 4.3 remark | — | [ppo.py:306-321](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L306-L321) |
-| 4 | export actor+encoder → ONNX | — | 2.6 act vs act_inference | — | `play.py` |
+| 4 | export actor+encoder → ONNX | — | 2.6 act vs act_inference | — | [play.py:104-121](../tron1-rl-isaaclab/scripts/rsl_rl/play.py#L104-L121) |
 
 > **สังเกต:** คอลัมน์ "สมการ" ใช้เลขของโน้ต 05 หลังจัดใหม่ (1–12) — walkthrough
 > เขียนขึ้นก่อนการจัดใหม่ จึงอ้าง "สมการ 3, 5, 6, 1b" ตามเลขเก่า ตารางเทียบ:
@@ -176,6 +210,10 @@ $$\text{actor input} = 3 + 36 + 3 = 42 \qquad \text{critic input} = 227 + 3 = 23
 | $\alpha$ / lr | learning rate | scalar ปรับได้ | — | "ก้าวยาวแค่ไหน" · KL คุม | `1e-3` เริ่ม | 2.2, 4.5 (ข) |
 | $B$ | batch = num_envs | จำนวน | 2048 | "หุ่นกี่ตัวขนานกัน" | 2048 | 4.6 |
 | `MB` | minibatch | จำนวน | 12,288 | "หั่น 49,152 เป็น 4 ก้อน" | 12,288 | 4.6 |
+| $z_i$ | ระยะมาตรฐาน | scalar ต่อมิติ | `(B,8)` | "$a_i$ ห่างจาก $\mu_i$ กี่เท่าของ $\sigma_i$" — $z_i = (a_i-\mu_i)/\sigma_i$ | `0.19` | §3.4, E8 |
+| $\ell$ | `logstd` | เวกเตอร์ | `(8,)` | "ลูกบิดคุมความกว้าง" — $\sigma = e^{\ell}$ · **ไม่ใช่ $L$** | `0.0` เริ่ม | §3.4, E4 |
+| $L$ | loss | **scalar** | `(1,)` | "เข็มวัดความแย่รวมทั้งระบบ" — ยิ่งน้อยยิ่งดี · **ไม่ใช่ $\ell$** | `−1.32` | §3.4 |
+| $\psi$ | weight ของ encoder | เวกเตอร์ยาว | 125,699 | เหมือน $\theta$ แต่ของ encoder · **มี optimizer แยก** | — | 4.3 |
 
 ### สัญลักษณ์ที่ "หน้าตาคล้าย" แต่คนละความหมาย — จุดสับสนบ่อย
 
@@ -230,7 +268,7 @@ $$L^{CLIP} = \mathbb{E}\Big[\min\big(\rho_t A_t,\; \text{clip}(\rho_t, 1-\epsilo
 > ([ppo.py:88-89](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L88-L89)) เข็มคนละอัน
 > (`extra_loss`) และ `.step()` คนละบรรทัด ([:321](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L321)) ·
 > ที่เด็ดขาดกว่านั้นคือ `encode()` คืนค่าแบบ `.detach()` เมื่อ `output_detach = True`
-> (`mlp_encoder.py:95-100`, ตั้งไว้ที่ `cfg:71`) — แปลว่า encoder **ไม่ได้อยู่ในกราฟของ
+> (`mlp_encoder.py:95-100`, ตั้งไว้ที่ [`limx_rsl_rl_ppo_cfg.py:109`](../tron1-rl-isaaclab/exts/bipedal_locomotion/bipedal_locomotion/tasks/locomotion/agents/limx_rsl_rl_ppo_cfg.py#L109)) — แปลว่า encoder **ไม่ได้อยู่ในกราฟของ
 > `loss` เลยด้วยซ้ำ** · ตลอดหัวข้อนี้ "ลูกบิด" หมายถึง 469,905 ตัวของเครื่องแรกเท่านั้น
 
 ทุกคำที่เหลือในหัวข้อนี้เป็นชื่อของชิ้นส่วนในภาพนี้
@@ -605,7 +643,8 @@ $$\boxed{\;\ell_i \;\leftarrow\; \ell_i \;-\; \alpha\,\frac{\hat{m}_i}{\sqrt{\ha
 ของความชันทิ้ง** · ถ้าความชัน **ชี้ทางเดิมสม่ำเสมอ** ขนาดก้าวจะอยู่ที่ราว ๆ $\alpha$
 ไม่ว่าความชันจะใหญ่หรือเล็ก
 
-> **แต่ไม่ใช่ $\alpha$ เสมอไป** — $\hat{m}/\sqrt{\hat{v}}$ เป็น *อัตราส่วนสัญญาณต่อสัญญาณรบกวน*
+> **แต่ไม่ใช่ $\alpha$ เสมอไป — ตาราง SNR ของ Adam** · $\hat{m}/\sqrt{\hat{v}}$ เป็น
+> *อัตราส่วนสัญญาณต่อสัญญาณรบกวน* (signal-to-noise ratio, SNR)
 > ไม่ใช่ทิศล้วน ๆ · จำลองด้วยค่าปริยาย PyTorch ($\beta_1=0.9,\ \beta_2=0.999$):
 >
 > | ความชันที่ป้อนเข้า | ก้าวที่ได้ |
@@ -2054,7 +2093,7 @@ $$a = \mu + (\sigma\odot\varepsilon) = [\,0.61,\ -0.37,\ 0.505\,]$$
 **$I_8$ บอกอะไร** — ช่องที่สองของ $\mathcal{N}$ ในโลกหลายมิติคือ *เมทริกซ์ความแปรปรวนร่วม*
 ไม่ใช่ตัวเลขเดี่ยว อ่านได้สองอย่าง:
 
-- **เส้นทแยงเป็น 1 ทั้งหมด** → ทุกมิติกว้างเท่ากัน (sd = 1)
+- **เส้นทแยงเป็น 1 ทั้งหมด** → ทุกมิติกว้างเท่ากัน ($\sigma = 1$)
 - **นอกเส้นทแยงเป็น 0 ทั้งหมด** → **แต่ละมิติสุ่มอิสระจากกัน** ข้อ 3 จะสุ่มได้เท่าไร
   ไม่เกี่ยวกับข้อ 1 เลย
 
@@ -2480,9 +2519,9 @@ walkthrough §3.5 และ §4 บอก actor ≈ 185,480 · critic ≈ 250,62
 | เรื่อง | walkthrough | โน้ต 05 | หมายเหตุ |
 | --- | --- | --- | --- |
 | **advantage normalization** | §2.3 อธิบายชัด | 4.4 ไม่ได้พูดตรง ๆ | สำคัญ: ทำให้ scale ของ $A$ คงที่ไม่ว่า reward จะใหญ่แค่ไหน — ค่า `+1.10` ใน walkthrough คือหลัง normalize |
-| **value clipping** | §3.3 อธิบาย | 4.2 ไม่ได้พูด | `use_clipped_value_loss=True` ใน config · ใช้ `clip_param` 0.2 ตัวเดียวกับ policy — เป็นเทคนิคเสริมของ rsl_rl ไม่ใช่ PPO paper ต้นฉบับ |
+| **value clipping** | §3.3 อธิบาย | 4.2 ไม่ได้พูด | `use_clipped_value_loss=True` ([cfg:95](../tron1-rl-isaaclab/exts/bipedal_locomotion/bipedal_locomotion/tasks/locomotion/agents/limx_rsl_rl_ppo_cfg.py#L95)) · ใช้ `clip_param` 0.2 ([cfg:96](../tron1-rl-isaaclab/exts/bipedal_locomotion/bipedal_locomotion/tasks/locomotion/agents/limx_rsl_rl_ppo_cfg.py#L96)) ตัวเดียวกับ policy — เป็นเทคนิคเสริมของ rsl_rl ไม่มีในเปเปอร์ PPO ต้นฉบับ (Schulman et al., *Proximal Policy Optimization Algorithms*, arXiv:1707.06347) |
 | **`clip_grad_norm_(1.0)`** | §3.5 กล่าวถึง | ไม่มี | `max_grad_norm=1.0` ใน config — กัน gradient ระเบิด |
-| **`not_done` mask ใน GAE** | §2.2 มีใน pseudo-code | 4.4 ไม่มี | ถ้า episode จบที่ step $t$ ห้ามให้ $V_{t+1}$ ไหลข้าม — โค้ด `next_is_not_terminal` |
+| **`not_done` mask ใน GAE** | §2.2 มีใน pseudo-code | 4.4 ไม่มี | ถ้า episode จบที่ step $t$ ห้ามให้ $V_{t+1}$ ไหลข้าม — โค้ด `next_is_not_terminal` ที่ [rollout_storage.py:194-197](../tron1-rl-isaaclab/rsl_rl/rsl_rl/storage/rollout_storage.py#L194-L197) |
 | **encoder loss แบบ MSE** | §1.2 TIP | 4.3 remark บอกแค่ "ฝึกแยก" | ยืนยันจากโค้ด: `(encode[:,0:3] − critic_obs[:,0:3]).pow(2).mean()` — เป้าคือ 3 มิติแรกของ privileged obs = `base_lin_vel` |
 
 ### 4.4 การเขียน shape ของ $\sigma$
@@ -2509,7 +2548,7 @@ walkthrough อ้าง "สมการ (3), (5), (6), (1b)" ตามกา�
 | **ลูกศรทึบ** | ข้อมูลไหลไปข้างหน้า (forward pass) — เกิดทุก step ทั้งตอนเทรนและ deploy | 2.5 |
 | **ลูกศรประ** $\nabla\theta, \nabla\phi$ | สัญญาณการเรียนรู้ — เกิดเฉพาะช่วง C ของ iteration · **นี่คือ 2 เส้นเดียวที่ทำให้ระบบ "เรียนรู้"** | 2.2 สมการ (6) |
 | **กล่องประ** (Critic, PPO) | มีชีวิตแค่ตอนเทรน · ถูกทิ้งตอน export ONNX | 2.6 |
-| **กล่องส้ม** Advantage | จุดที่ critic "สอน" actor — ถ้าตัดกล่องนี้ออก จะเหลือแค่ policy gradient ธรรมดาที่ variance สูง | 4.1, 4.4 |
+| **กล่องส้ม** Advantage | จุดที่ critic "สอน" actor — ถ้าตัดกล่องนี้ออก จะเหลือแค่ policy gradient ธรรมดาที่ **ความแปรปรวน** (variance) สูง คือ gradient เหวี่ยงไปมาจนเรียนช้า | 4.1, 4.4 |
 | encoder ไม่มีกล่องแยก | ยุบเป็น sublabel ใน Actor เพราะ budget ของไดอะแกรม — โครงสร้างเต็มอยู่ใน walkthrough §1.2 และโน้ต 05 §4.3 | 4.3 |
 
 **คำถามที่ควรถามตัวเองตอนดูรูป A:** "ถ้าลบลูกศรประสองเส้นออก ระบบนี้จะเป็นอะไร?"
@@ -2540,7 +2579,8 @@ walkthrough อ้าง "สมการ (3), (5), (6), (1b)" ตามกา�
 | **กล่องซ้าย 2 ใบ** | ทางแยกออกจากโซ่หลัก: อ่าน $\mu,\sigma$ กลับ (ทิศ ②) และ action ที่ออกไปคุมหุ่น | §3.5.3 |
 | **เส้นประวนกลับ E15 → E3** | $\theta$ เปลี่ยน → $\mu$ ใหม่ → เริ่ม E3 อีกครั้ง · 20 รอบต่อ iteration | §3.5.4 E11 |
 
-> รูปนี้จงใจเกิน budget 9 กล่องของ diagram-design เพราะมันเป็น *แผ่นอ้างอิง* ไม่ใช่
+> รูปนี้จงใจเกินเพดาน 9 กล่องที่ skill `diagram-design` แนะนำ (เพดานความหนาแน่นของ
+> ไดอะแกรมหนึ่งรูป) เพราะมันเป็น *แผ่นอ้างอิง* ไม่ใช่
 > แผนภาพสรุป — ใช้คู่กับ §3.5 ไม่ใช้เดี่ยว ๆ
 
 ### D — Tron1 ตอน deploy (`diagrams/tron1-deploy.html`)
@@ -2550,7 +2590,7 @@ walkthrough อ้าง "สมการ (3), (5), (6), (1b)" ตามกา�
 | **แถบบนที่จางทั้งแถบ** | critic, GAE, PPO ไม่ได้ถูก export — ไม่มีอยู่บนหุ่นจริง | 2.6 |
 | **ลูกศรส้มเส้นประชี้ลง** | คำตอบของคำถาม "advantage ไปไหนตอน deploy" — มันถูกใช้หมดไปแล้ว เหลือเป็นตัวเลขใน $\theta$ | 4.4, 4.5 |
 | **`encoder.onnx` + `policy.onnx` แยกกัน** | export เป็นสองไฟล์ โค้ดฝั่งหุ่นเป็นคน `cat` เอง ([play.py:111-121](../tron1-rl-isaaclab/scripts/rsl_rl/play.py#L111-L121)) | 2.6 |
-| **ไม่มี $\sigma$ ไม่มีการสุ่ม** | `act_inference` คืน $\mu$ ตรง ๆ — ข้าม E4–E9 ทั้งหมด | 2.4, 2.6 |
+| **ไม่มี $\sigma$ ไม่มีการสุ่ม** | `act_inference` คืน $\mu$ ตรง ๆ ([actor_critic.py:166-168](../tron1-rl-isaaclab/rsl_rl/rsl_rl/modules/actor_critic.py#L166-L168)) — ข้าม E4–E9 ทั้งหมด | 2.4, 2.6 |
 
 **เทียบ A กับ D:** รูป A คือ *ตอนเรียน* รูป D คือ *ตอนสอบ* — กล่องที่หายไปคือทุกอย่าง
 ที่มีไว้เพื่อ "รู้ว่าทำได้ดีแค่ไหน" ซึ่งไม่จำเป็นอีกเมื่อหยุดเรียนแล้ว
