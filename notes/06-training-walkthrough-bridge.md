@@ -104,7 +104,7 @@ $$\text{actor input} = 3 + 36 + 3 = 42 \qquad \text{critic input} = 227 + 3 = 23
 | 3.3 | value loss (clipped MSE) | scalar | 4.2 critic เรียนจาก reward | (4) | [ppo.py:263-268](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L263-L268) |
 | 3.4 | entropy $H$ | scalar | 4.5 (ค) · 2.4 σ | — | `actor_critic.py` entropy |
 | 3.5 | รวม loss → backward → Adam | — | 2.2 gradient descent | (6) | `ppo.py` `loss.backward()` |
-| 3.6 | KL-adaptive lr (÷1.5 / ×1.5) | — | 4.5 (ข) | — | [ppo.py:235-243](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L235-L243) |
+| 3.6 | KL-adaptive lr (÷1.5 / ×1.5) | — | 4.5 (ข) | — | [ppo.py:236-244](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L236-L244) |
 | (encoder) | MSE(latent, base_lin_vel) แยก optimizer | — | 4.3 remark | — | [ppo.py:306-321](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L306-L321) |
 | 4 | export actor+encoder → ONNX | — | 2.6 act vs act_inference | — | `play.py` |
 
@@ -511,7 +511,7 @@ $\theta$ ทำให้ $\rho = 1$
 | ที่มา | ค่าที่ได้ |
 | --- | --- |
 | จาก surrogate: $-\hat{A}\rho(z_i^2-1)$ | $+1.060290$ |
-| จาก entropy: $-$`entropy_coef` $= -0.01$ ([cfg:59](../tron1-rl-isaaclab/exts/bipedal_locomotion/bipedal_locomotion/tasks/locomotion/agents/limx_rsl_rl_ppo_cfg.py#L59)) | $-0.010000$ |
+| จาก entropy: $-$`entropy_coef` $= -0.01$ ([cfg:97](../tron1-rl-isaaclab/exts/bipedal_locomotion/bipedal_locomotion/tasks/locomotion/agents/limx_rsl_rl_ppo_cfg.py#L97)) | $-0.010000$ |
 | **รวม เขียนลง `l.grad`** | $\mathbf{+1.050290}$ |
 
 *ขั้น 3 · `step()`* — **ตรงนี้คือการเขียนทับ**
@@ -527,7 +527,7 @@ $$\sigma_{\text{ใหม่}} = e^{-0.001050} = 0.998950 \qquad (\text{เด�
 > จะออกมาราว ๆ $lr$ พอดี ไม่ได้เป็น $lr \times 1.050290$ (ดูหัวข้อ Adam)
 >
 > บรรทัด `step()` ข้างบนยังสมมติอีกข้อว่า norm รวมของ gradient ไม่เกิน
-> `max_grad_norm = 1.0` ([cfg:37](../tron1-rl-isaaclab/exts/bipedal_locomotion/bipedal_locomotion/tasks/locomotion/agents/limx_rsl_rl_ppo_cfg.py#L37))
+> `max_grad_norm = 1.0` ([cfg:105](../tron1-rl-isaaclab/exts/bipedal_locomotion/bipedal_locomotion/tasks/locomotion/agents/limx_rsl_rl_ppo_cfg.py#L105))
 > ถ้าเกิน `clip_grad_norm_` จะย่อ `l.grad` ลงตามสัดส่วนก่อน `step()` จะได้เห็น
 >
 > **สามบรรทัดที่ควรจำ**
@@ -620,8 +620,149 @@ $$\boxed{\;\ell_i \;\leftarrow\; \ell_i \;-\; \alpha\,\frac{\hat{m}_i}{\sqrt{\ha
 > ขนาดก้าวจริง**
 
 Tron1 ใช้ Adam ([ppo.py:85](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L85))
-โดย $\alpha$ เริ่มที่ `1e-3` ([cfg:62](../tron1-rl-isaaclab/exts/bipedal_locomotion/bipedal_locomotion/tasks/locomotion/agents/limx_rsl_rl_ppo_cfg.py#L62))
+โดย $\alpha$ เริ่มที่ `1e-3` ([cfg:100](../tron1-rl-isaaclab/exts/bipedal_locomotion/bipedal_locomotion/tasks/locomotion/agents/limx_rsl_rl_ppo_cfg.py#L100))
 แล้วถูก KL ปรับขึ้นลงระหว่างทาง
+
+### KL คืออะไร
+
+`lr` ในหัวข้อถัดไปถูกควบคุมด้วยค่านี้ จึงต้องรู้จักมันก่อน
+
+**ชื่อเต็มคือ Kullback–Leibler divergence** — เป็นชื่อคนสองคน (Solomon Kullback กับ
+Richard Leibler, 1951) ไม่ใช่ตัวย่อของศัพท์เทคนิค
+
+**ชนิดก่อนอย่างอื่น**
+
+$$D_{KL} \;:\; \Delta(\mathcal{A}) \times \Delta(\mathcal{A}) \;\longrightarrow\; [0, \infty)$$
+
+**รับการแจกแจงสองอัน คืนเลขตัวเดียวที่ไม่ติดลบ** · ไม่ได้รับตัวเลข — รับ *ระฆังทั้งใบ*
+สองใบ (สัญลักษณ์ $\Delta(\mathcal{A})$ คือเซตของการแจกแจงบน $\mathcal{A}$ — §3.5.0)
+
+| เขียนว่า | ชนิด | หมายถึง | ในโค้ด |
+| --- | --- | --- | --- |
+| $D_{KL}$ | **ฟังก์ชัน** | ตัวเทียบ ยังไม่ได้ป้อนอะไรเข้าไป | — |
+| $D_{KL}(p \,\|\, q)$ | **scalar** $\ge 0$ | ความต่างของระฆังสองใบ | `kl` `(MB,)` · [ppo.py:223-231](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L223-L231) |
+| $\overline{kl}$ | **scalar** | เฉลี่ยทั้ง minibatch | `kl_mean` · [:233](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L233) |
+
+**หมายถึงอะไร**
+
+$$D_{KL}(p \,\|\, q) = \mathbb{E}_{a \sim p}\big[\log p(a) - \log q(a)\big]$$
+
+อ่านว่า *"ถ้าคุณเชื่อว่าโลกเป็น $q$ แต่ความจริงมันเป็น $p$ — คุณจะเซอร์ไพรส์เกินจำเป็น
+เฉลี่ยกี่หน่วย"* · หน่วยคือ **nat** เพราะใช้ลอการิทึมฐาน $e$ · เท่ากับ 0 พอดีเมื่อ $p$ กับ $q$
+เหมือนกันทุกจุด · ความหมายของขีดตั้งสองอัน $\|$ และเหตุผลที่สลับที่ไม่ได้ อยู่ที่ §3.5.2
+
+ใน Tron1 มันตอบคำถามเดียว: **"ตอนนี้ policy ห่างจากตอนเก็บข้อมูลไปแค่ไหนแล้ว"**
+
+**คำว่า "KL" ในวงการมีสามความหมาย**
+
+| ใครพูด | หมายถึง | Tron1 ใช้ไหม |
+| --- | --- | --- |
+| ตำราคณิตศาสตร์ | ปริมาณ $D_{KL}(p \,\|\, q)$ | ✓ |
+| คนดู tensorboard | ตัวเลข `Policy/mean_kl` | ✓ |
+| คนพูดถึง *"KL penalty"* | **พจน์หนึ่งใน loss** | **✗ ไม่มี** |
+
+**ตรงข้ามกับ entropy — สองตัวนี้มาคู่กันเสมอ แต่คนละเรื่อง**
+
+| | วัดอะไร | ป้อนเข้าไปกี่อัน | อยู่ใน `loss` ไหม |
+| --- | --- | --- | --- |
+| **entropy** $H$ | ความไม่แน่นอนของ **หนึ่ง** ระฆัง | 1 | **✓ อยู่** สัมประสิทธิ์ $-0.01$ |
+| **KL** | ความต่างระหว่าง **สอง** ระฆัง | 2 | **✗ ไม่อยู่เลย** |
+
+> **ประโยคปิดที่ควรจำ** — **KL ไม่ได้อยู่ในสูตร `loss` สักตัว**
+> ([ppo.py:274-278](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L274-L278) มีแค่สามพจน์ ไม่มี KL) · มันเป็นแค่ **มาตรวัด**
+> ที่อ่านออกมาแล้วเอาไปหมุนวาล์ว `lr` เท่านั้น · ถ้าลบบล็อก KL ทิ้งทั้งก้อน gradient จะยัง
+> คำนวณได้เหมือนเดิมทุกประการ แค่ `lr` จะไม่ปรับตัวอีก
+>
+> (กิ่ง `early_stop` ที่ [ppo.py:246-249](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L246-L249) ก็ใช้ KL เหมือนกัน แต่
+> `early_stop` ใช้ค่า default คือปิด — กิ่งนั้นไม่เคยทำงาน)
+
+ตัวอย่างจริงจาก §3.5.2: KL รายมิติ $0.015874$ คูณ 8 มิติได้ $\approx 0.127$ เทียบกับ
+`desired_kl = 0.01` → เกิน $0.02$ ไปมาก → `lr` จะถูกหารด้วย 1.5
+
+### `lr` มาจากไหน — และทำไมมันไม่คงที่
+
+**`lr` ย่อมาจาก *learning rate*** — ตัวเดียวกับ $\alpha$ ในหัวข้อ SGD ข้างบน เขียนสองแบบ
+เพราะโค้ดใช้ชื่อ `lr` ส่วนตำราใช้ $\alpha$ · หน้าที่มันคือ **บอกว่าก้าวยาวแค่ไหน**
+
+$$\ell \;\leftarrow\; \ell - \underbrace{lr}_{\text{ก้าวยาวแค่ไหน}} \times \underbrace{\ell.\text{grad}}_{\text{ที่มาของทิศ}} \qquad \text{(รูป SGD)}$$
+
+> **นี่คือรูป SGD** — Adam แทน $\ell.\text{grad}$ ด้วย $\hat{m}/(\sqrt{\hat{v}}+\texttt{eps})$ ซึ่ง
+> ปรับสเกลรายลูกบิด ทำให้ *ทิศ* ที่ก้าวจริงไม่เท่ากับทิศของ gradient เป๊ะ ๆ และ `lr`
+> ไม่ได้เป็นตัวกำหนดระยะเพียงตัวเดียว · เขียนรูป SGD ไว้เพราะมันอ่านง่ายกว่าและ
+> **บทบาทของ `lr` เหมือนกันทั้งสองแบบ** คือเป็นตัวคูณความยาวก้าว
+
+ถ้า $lr = 0$ ลูกบิดไม่ขยับเลย ต่อให้ gradient ใหญ่แค่ไหนก็ตาม
+
+**ช่วงที่ 1 · ค่าเริ่มต้นมาจากมนุษย์พิมพ์ลงไฟล์**
+
+```python
+learning_rate=1.0e-3,     # limx_rsl_rl_ppo_cfg.py:100
+```
+
+ไม่มีใครคำนวณมันมา · มันคือ **hyperparameter** — ตัวเลขที่คนตั้งเอง จูนเอง ลองผิดลองถูกเอา
+
+| | ลูกบิดทั้งหมด $\theta, \phi, \ell$ (**parameter**) | `lr` (**hyperparameter**) |
+| --- | --- | --- |
+| ค่าแรกมาจาก | โค้ด init (สุ่ม / ศูนย์) | **มนุษย์พิมพ์ลง config** |
+| เปลี่ยนยังไงระหว่างเทรน | `optimizer.step()` จาก gradient | กฎ KL — **ไม่มี gradient เกี่ยวข้องเลย** |
+| มีกี่ตัว | 469,905 | **1 ต่อ optimizer** — การรันนี้มีสองตัว ดูเกร็ดท้ายหัวข้อ |
+
+**ช่วงที่ 2 · ระหว่างเทรน KL ปรับให้เอง เหมือน thermostat**
+
+`lr` ของ repo นี้ **ไม่คงที่** เพราะ `schedule = "adaptive"` ([cfg:101](../tron1-rl-isaaclab/exts/bipedal_locomotion/bipedal_locomotion/tasks/locomotion/agents/limx_rsl_rl_ppo_cfg.py#L101))
+
+```python
+if kl_mean > self.desired_kl * 2.0:                       # > 0.02
+    self.learning_rate = max(1e-5, self.learning_rate / 1.5)
+elif kl_mean < self.desired_kl / 2.0 and kl_mean > 0.0:   # < 0.005
+    self.learning_rate = min(1e-2, self.learning_rate * 1.5)
+for param_group in self.optimizer.param_groups:
+    param_group["lr"] = self.learning_rate                # ppo.py:236-244
+```
+
+| อ่าน `kl_mean` ได้ | แปลว่า | ทำอะไร |
+| --- | --- | --- |
+| **> 0.02** | policy ขยับ **เยอะเกิน** | **หรี่** `lr` $\div 1.5$ (ไม่ต่ำกว่า `1e-5`) |
+| **< 0.005** | ขยับ **น้อยเกิน** เสียเวลา | **เร่ง** `lr` $\times 1.5$ (ไม่เกิน `1e-2`) |
+| อยู่ระหว่างนั้น | กำลังดี | ไม่แตะ |
+
+`desired_kl = 0.01` ([cfg:104](../tron1-rl-isaaclab/exts/bipedal_locomotion/bipedal_locomotion/tasks/locomotion/agents/limx_rsl_rl_ppo_cfg.py#L104)) คือ **อุณหภูมิเป้าหมาย** · `kl_mean` คือ
+**อุณหภูมิที่วัดได้** · `lr` คือ **วาล์ว**
+
+> **สองข้อที่น่าแปลกใจ** — บล็อกนี้อยู่ **ในลูป minibatch** (ลูปเริ่มที่ `ppo.py:190`
+> บล็อก KL อยู่ที่ `:236` ย่อหน้าลึกกว่าหนึ่งชั้น) แปลว่า `lr` ปรับได้ถึง **20 ครั้งต่อหนึ่ง
+> iteration** ไม่ใช่ครั้งเดียว · และจาก `1e-3` ไปชนเพดาน `1e-2` ใช้แค่ **6 ครั้ง** ส่วนไป
+> ชนพื้น `1e-5` ใช้ **12 ครั้ง** — ขยับเร็วกว่าที่คิดมาก
+
+**ทำไมไม่ตั้งค่าคงที่ไปเลย**
+
+| `lr` | เกิดอะไรขึ้น |
+| --- | --- |
+| **ใหญ่เกิน** | ก้าวเลยจุดดี · policy เปลี่ยนฮวบ · $\rho$ หลุดกรอบ clip เป็นวงกว้าง · ตัวอย่างที่ขยับ*ถูกทาง*ไปไกลเกินจะให้ gradient เป็น 0 (ตัวที่ขยับ*ผิดทาง*ยังแก้ได้ — โน้ต 07 §5.3) → สัญญาณเรียนรู้เหลือน้อยลงมาก และ surrogate เลิกประมาณเป้าหมายจริง → เทรนพัง |
+| **เล็กเกิน** | ไม่พัง แต่ช้า เผา GPU ฟรี |
+
+จุดที่พอดี **เปลี่ยนไปตลอดการเทรน** (ตอนต้นภูมิประเทศชันมาก ตอนปลายชันน้อย) —
+ค่าคงที่ตัวเดียวจึงผิดเสมอ อย่างน้อยก็ช่วงใดช่วงหนึ่ง · KL เหมาะเป็นตัววัดเพราะมันบอก
+ว่า **policy ตอนนี้ห่างจาก policy ที่ใช้เก็บข้อมูลรอบนี้ไปแค่ไหน** (เฉลี่ยบน state ที่เจอ
+ใน minibatch)
+
+> **ระวัง: ไม่ใช่ "ก้าวที่แล้วขยับไปเท่าไร"** — `old_mu_batch`/`old_sigma_batch` มาจาก
+> buffer (`rollout_storage.py:145-146`) ซึ่งบันทึกไว้ตอนเก็บ rollout · `kl_mean` จึงเป็น
+> **ระยะทางสะสม**ตั้งแต่ต้น `update()` ไม่ใช่ระยะของ gradient step ล่าสุด · ผลที่ตามมา
+> ที่สังเกตได้: ที่ minibatch แรกของทุก iteration ยังไม่มี `.step()` เกิดขึ้นเลย
+> $\mu,\sigma$ จึงเท่าของเก่าเป๊ะ และ `kl` เหลือแค่ $8\log(1+10^{-5}) \approx 8\times10^{-5}$
+> จาก $\varepsilon$ กันหารศูนย์ที่ `ppo.py:224` — ซึ่ง **น้อยกว่า 0.005** ทำให้กิ่ง "เร่ง"
+> ทำงาน **ทุก iteration** ที่ minibatch แรก
+>
+> **เกร็ด** — `anneal_lr = False` ([ppo.py:64](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L64))
+> จึงมีแต่กฎ KL อย่างเดียว · ถ้าเปิด `anneal_lr` มันจะ**ไม่ใช่**การลด `lr` ตามเวลาการเทรน
+> แต่เป็นฟันเลื่อยภายในหนึ่ง iteration (1.0 ลงไป 1/20 ข้าม 20 minibatch แล้วรีเซ็ต
+> เพราะ `num_updates` ถูกล้างทุกครั้งที่เข้า `update()` — [ppo.py:280-284](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L280-L284))
+>
+> **encoder มี `lr` ของตัวเองแยก** — `est_learning_rate = 1.0e-3` ซึ่งเป็น**ค่า default
+> ของ `PPO.__init__`** ([ppo.py:61](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L61))
+> ไม่ได้ตั้งใน cfg · ใช้สร้าง `extra_optimizer` ที่ [ppo.py:88-89](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L88-L89) ·
+> **KL ไม่แตะมันเลย** — ยืนยันได้ว่า `extra_optimizer.param_groups` ไม่เคยถูกเขียนที่ไหน
 
 ### Optimizer และ `.step()`
 
@@ -643,8 +784,8 @@ Tron1 ใช้ Adam ([ppo.py:85](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/p
 $$L \;=\; \underbrace{L^{CLIP}}_{\text{actor เรียน}} \;+\; \underbrace{1.0 \cdot L_V}_{\text{critic เรียน}} \;-\; \underbrace{0.01 \cdot H}_{\text{โบนัสความมั่ว}}$$
 
 ([ppo.py:274-278](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L274-L278) ·
-สัมประสิทธิ์ `1.0` และ `0.01` มาจาก [cfg:56](../tron1-rl-isaaclab/exts/bipedal_locomotion/bipedal_locomotion/tasks/locomotion/agents/limx_rsl_rl_ppo_cfg.py#L56)
-และ [cfg:59](../tron1-rl-isaaclab/exts/bipedal_locomotion/bipedal_locomotion/tasks/locomotion/agents/limx_rsl_rl_ppo_cfg.py#L59)
+สัมประสิทธิ์ `1.0` และ `0.01` มาจาก [cfg:94](../tron1-rl-isaaclab/exts/bipedal_locomotion/bipedal_locomotion/tasks/locomotion/agents/limx_rsl_rl_ppo_cfg.py#L94)
+และ [cfg:97](../tron1-rl-isaaclab/exts/bipedal_locomotion/bipedal_locomotion/tasks/locomotion/agents/limx_rsl_rl_ppo_cfg.py#L97)
 ไม่ใช่ค่าปริยายของ `ppo.py`)
 
 **อ่านเป็นภาษาคน** — "ทำให้ actor เลือกท่าที่ advantage สูงขึ้น **และ** ทำให้ critic
@@ -676,7 +817,7 @@ $L^{CLIP}$ จึงเป็น **ฟังก์ชันตัวแทน**:
 **พจน์ที่ 2 · $L_V$ — value loss** · critic ทำนาย $V(s)$ แล้วเทียบกับเป้า $R_t$
 ด้วยกำลังสองของส่วนต่าง · **แต่มีสองจุดที่ไม่ใช่ supervised ธรรมดา**
 
-1. repo นี้เปิด `use_clipped_value_loss = True` ([cfg:57](../tron1-rl-isaaclab/exts/bipedal_locomotion/bipedal_locomotion/tasks/locomotion/agents/limx_rsl_rl_ppo_cfg.py#L57))
+1. repo นี้เปิด `use_clipped_value_loss = True` ([cfg:95](../tron1-rl-isaaclab/exts/bipedal_locomotion/bipedal_locomotion/tasks/locomotion/agents/limx_rsl_rl_ppo_cfg.py#L95))
    สิ่งที่รันจริงคือ $\max$ ของ MSE สองแบบ ([ppo.py:263-269](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L263-L269))
    — MSE เปล่า ๆ อยู่ในกิ่ง `else` ที่ไม่ถูกใช้
 2. $R_t$ **ไม่ใช่ "ผลจริง"** — `rollout_storage.py:201` สร้างมันจาก
@@ -1635,7 +1776,7 @@ $$\ell_i \;\leftarrow\; \ell_i - \text{lr}\cdot\frac{\partial L}{\partial \ell_i
 | พจน์ใน loss | $\partial/\partial \ell_i$ | เพราะอะไร |
 | --- | --- | --- |
 | `value_loss` | **$0$** | critic เป็น NN คนละก้อน ([:111](../tron1-rl-isaaclab/rsl_rl/rsl_rl/modules/actor_critic.py#L111)) ไม่มีเส้นถึง `logstd` |
-| `entropy` × `entropy_coef` $= 0.01$ ([cfg:59](../tron1-rl-isaaclab/exts/bipedal_locomotion/bipedal_locomotion/tasks/locomotion/agents/limx_rsl_rl_ppo_cfg.py#L59)) | $-0.01 \cdot 1 = -0.01$ **เป๊ะ** | torch เขียน $H = \tfrac12 + \tfrac12\log 2\pi + \log\sigma = \tfrac12\log 2\pi e + \ell$ (`torch/.../normal.py:105` — ไม่ได้อยู่ใน repo นี้) → $\partial H/\partial\ell_i = 1$ |
+| `entropy` × `entropy_coef` $= 0.01$ ([cfg:97](../tron1-rl-isaaclab/exts/bipedal_locomotion/bipedal_locomotion/tasks/locomotion/agents/limx_rsl_rl_ppo_cfg.py#L97)) | $-0.01 \cdot 1 = -0.01$ **เป๊ะ** | torch เขียน $H = \tfrac12 + \tfrac12\log 2\pi + \log\sigma = \tfrac12\log 2\pi e + \ell$ (`torch/.../normal.py:105` — ไม่ได้อยู่ใน repo นี้) → $\partial H/\partial\ell_i = 1$ |
 | `surrogate_loss` | $-\hat{A}\rho\,(z_i^2-1)$ | โดย $z_i = (a_i-\mu_i)/\sigma_i$ |
 
 **รวมเป็นสูตรเดียวที่ต้องจำ** — ทิศที่ $\ell$ ขยับใน 1 gradient step
