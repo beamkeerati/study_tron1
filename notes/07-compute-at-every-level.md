@@ -1,8 +1,8 @@
 # 07 — การคำนวณในทุกระดับ: step · episode · iteration · epoch · mini-batch — derive ด้วยมือ
 
-> **หมายเหตุชั่วคราว (ระหว่างเรียบเรียงชุดโน้ตใหม่)** — เลขสมการของโน้ต 05 เปลี่ยนเป็นเลขเดียวทั้งชุดแล้ว
-> (ตารางแปลงอยู่ที่ [`00-glossary.md` หัวข้อ 9](00-glossary.md) และโน้ต 05 §5.2) · การอ้าง "สมการ (N)" ของโน้ต 05
-> ที่ปรากฏในโน้ตนี้ยังเป็น**เลขเดิม** จนกว่าโน้ตนี้จะถูกเรียบเรียงตาม (แผนขั้น B1/B2) · เลขหัวข้อของโน้ต 05 ในภาค 4 เปลี่ยนแล้ว (4.1–4.6 เดิม → 4.2–4.7; 4.1 ใหม่ = policy gradient; 3.3 = on-policy/importance sampling แทน bandits) — การอ้าง "หัวข้อ 3.3 / 4.x" ในโน้ตนี้ยังเป็นเลขเดิม
+> **ทุกคำ สัญลักษณ์ และเลขสมการ นิยามที่เดียวใน [`00-glossary.md`](00-glossary.md)** — เลขสมการ (N) ในโน้ตนี้
+> คือเลขเดียวกับโน้ต 05 · ตัวเลขทุกตัวของตาราง 2 × 4 อยู่ในอภิธานศัพท์หัวข้อ 8 และคำนวณด้วย
+> `scripts/toy_answer_key.py` (รันจากรากของ repo)
 >
 > โน้ตนี้มีเป้าหมายเดียว: **ให้คุณอธิบายกระบวนการเทรนทั้งหมดบนกระดานได้ด้วยมือ
 > โดยไม่ต้องเปิดโค้ด** — ทุกสูตรถูก derive จากสิ่งที่ง่ายกว่า และทุกตัวเลขคำนวณ
@@ -66,17 +66,17 @@ transition $(s, a, r, V, \log\pi, \text{done})$
 
 เพื่อให้คำนวณด้วยมือได้ ใช้ค่าคงที่กลม ๆ (ต่างจาก Tron1 จริง แต่สูตรเดียวกันเป๊ะ):
 
-| ค่าคงที่ | toy | Tron1 จริง | ความหมาย |
-| --- | --- | --- | --- |
-| $B$ (envs) | 2 | 2048 | จำนวนคอลัมน์ |
-| $T$ (steps) | 4 | 24 | จำนวนแถว |
-| action dim | 1 | 8 | มิติของ $a$ — ใช้ 1 เพื่อให้ $\log\pi$ มีพจน์เดียว |
-| $\gamma$ | 0.9 | 0.99 | discount |
-| $\lambda$ | 0.8 | 0.95 | GAE |
-| $\gamma\lambda$ | **0.72** | 0.9405 | ตัวถ่วงน้ำหนัก GAE — คำนวณล่วงหน้าไว้ |
-| $\sigma$ | 0.5 (คงที่) | เริ่ม 1.0 ค่อย ๆ ลด | ความกว้างการสุ่ม |
-| $\epsilon$ (clip) | 0.2 | 0.2 | ขอบ clip |
-| epochs × minibatches | 2 × 2 | 5 × 4 | gradient steps ต่อ iteration = 4 vs 20 |
+| ค่าคงที่ | toy | Tron1 จริง | ความหมาย | ค่า Tron1 มาจากบรรทัด |
+| --- | --- | --- | --- | --- |
+| $B$ (envs) | 2 | 2048 | จำนวนคอลัมน์ | CLI `--num_envs 2048` (`../README.md:265`); default ใน cfg 4096 `cfg/SF/limx_base_env_cfg.py:484` |
+| $T$ (steps) | 4 | 24 | จำนวนแถว | `num_steps_per_env` `limx_rsl_rl_ppo_cfg.py:81` |
+| action dim | 1 | 8 | มิติของ $a$ — ใช้ 1 เพื่อให้ $\log\pi$ มีพจน์เดียว | `ActionsCfg` `cfg/SF/limx_base_env_cfg.py:116-121` → 8 ข้อต่อ `solefoot_cfg.py:41-57` |
+| $\gamma$ | 0.9 | 0.99 | discount | `gamma` `cfg:102` |
+| $\lambda$ | 0.8 | 0.95 | GAE | `lam` `cfg:103` |
+| $\gamma\lambda$ | **0.72** | 0.9405 | ตัวถ่วงน้ำหนัก GAE — คำนวณล่วงหน้าไว้ | — |
+| $\sigma$ | 0.5 (คงที่, $\ell = -0.6931$) | เริ่ม 1.0 ค่อย ๆ ลด | ความกว้างการสุ่ม | `logstd = zeros` `actor_critic.py:118` |
+| $\epsilon$ (clip) | 0.2 | 0.2 | ขอบ clip | `clip_param` `cfg:96` |
+| epochs × minibatches | 2 × 2 | 5 × 4 | gradient steps ต่อ iteration = 4 vs 20 | `cfg:98-99` |
 
 **ข้อมูลดิบในตาราง 2 × 4** — สิ่งที่ "network คาย" ($\mu$, $V$) · "ลูกเต๋าของ policy" ($\varepsilon$ — สุ่มใน
 `.sample()` ไม่ใช่โลกให้) · "โลกให้มา" ($r$, done) ระหว่างช่วงเก็บข้อมูล (สมมติขึ้นให้ครบทุกกรณี: e1 ล้มที่ t=2):
@@ -106,7 +106,7 @@ transition $(s, a, r, V, \log\pi, \text{done})$
 
 ทุกช่องทำสี่อย่างนี้ **พร้อมกันทั้ง $B$ คอลัมน์** (tensor operation ครั้งเดียว):
 
-### 2.1 สุ่ม action — สมการ (8) ของโน้ต 05
+### 2.1 สุ่ม action — สมการ (16) ของโน้ต 05
 
 $$a = \mu + \sigma\,\varepsilon$$
 
@@ -123,7 +123,7 @@ $$a = \mu + \sigma\,\varepsilon$$
 
 ### 2.2 $\log\pi_{old}(a \mid s)$ — derive จาก Gaussian PDF
 
-เริ่มจากสมการ (7): $p(a) = \dfrac{1}{\sigma\sqrt{2\pi}} \exp\!\left(-\dfrac{(a-\mu)^2}{2\sigma^2}\right)$
+เริ่มจากสมการ (13): $p(a) = \dfrac{1}{\sigma\sqrt{2\pi}} \exp\!\left(-\dfrac{(a-\mu)^2}{2\sigma^2}\right)$
 
 ใส่ $\log$ ทั้งสองข้าง แล้วใช้กฎ $\log(xy) = \log x + \log y$ และ $\log e^u = u$:
 
@@ -132,7 +132,7 @@ $$a = \mu + \sigma\,\varepsilon$$
 | $\log p = \log\!\big(\tfrac{1}{\sigma\sqrt{2\pi}}\big) + \log\exp(\cdots)$ | แยกผลคูณเป็นผลบวก |
 | $= -\log\sigma - \log\sqrt{2\pi} - \dfrac{(a-\mu)^2}{2\sigma^2}$ | $\log\tfrac{1}{x} = -\log x$ และ $\log\sqrt{2\pi} = \tfrac12\log 2\pi$ |
 
-$$\boxed{\;\log\pi(a\mid s) = -\tfrac{1}{2}\ln 2\pi \;-\; \ln\sigma \;-\; \frac{(a-\mu)^2}{2\sigma^2}\;} \tag{7'}$$
+$$\boxed{\;\log\pi(a\mid s) = -\tfrac{1}{2}\ln 2\pi \;-\; \ln\sigma \;-\; \frac{(a-\mu)^2}{2\sigma^2}\;} \tag{14}$$
 
 สองพจน์แรก**คงที่ทั้งตาราง** (เพราะ $\sigma$ ไม่ขึ้นกับ state): $-\tfrac12\ln 2\pi = -0.9189$
 และ $-\ln 0.5 = +0.6931$ รวม $= -0.2258$ เหลือแค่พจน์สุดท้ายที่ต่างกันต่อช่อง:
@@ -155,7 +155,7 @@ $$\boxed{\;\log\pi(a\mid s) = -\tfrac{1}{2}\ln 2\pi \;-\; \ln\sigma \;-\; \frac{
 
 ### 2.3 $V(s)$ และ $r$, done
 
-$V$ มาจาก critic forward pass (สมการ (5) ซ้อน 4 ชั้น) — ในตัวอย่างนี้ให้มาแล้ว ·
+$V$ มาจาก critic forward pass (สมการ (10) ซ้อน 4 ชั้น) — ในตัวอย่างนี้ให้มาแล้ว ·
 $r$ กับ done มาจาก `env.step()` หลังส่ง $a \times 0.25$ เข้า PD (โน้ต 05 หัวข้อ 2.5)
 
 **สรุประดับ step:** หนึ่งช่องเก็บ 6 ค่า $(s,\ a,\ r,\ V,\ \log\pi_{old},\ \text{done})$
@@ -177,9 +177,16 @@ env 1 มี 2 episode ในตารางนี้: $\{t_0, t_1, t_2\}$ (จ�
 | จดผลรวม reward → `Mean reward` | logger | ไม่ (แค่บวก) |
 | **ตั้ง done=1 ที่ช่องสุดท้าย** | environment | **มีผลต่อ GAE ใน §4.2** |
 
-นั่นคือทั้งหมด — **ไม่มีสมการไหนในโน้ต 05 ที่คำนวณ "ต่อ episode"** สมการ (1) และ
-(2) พูดถึงผลรวมถึง $T$ ก็จริง แต่ในทางปฏิบัติถูกแทนด้วย bootstrap (§4.1) ทำให้
+นั่นคือทั้งหมด — **ไม่มีสมการไหนในโน้ต 05 ที่คำนวณ "ต่อ episode"** สมการ (2) และ
+(3) พูดถึงผลรวมถึง $T$ ก็จริง แต่ในทางปฏิบัติถูกแทนด้วย bootstrap (§4.1) ทำให้
 ไม่ต้องรอ episode จบเลย
+
+> **Remark — done มีสองสาเหตุ และโค้ดปฏิบัติต่างกัน.** ตารางนี้มีแต่กรณี*ล้ม* (`base_contact`
+> `cfg/SF/limx_base_env_cfg.py:451-454`) ซึ่งอนาคตถูกตัดจริง mask ใน §4.2 จึงตัดพจน์ bootstrap ทิ้ง
+> ถูกต้อง · แต่ *หมดเวลา* (`time_out` `:450`, 1000 step) อนาคตยังมี — `ppo.py:163-168` จึงบวก
+> $\gamma \cdot V(s_t)$ กลับเข้าไปใน $r_t$ **ก่อนเก็บลง buffer** (ใช้ $V$ ของช่องนั้นเองที่ critic
+> เพิ่งคำนวณ แทน $V(s_{t+1})$ ที่ไม่ได้คำนวณ — การประมาณของ rsl_rl) · ถ้า e1 t2 เป็นหมดเวลา
+> แทนล้ม ค่า $r$ ในตารางจะกลายเป็น $-2.0 + 0.9 \times 1.0 = -1.1$ ก่อนที่ §4 จะเห็นมัน
 
 ---
 
@@ -196,10 +203,10 @@ env 1 มี 2 episode ในตารางนี้: $\{t_0, t_1, t_2\}$ (จ�
 
 ### 4.2 TD-error $\delta_t$ — derive จากสมการ Bellman
 
-สมการ (3): $V(s_t) = \mathbb{E}[r_t + \gamma V(s_{t+1})]$ บอกว่า *ถ้า critic แม่น*
+สมการ (4): $V(s_t) = \mathbb{E}[r_t + \gamma V(s_{t+1}) \mid s_t]$ บอกว่า *ถ้า critic แม่น*
 ข้างซ้ายเท่าข้างขวา · **ส่วนต่าง**ระหว่างสองข้างจึงวัดว่า critic เดาพลาดเท่าไหร่:
 
-$$\boxed{\;\delta_t = r_t + \underbrace{(1-\text{done}_t)}_{\text{mask}}\,\gamma\, V(s_{t+1}) - V(s_t)\;} \tag{10'}$$
+$$\boxed{\;\delta_t = r_t + \underbrace{(1-\text{done}_t)}_{\text{mask}}\,\gamma\, V(s_{t+1}) - V(s_t)\;} \tag{19}$$
 
 พจน์ $(1-\text{done}_t)$ คือสิ่งที่โค้ดเรียก `next_is_not_terminal` — ถ้า episode จบ
 ที่ช่องนี้ **ไม่มี** $s_{t+1}$ ที่มีความหมาย (env reset ไปแล้ว) จึงต้องตัดพจน์ bootstrap
@@ -222,10 +229,10 @@ $$\boxed{\;\delta_t = r_t + \underbrace{(1-\text{done}_t)}_{\text{mask}}\,\gamma
 
 ### 4.3 Advantage $A_t$ — derive ว่า recursion กับ closed-form คือสิ่งเดียวกัน
 
-โน้ต 05 สมการ (11) เขียน GAE เป็นผลรวม: $A_t = \sum_{k\ge0}(\gamma\lambda)^k\delta_{t+k}$
+โน้ต 05 สมการ (25) เขียน GAE เป็นผลรวม: $A_t = \sum_{k\ge0}(\gamma\lambda)^k\delta_{t+k}$
 แต่โค้ดเขียนเป็น **recursion**:
 
-$$\boxed{\;A_t = \delta_t + (1-\text{done}_t)\,\gamma\lambda\, A_{t+1}, \qquad A_{T} = 0\;} \tag{11'}$$
+$$\boxed{\;A_t = \delta_t + (1-\text{done}_t)\,\gamma\lambda\, A_{t+1}, \qquad A_{T} = 0\;} \tag{26}$$
 
 **พิสูจน์ว่าเท่ากัน** (ไม่มี done): แทน $A_{t+1}$ ด้วยนิยามของมันเองซ้ำ ๆ
 
@@ -266,7 +273,7 @@ $$A_0^{(e1)} = \delta_0 + 0.72\,\delta_1 + 0.72^2\,\delta_2 + \underbrace{0\cdot
 
 ### 4.4 Return $R_t$ — เป้าที่ critic ต้องเรียนรู้
 
-$$R_t = A_t + V_t \tag{4'}$$
+$$R_t = A_t + V_t \tag{27}$$
 
 ทำไม: จากนิยาม $A = (\text{ผลจริง}) - (\text{ที่ critic เดา})$ → ผลจริง $= A + V$ ·
 นี่คือ "คำตอบเฉลย" ที่จะเอาไปสอน critic ใน §5.4
@@ -284,7 +291,7 @@ $$R_t = A_t + V_t \tag{4'}$$
 
 ### 4.5 Normalize advantage — ทำครั้งเดียวทั้งตาราง
 
-$$\hat A = \frac{A - \text{mean}(A)}{\text{std}(A) + 10^{-8}}$$
+$$\hat A = \frac{A - \text{mean}(A)}{\text{std}(A) + 10^{-8}} \tag{28}$$
 
 ทำไม: ทำให้ขนาดของ $A$ อยู่ราว ๆ $\pm 1$ เสมอไม่ว่า reward จะใหญ่หรือเล็ก → learning
 rate ตัวเดียวใช้ได้ทุกงาน · คำนวณจาก**ทั้ง 8 ค่า**พร้อมกัน (ทั้ง 49,152 ใน Tron1):
@@ -309,7 +316,7 @@ $$\text{std} = \sqrt{\frac{\sum (A_i - \text{mean})^2}{8-1}} = 1.1513$$
 
 **อ่านผล:** ทุก action ของ e0 กลายเป็น "ดีกว่าค่าเฉลี่ย" (บวก) และ e1 t0–t2 เป็น
 "แย่กว่า" (ลบ) — แม้ $A$ ดิบของ e0 จะติดลบทั้งหมด! เพราะ normalize วัด**เทียบกับ
-เพื่อนในตารางเดียวกัน** ไม่ใช่เทียบกับศูนย์ นี่คือเหตุผลที่โน้ต 05 หัวข้อ 4.4 เตือนว่า
+เพื่อนในตารางเดียวกัน** ไม่ใช่เทียบกับศูนย์ นี่คือเหตุผลที่โน้ต 05 หัวข้อ 4.5 เตือนว่า
 PPO ไม่ได้ดู reward ดิบ
 
 **สรุประดับ iteration (ครั้งเดียว):** ตารางตอนนี้มี $\hat A$ และ $R$ ครบทุกช่อง พร้อม
@@ -321,15 +328,15 @@ PPO ไม่ได้ดู reward ดิบ
 
 ### 5.1 หั่นตาราง
 
-8 ช่อง → สับลำดับ → หั่นเป็น 2 minibatch ละ 4 ช่อง · เดินครบทั้ง 2 = 1 epoch ·
-ทำ 2 epoch (สับใหม่ทุก epoch) = **4 gradient steps ต่อ iteration**
+8 ช่อง → สับลำดับ**ครั้งเดียว** (`torch.randperm` `rollout_storage.py:230` อยู่นอกลูป epoch `:251`)
+→ หั่นเป็น 2 minibatch ละ 4 ช่อง · เดินครบทั้ง 2 = 1 epoch · ทำ 2 epoch ด้วยการหั่นชุดเดิม
+= **4 gradient steps ต่อ iteration**
 
 ```text
-epoch 1:  สับ → mb₀ = {e0t0, e0t2, e1t1, e1t3}   → gradient step #1
-                mb₁ = {e0t1, e0t3, e1t0, e1t2}   → gradient step #2
-epoch 2:  สับใหม่ → mb₀' = {…4 ช่อง…}            → gradient step #3
-                    mb₁' = {…4 ช่อง…}            → gradient step #4
-                                                   (Tron1: 5 × 4 = 20 steps)
+สับครั้งเดียว:  mb₀ = {e0t0, e0t2, e1t1, e1t3}   mb₁ = {e0t1, e0t3, e1t0, e1t2}
+epoch 1:        mb₀ → gradient step #1            mb₁ → gradient step #2
+epoch 2:        mb₀ → gradient step #3            mb₁ → gradient step #4   (ชุดเดิม ไม่สับใหม่)
+                                                  (Tron1: 5 × 4 = 20 steps)
 ```
 
 **จุดสำคัญ:** ข้อมูล $(a, \log\pi_{old}, \hat A, R)$ ในตาราง**ไม่เปลี่ยน**ตลอด 4 steps
@@ -348,7 +355,7 @@ $$\rho = \frac{\pi_{new}(a\mid s)}{\pi_{old}(a\mid s)}
 = e^{\log\pi_{new} - \log\pi_{old}}$$
 
 จึงไม่ต้องคำนวณ $\pi$ ตรง ๆ แค่**ลบ log สองตัวแล้ว exp** — เสถียรกว่ามาก ·
-$\log\pi_{new}$ ใช้สูตร (7') เดิมแต่แทน $\mu_{new}$ และ $a$ *ตัวเดิม*จาก buffer:
+$\log\pi_{new}$ ใช้สมการ (14) เดิมแต่แทน $\mu_{new}$ และ $a$ *ตัวเดิม*จาก buffer:
 
 | ช่อง | $a$ | $\mu_{new}$ | $(a-\mu_{new})^2/0.5$ | $\log\pi_{new}$ | $\log\pi_{old}$ | $\Delta$ | $\rho = e^\Delta$ |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -360,11 +367,11 @@ $\log\pi_{new}$ ใช้สูตร (7') เดิมแต่แทน $\mu_{
 ทุก $\rho > 1$ เพราะ $\mu$ ขยับ*เข้าหา* $a$ ในทุกช่อง (บังเอิญจากที่เลือก +0.05) →
 policy ใหม่ "ชอบ" action เก่าเหล่านี้มากขึ้น 3–8%
 
-**(ข) Clipped surrogate — สมการ (12)**
+**(ข) Clipped surrogate — สมการ (29)**
 
 $$L_i = \max\big(-\rho_i\hat A_i,\; -\text{clip}(\rho_i, 0.8, 1.2)\,\hat A_i\big)$$
 
-(เขียนเป็น loss ที่ต้อง*ลด* จึงติดลบจากสมการ (12) และ $\min$ กลายเป็น $\max$ —
+(เขียนเป็น loss ที่ต้อง*ลด* จึงติดลบจากรูปของเปเปอร์ และ $\min$ กลายเป็น $\max$ —
 ตรงกับ [ppo.py:256-260](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L256-L260))
 
 | ช่อง | $\rho$ | clip$(\rho)$ | $\hat A$ | $-\rho\hat A$ | $-\text{clip}(\rho)\hat A$ | $L_i = \max$ | clip ทำงาน? |
@@ -380,14 +387,31 @@ $$L^{CLIP} = \text{mean}(L_i) = \frac{-0.8259 - 1.0526 + 1.0014 - 0.3062}{4} = \
 (policy ใหม่ดันชอบมัน*มากขึ้น*) — gradient จะแก้ตรงนี้ · ยังไม่มี clip เพราะ $\rho$
 ทุกตัวอยู่ใน $[0.8, 1.2]$ — ดู §5.3 ว่าเมื่อไหร่มันจะทำงาน
 
+**mb₁ — อีกสี่ช่อง ด้วยกฎ +0.05 เดียวกัน (มี $\rho < 1$ ให้ดู)**
+
+| ช่อง | $a$ | $\mu_{new}$ | $(a-\mu_{new})^2/0.5$ | $\log\pi_{new}$ | $\log\pi_{old}$ | $\Delta$ | $\rho$ | $\hat A$ | $L_i$ |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| e0 t1 | 0.20 | 0.35 | 0.0450 | −0.2708 | −0.2458 | −0.0250 | **0.9753** | +0.6452 | −0.6293 |
+| e0 t3 | 0.40 | 0.45 | 0.0050 | −0.2308 | −0.2258 | −0.0050 | **0.9950** | +0.7733 | −0.7695 |
+| e1 t0 | −0.40 | −0.05 | 0.2450 | −0.4708 | −0.4058 | −0.0650 | **0.9371** | −0.9874 | +0.9253 |
+| e1 t2 | 0.30 | 0.25 | 0.0050 | −0.2308 | −0.2458 | +0.0150 | 1.0151 | −1.5718 | +1.5955 |
+
+$$L^{CLIP}_{mb_1} = \frac{-0.6293 - 0.7695 + 0.9253 + 1.5955}{4} = \mathbf{+0.2805}$$
+
+**อ่าน:** สามช่องแรกได้ $\rho < 1$ เพราะ $a$ *ไม่สูงกว่า* $\mu_{old}$ (e0 t1: 0.20 < 0.30 · e0 t3: 0.40 = 0.40 พอดี) การขยับ
++0.05 แบบเหมารวมจึงเป็นการ*หนี* $a$ — policy ใหม่ชอบ action เก่าน้อยลง · นี่คือข้อจำกัดของ
+"กฎ +0.05" ที่ใช้เพื่อให้คำนวณตามได้: gradient จริง (ค) จะขยับแต่ละช่องคนละทิศ · และ mb₁ ให้
+$L^{CLIP}$ เป็น**บวก** เพราะสองช่องของ env 1 ที่ $\hat A < 0$ มี $|\hat A|$ ใหญ่ — loss บวกแปลว่า
+"ตอนนี้ policy ยังชอบ action แย่พวกนั้นอยู่" gradient จะดันออก
+
 **(ค) Gradient $\partial L/\partial\mu$ — derive ด้วยมือ: หัวใจของ "ทำไม policy ถึงเรียนรู้"**
 
 เมื่อ $\rho$ อยู่ในช่วง clip พจน์ที่ใช้คือ $-\rho\hat A$ · หาอนุพันธ์เทียบ $\mu_{new}$
 (ค่าที่ actor คาย) ผ่าน chain rule:
 
-| ขั้น | ผล | เหตุผล |
-| --- | --- | --- |
-| $\dfrac{\partial \log\pi}{\partial\mu} = \dfrac{\partial}{\partial\mu}\Big[-\dfrac{(a-\mu)^2}{2\sigma^2}\Big] = \dfrac{a-\mu}{\sigma^2}$ | จาก (7') พจน์เดียวที่มี $\mu$ · อนุพันธ์ของ $-(a-\mu)^2$ คือ $+2(a-\mu)$ |
+| ขั้น | เหตุผล |
+| --- | --- |
+| $\dfrac{\partial \log\pi}{\partial\mu} = \dfrac{\partial}{\partial\mu}\Big[-\dfrac{(a-\mu)^2}{2\sigma^2}\Big] = \dfrac{a-\mu}{\sigma^2}$ | จาก (14) พจน์เดียวที่มี $\mu$ — นี่คือสมการ (24) ของโน้ต 05 · อนุพันธ์ของ $-(a-\mu)^2$ คือ $+2(a-\mu)$ |
 | $\dfrac{\partial\rho}{\partial\mu} = \rho\cdot\dfrac{\partial\log\pi}{\partial\mu} = \rho\,\dfrac{a-\mu}{\sigma^2}$ | เพราะ $\rho = e^{\log\pi_{new} - c}$ และ $\frac{d}{dx}e^{f} = e^{f}f'$ |
 | $\dfrac{\partial L}{\partial\mu} = -\hat A\,\dfrac{\partial\rho}{\partial\mu}$ | $\hat A$ เป็นค่าคงที่ (มาจาก buffer) |
 
@@ -448,12 +472,12 @@ $+0.15$ ส่วนของ e1 t1 คือ $-0.15$ · แล้วลอง�
 **อ่านสองแถวล่าง:** $\rho$ หลุดกรอบเท่ากันเป๊ะ แต่ใน **ทิศที่ผิด** — $\max$ กลับเลือกพจน์ดิบ
 gradient ไหลเต็ม และเครื่องหมายของมันดึง $\mu$ กลับ · clip **ไม่เคยขวางการแก้ผิด**
 
-> **ปลายการเทรน $\sigma$ เล็กลง clip จะทำงานถี่ขึ้นมาก** — จาก (7′) สองครั้งได้
+> **ปลายการเทรน $\sigma$ เล็กลง clip จะทำงานถี่ขึ้นมาก** — จาก (14) สองครั้งได้
 > $\rho = \exp\!\Big(\tfrac{(a-\mu_{old})^2 - (a-\mu_{new})^2}{2\sigma^2}\Big)$ · ถ้า $\sigma = 0.25$ การขยับ +0.15
 > เดียวกันบน e0 t2 ($a - \mu_{old} = 0.40$, $a - \mu_{new} = 0.25$) ให้
-> $\rho = \exp\!\big(\tfrac{0.40^2 - 0.25^2}{2\cdot 0.25^2}\big) = \exp(0.78) = 2.18$ ทะลุกรอบไปไกล · นี่คือความหมายเชิงปฏิบัติของ trade-off ในโน้ต 05 หัวข้อ 4.6 เรื่องจำนวน epoch
+> $\rho = \exp\!\big(\tfrac{0.40^2 - 0.25^2}{2\cdot 0.25^2}\big) = \exp(0.78) = 2.18$ ทะลุกรอบไปไกล · นี่คือความหมายเชิงปฏิบัติของ trade-off ในโน้ต 05 หัวข้อ 4.7 เรื่องจำนวน epoch
 
-**ตารางสรุปว่า clip ทำงานเมื่อไหร่** (ตรงกับที่โน้ต 05 หัวข้อ 4.5 อธิบายด้วยคำพูด):
+**ตารางสรุปว่า clip ทำงานเมื่อไหร่** (ตรงกับตารางเดียวกันในโน้ต 05 หัวข้อ 4.6 (ก)):
 
 | $\hat A$ | $\rho > 1+\epsilon$ (ชอบมากขึ้น) | $\rho < 1-\epsilon$ (ชอบน้อยลง) |
 | --- | --- | --- |
@@ -467,7 +491,7 @@ clip ปิด gradient เฉพาะ**ทิศที่เคลื่อน
 เป้าคือ $R$ จาก §4.4 · critic คายค่าใหม่ $V_{new}$ (weight $\phi$ เปลี่ยนไปแล้ว):
 
 $$L_V = \text{mean}\Big[\max\big((V_{new} - R)^2,\; (V_{clip} - R)^2\big)\Big],
-\quad V_{clip} = V_{old} + \text{clip}(V_{new} - V_{old}, -0.2, 0.2)$$
+\quad V_{clip} = V_{old} + \text{clip}(V_{new} - V_{old}, -0.2, 0.2) \tag{32}$$
 
 ตัวอย่างช่อง e0 t0 ($V_{old} = 5.0$, $R = 4.7278$):
 
@@ -481,19 +505,19 @@ $\max$ ทำให้ critic ถูก "ลงโทษแบบระวัง
 
 ### 5.5 Entropy — derive สำหรับ Gaussian
 
-นิยาม $H = -\mathbb{E}[\log p(a)]$ · แทน (7') แล้วใช้ $\mathbb{E}[(a-\mu)^2] = \sigma^2$:
+นิยาม $H = -\mathbb{E}[\log p(a)]$ · แทน (14) แล้วใช้ $\mathbb{E}[(a-\mu)^2] = \sigma^2$:
 
 $$H = -\mathbb{E}\Big[-\tfrac12\ln 2\pi - \ln\sigma - \tfrac{(a-\mu)^2}{2\sigma^2}\Big]
 = \tfrac12\ln 2\pi + \ln\sigma + \frac{\sigma^2}{2\sigma^2}
-= \boxed{\tfrac12 + \tfrac12\ln 2\pi + \ln\sigma}$$
+= \boxed{\tfrac12 + \tfrac12\ln 2\pi + \ln\sigma} \tag{31}$$
 
 ที่ $\sigma = 0.5$: $H = 0.5 + 0.9189 - 0.6931 = \mathbf{0.7258}$ · ขึ้นกับ $\sigma$
-อย่างเดียว — ยิ่ง $\sigma$ เล็ก $H$ ยิ่งต่ำ (ติดลบได้) · โบนัส $+0.01H$ ใน loss จึงต้าน
-การหด $\sigma$ (โน้ต 05 หัวข้อ 4.5 ค)
+อย่างเดียว — ยิ่ง $\sigma$ เล็ก $H$ ยิ่งต่ำ (ติดลบได้) · พจน์ $-0.01H$ ใน loss (= บวกโบนัสเข้า objective) จึงต้าน
+การหด $\sigma$ (โน้ต 05 หัวข้อ 4.6 ค)
 
 ### 5.6 รวม loss แล้วก้าว
 
-$$L = L^{CLIP} + 1.0\,L_V - 0.01\,H$$
+$$L = L^{CLIP} + 1.0\,L_V - 0.01\,H \tag{33}$$
 
 `loss.backward()` → gradient ทุก weight ($\theta$ ของ actor, $\phi$ ของ critic,
 logstd) · `clip_grad_norm_(1.0)` · `optimizer.step()` → **จบ 1 gradient step** ·
@@ -502,9 +526,9 @@ logstd) · `clip_grad_norm_(1.0)` · `optimizer.step()` → **จบ 1 gradient 
 ### 5.7 KL → ปรับ lr — derive สำหรับ Gaussian
 
 KL ระหว่าง $\mathcal N(\mu_o, \sigma_o)$ กับ $\mathcal N(\mu_n, \sigma_n)$ (สูตรมาตรฐาน,
-ตรงกับ [ppo.py:222-230](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L222-L230) ทุกพจน์):
+ตรงกับ [ppo.py:223-232](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L223-L232) ทุกพจน์ — สมการ (30) ของโน้ต 05):
 
-$$KL = \ln\frac{\sigma_n}{\sigma_o} + \frac{\sigma_o^2 + (\mu_o - \mu_n)^2}{2\sigma_n^2} - \tfrac12$$
+$$KL = \ln\frac{\sigma_n}{\sigma_o} + \frac{\sigma_o^2 + (\mu_o - \mu_n)^2}{2\sigma_n^2} - \tfrac12 \tag{30}$$
 
 กรณี $\sigma$ เท่ากัน สองพจน์ตัดกันเหลือ $\dfrac{(\Delta\mu)^2}{2\sigma^2}$ · ที่ $\Delta\mu = 0.05$:
 $KL = 0.0025/0.5 = \mathbf{0.0050}$
@@ -525,15 +549,16 @@ $\Delta\mu/\sigma$ อย่างเดียว — action ที่สุ่�
 | --- | --- | --- | --- |
 | ช่องในตาราง | 2 × 4 = 8 | 2048 × 24 = **49,152** | `num_envs × num_steps_per_env` |
 | $\log\pi$ ต่อช่อง | 1 พจน์ | **ผลรวม 8 พจน์** (8 ข้อต่อ อิสระ) | `.sum(dim=-1)` — โน้ต 05 หัวข้อ 2.3 |
-| $\gamma\lambda$ | 0.72 | 0.9405 | horizon ≈ 17 steps — โน้ต 05 หัวข้อ 4.6 |
+| $\gamma\lambda$ | 0.72 | 0.9405 | horizon 3.6 vs ≈ 17 step — สมการ (34) โน้ต 05 หัวข้อ 4.7 |
 | GAE | 4 ก้าวย้อน × 2 คอลัมน์ | 24 ก้าวย้อน × 2048 คอลัมน์ **พร้อมกัน** | vectorized บน GPU |
 | normalize | จาก 8 ค่า | จาก 49,152 ค่า | |
 | minibatch | 4 ช่อง | **12,288** ช่อง | `49152 / num_mini_batches 4` |
 | gradient steps / iteration | 2 × 2 = 4 | 5 × 4 = **20** | `num_learning_epochs × num_mini_batches` |
 | $\partial L/\partial\mu$ | 1 ตัวเลขต่อช่อง | 8 ตัวเลขต่อช่อง | ต่อข้อต่อ |
-| $\partial L/\partial\theta$ | — | **187,272** ตัวเลข (actor) | backprop ผ่าน MLP |
+| $\partial L/\partial\theta$ | — | **187,280** ตัวเลข (actor 187,272 + $\ell$ 8) · ทั้ง optimizer หลัก 469,905 | backprop ผ่าน MLP |
+| ขนาดของ $V$, $\delta$, $L_V$ ต่อช่อง | 3–5 · ±3 · ~0.05 | ~650 · ~28 · ~781 | **ตัวเลขประกอบ**จากเอกสารต้นทาง (`sources/`) ไม่ใช่ค่าวัดจริง — reward ของ Tron1 รวม 20 พจน์ต่อ step และ episode ยาว 1000 step ค่า $V$ จึงใหญ่กว่า toy สองร้อยเท่า |
 | iterations | 1 | 15,000 | ตารางใหม่ 15,000 ใบ |
-| เวลาจริงต่อ iteration | — | ~0.6 s (collection 0.42 + learning 0.18) | ล็อกของ `train.py` |
+| เวลาจริงต่อ iteration | — | ~0.6 s (collection 0.42 + learning 0.18) | **ตัวอย่างรูปแบบล็อก**ของ `train.py` — ยังไม่ได้วัดจริง (exp_001 ยังไม่รัน) |
 
 ---
 
@@ -541,24 +566,27 @@ $\Delta\mu/\sigma$ อย่างเดียว — action ที่สุ่�
 
 เรียงตามลำดับที่เกิดจริง พร้อมระดับที่มันอยู่:
 
-| # | ระดับ | สูตร | อ่านว่า |
-| --- | --- | --- | --- |
-| 1 | step | $a = \mu_\theta(s) + \sigma\varepsilon,\ \varepsilon\sim\mathcal N(0,1)$ | สุ่มรอบค่าที่ actor คิดว่าดี |
-| 2 | step | $\log\pi = -\tfrac12\ln2\pi - \ln\sigma - \frac{(a-\mu)^2}{2\sigma^2}$ | เก็บไว้เป็นค่าอ้างอิง |
-| 3 | step | $V = V_\phi(s)$ · $r, \text{done} = \text{env}(a)$ | critic เดา · โลกตอบ |
-| 4 | iteration | $V_{last} = V_\phi(s_T)$ | bootstrap ที่ขอบตาราง |
-| 5 | iteration | $\delta_t = r_t + (1-d_t)\gamma V_{t+1} - V_t$ | critic พลาดเท่าไหร่ |
-| 6 | iteration | $A_t = \delta_t + (1-d_t)\gamma\lambda A_{t+1}$ | เครดิตสะสม ย้อนหลัง |
-| 7 | iteration | $R_t = A_t + V_t$ | เป้าของ critic |
-| 8 | iteration | $\hat A = (A - \bar A)/\text{std}_{n-1}(A)$ | เทียบกับเพื่อนในตาราง |
-| 9 | minibatch | $\rho = \exp(\log\pi_{new} - \log\pi_{old})$ | ชอบมากขึ้นกี่เท่า |
-| 10 | minibatch | $L^{CLIP} = \text{mean}\max(-\rho\hat A, -\text{clip}(\rho)\hat A)$ | ให้รางวัลแต่ไม่เกิน 20% |
-| 11 | minibatch | $L_V = \text{mean}\max((V-R)^2, (V_{clip}-R)^2)$ | สอน critic |
-| 12 | minibatch | $H = \tfrac12 + \tfrac12\ln2\pi + \ln\sigma$ | ยังสำรวจอยู่ไหม |
-| 13 | minibatch | $L = L^{CLIP} + L_V - 0.01H$ · $\theta \leftarrow \theta - \alpha\nabla_\theta L$ | ก้าวหนึ่งก้าว |
-| 14 | minibatch | $\partial L/\partial\mu = -\hat A\rho(a-\mu)/\sigma^2$ | **ทิศทางการเรียนรู้** |
-| 15 | minibatch | $KL = \ln\frac{\sigma_n}{\sigma_o} + \frac{\sigma_o^2+(\Delta\mu)^2}{2\sigma_n^2} - \tfrac12$ → lr ×/÷ 1.5 | เบรกอัตโนมัติ |
-| — | episode | *(ไม่มี)* — แค่ $d_t$ ในสูตร 5–6 | reset + วัดผล |
+เลขในคอลัมน์ "สมการ" คือเลขเดียวกับโน้ต 05 และอภิธานศัพท์หัวข้อ 9 — ตารางนี้คือดัชนีนั้น
+มองตามระดับ ไม่ใช่สำเนาชุดที่สี่:
+
+| # | ระดับ | สูตร | สมการ | อ่านว่า |
+| --- | --- | --- | --- | --- |
+| 1 | step | $a = \mu_\theta(s) + \sigma\varepsilon,\ \varepsilon\sim\mathcal N(0,1)$ | (9) (16) | สุ่มรอบค่าที่ actor คิดว่าดี |
+| 2 | step | $\log\pi = -\tfrac12\ln2\pi - \ln\sigma - \frac{(a-\mu)^2}{2\sigma^2}$ | (14) (15) | เก็บไว้เป็นค่าอ้างอิง |
+| 3 | step | $V = V_\phi(s)$ · $r, \text{done} = \text{env}(a)$ | (3) (10) · (17) (18) | critic เดา · โลกตอบ |
+| 4 | iteration | $V_{last} = V_\phi(s_T)$ | — (bootstrap) | bootstrap ที่ขอบตาราง |
+| 5 | iteration | $\delta_t = r_t + (1-d_t)\gamma V_{t+1} - V_t$ | (19) | critic พลาดเท่าไหร่ |
+| 6 | iteration | $A_t = \delta_t + (1-d_t)\gamma\lambda A_{t+1}$ | (26) ≡ (25) | เครดิตสะสม ย้อนหลัง |
+| 7 | iteration | $R_t = A_t + V_t$ | (27) | เป้าของ critic |
+| 8 | iteration | $\hat A = (A - \bar A)/\text{std}_{n-1}(A)$ | (28) | เทียบกับเพื่อนในตาราง |
+| 9 | minibatch | $\rho = \exp(\log\pi_{new} - \log\pi_{old})$ | (21) | ชอบมากขึ้นกี่เท่า |
+| 10 | minibatch | $L^{CLIP} = \text{mean}\max(-\rho\hat A, -\text{clip}(\rho)\hat A)$ | (29) | ให้รางวัลแต่ไม่เกิน 20% |
+| 11 | minibatch | $L_V = \text{mean}\max((V-R)^2, (V_{clip}-R)^2)$ | (32) | สอน critic |
+| 12 | minibatch | $H = \tfrac12 + \tfrac12\ln2\pi + \ln\sigma$ | (31) | ยังสำรวจอยู่ไหม |
+| 13 | minibatch | $L = L^{CLIP} + L_V - 0.01H$ · $\theta \leftarrow \theta - \alpha\nabla_\theta L$ | (33) (12) · (36) Adam | ก้าวหนึ่งก้าว |
+| 14 | minibatch | $\partial L/\partial\mu = -\hat A\rho(a-\mu)/\sigma^2$ | (G) จาก (24) · (35) สำหรับ $\ell$ | **ทิศทางการเรียนรู้** |
+| 15 | minibatch | $KL = \ln\frac{\sigma_n}{\sigma_o} + \frac{\sigma_o^2+(\Delta\mu)^2}{2\sigma_n^2} - \tfrac12$ → lr ×/÷ 1.5 | (30) (37) | เบรกอัตโนมัติ |
+| — | episode | *(ไม่มี)* — แค่ $d_t$ ในสูตร 5–6 | — | reset + วัดผล |
 
 **ถ้าต้องอธิบายให้คนอื่นใน 3 ประโยค:**
 (1) ทุก step สุ่ม action รอบ $\mu$ แล้วจดว่า "ตอนนั้นชอบมันแค่ไหน" ($\log\pi_{old}$)
@@ -568,6 +596,6 @@ $\Delta\mu/\sigma$ อย่างเดียว — action ที่สุ่�
 
 ---
 
-*ตัวเลขทุกตัวคำนวณและตรวจด้วย Python 2026-09-10 · สูตรตรวจกับ `ppo.py`,
-`rollout_storage.py`, `actor_critic.py` ใน `tron1-rl-isaaclab/rsl_rl/` · ถ้าอยากตรวจเอง
-สคริปต์สั้น ๆ อยู่ท้ายโน้ต 06 §3 (ฟังก์ชัน `pdf`) ต่อยอดได้เลย*
+*ตัวเลขทุกตัวคำนวณและตรวจด้วย Python 2026-09-11 (`scripts/toy_answer_key.py` — รันจากรากของ
+repo ได้เลข ทุกช่อง ทุกระดับ รวมคู่แฝดและ KL) · สูตรตรวจกับ `ppo.py`, `rollout_storage.py`,
+`actor_critic.py` ใน `tron1-rl-isaaclab/rsl_rl/` · เวอร์ชัน 8 มิติของช่อง e0 t0 อยู่โน้ต 06 §3.5.5*

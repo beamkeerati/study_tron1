@@ -37,6 +37,20 @@ code contradicts the note, **the note is wrong**.
   = 125,699 · total 595,604. The **policy's** θ is actor + logstd = 187,280,
   which is not the same number — keep them apart.
 
+### One glossary, one definition
+
+Every term, symbol, abbreviation, config constant and equation number used by
+notes 05–07 is defined **once**, in `notes/00-glossary.md` (row shape: ชนิด ·
+ความหมาย · โค้ด · ค่าใน toy · ใช้ครั้งแรก · สูตร). A note may *teach* a term
+(picture, derivation, meaning) but may not re-define it in its own words, and
+must use the glossary's type and wording. Equation numbers are one global
+sequence: 05 owns (1)–(34), 06 adds (35)–(37), 07 has (G); never introduce a
+local numbering. The running example (2 env × 4 step, glossary §8) is the only
+worked example — every number quoted must come from `scripts/toy_answer_key.py`.
+Glyph rules live in glossary §7 (`\epsilon` clip vs `\varepsilon` noise, `h`
+= obsHistory, latent is `\hat v`, never bare `R` or `A`, 𝒩(μ, σ) with σ the
+standard deviation).
+
 ### After ANY edit to `notes/**` — run the reviewer
 
 Invoke the `notes-reviewer` subagent (`.claude/agents/notes-reviewer.md`) via

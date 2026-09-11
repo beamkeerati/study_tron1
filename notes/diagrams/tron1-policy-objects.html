@@ -150,7 +150,7 @@
       <text x="74" y="207" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">INPUT</text>
       <foreignObject x="52" y="216" width="160" height="26"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:15px;color:#2d3142;line-height:26px;">\(s\)</div></foreignObject>
       <foreignObject x="52" y="244" width="160" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:9px;color:#2d3142;line-height:16px;"><span class="tx">obs</span></div></foreignObject>
-      <foreignObject x="52" y="262" width="160" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:8.5px;color:#4f5d75;line-height:16px;">\(z\,3+\mathrm{obs}\,36+\mathrm{cmd}\,3\)</div></foreignObject>
+      <foreignObject x="52" y="262" width="160" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:8.5px;color:#4f5d75;line-height:16px;">\(\hat v\,3+\mathrm{obs}\,36+\mathrm{cmd}\,3\)</div></foreignObject>
       <foreignObject x="52" y="278" width="160" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:8.5px;color:#7a8399;line-height:16px;"><span class="th">ตัวเลขล้วน · เปลี่ยนทุกสเต็ป</span></div></foreignObject>
 
       <!-- ============ CARD B — the policy (function / NN) ============ -->
@@ -181,7 +181,7 @@
       <text x="978" y="157" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">TENSOR (8,)</text>
       <foreignObject x="940" y="164" width="208" height="24"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:13px;color:#2d3142;line-height:24px;">\(a\sim\pi_\theta(\cdot\mid s)\)</div></foreignObject>
       <foreignObject x="940" y="190" width="208" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:9px;color:#2d3142;line-height:16px;"><span class="tx">distribution.sample()</span></div></foreignObject>
-      <foreignObject x="940" y="208" width="208" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:8.5px;color:#4f5d75;line-height:16px;">\([0.61,-0.37,0.505,\dots]\)</div></foreignObject>
+      <foreignObject x="940" y="208" width="208" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:8.5px;color:#4f5d75;line-height:16px;">\([0.40,-0.40,0.40,\dots]\)</div></foreignObject>
       <foreignObject x="940" y="224" width="208" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:8.5px;color:#7a8399;line-height:16px;"><span class="th">เรียกซ้ำได้ค่าใหม่ — ไม่ใช่ฟังก์ชัน</span></div></foreignObject>
 
       <!-- the a that gets evaluated: during rollout it is the one just sampled -->
@@ -198,7 +198,7 @@
       <text x="965" y="281" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">SCALAR</text>
       <foreignObject x="940" y="288" width="208" height="24"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:13px;color:#2d3142;line-height:24px;">\(\pi_\theta(a\mid s)\)</div></foreignObject>
       <foreignObject x="940" y="312" width="208" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:9px;color:#2d3142;line-height:16px;"><span class="tx">.log_prob(a).sum(-1)</span></div></foreignObject>
-      <foreignObject x="940" y="328" width="208" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:8.5px;color:#4f5d75;line-height:16px;">\(0.03352\ \Rightarrow\ \log=-3.3955\)</div></foreignObject>
+      <foreignObject x="940" y="328" width="208" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:8.5px;color:#4f5d75;line-height:16px;">\(0.03592\ \Rightarrow\ \log=-3.3263\)</div></foreignObject>
       <foreignObject x="940" y="344" width="208" height="16"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:8.5px;color:#7a8399;line-height:16px;"><span class="th">ต้องป้อน</span>&#160;\(a\)&#160;<span class="th">เข้าไป — ไม่ได้ผลิต</span>&#160;\(a\)&#160;<span class="th">เอง</span></div></foreignObject>
 
       <!-- ============ zone footnotes ============ -->

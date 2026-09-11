@@ -1,56 +1,37 @@
-# 06 — สะพานเชื่อม: walkthrough ↔ โน้ต 05 ↔ โค้ดจริง
+# 06 — สะพานเชื่อม: โน้ต 05 ↔ โน้ต 07 ↔ โค้ดจริง
 
-> **หมายเหตุชั่วคราว (ระหว่างเรียบเรียงชุดโน้ตใหม่)** — เลขสมการของโน้ต 05 เปลี่ยนเป็นเลขเดียวทั้งชุดแล้ว
-> (ตารางแปลงอยู่ที่ [`00-glossary.md` หัวข้อ 9](00-glossary.md) และโน้ต 05 §5.2) · การอ้าง "สมการ (N)" ของโน้ต 05
-> ที่ปรากฏในโน้ตนี้ยังเป็น**เลขเดิม** จนกว่าโน้ตนี้จะถูกเรียบเรียงตาม (แผนขั้น B1/B2) · เลขหัวข้อของโน้ต 05 ในภาค 4 เปลี่ยนแล้ว (4.1–4.6 เดิม → 4.2–4.7; 4.1 ใหม่ = policy gradient; 3.3 = on-policy/importance sampling แทน bandits) — การอ้าง "หัวข้อ 3.3 / 4.x" ในโน้ตนี้ยังเป็นเลขเดิม
+> โน้ต 05 อธิบาย *ทฤษฎี* จากศูนย์ (สมการ (1)–(34)) และโน้ต 07 ไล่ *ตัวเลข* ของตาราง 2 × 4
+> ครบหนึ่ง iteration · โน้ตนี้เป็นสะพานระหว่างสองอย่างนั้นกับ**บรรทัดโค้ดจริง** ทำสี่อย่าง:
+> (1) ตารางเชื่อม โน้ต 05 → สมการ → โค้ด ทีละสิ่งที่เกิดขึ้น (§2)
+> (2) สอนวิธีอ่าน notation ให้ได้ความหมายเชิงสัญชาตญาณ (§3) และกลไกระดับโค้ดของการปรับ
+> weight — $\ell$ กับ `.grad`, Adam, กฎ lr — พร้อมสมการ (35)–(37) ที่โน้ต 05 ไม่ได้ derive (§3.4)
+> (3) ไล่สายส่งค่าจาก observation ถึง gradient ทีละสมการ (E1–E15) พร้อมโค้ด 1:1 และ
+> เวกเตอร์ 8 มิติจริง (§3.5)
+> (4) errata ของเอกสารต้นทาง `sources/training_numerical_walkthrough.md` (§4) —
+> **ทุกข้ออ้างในโน้ตนี้ตรวจกับโค้ดใน `tron1-rl-isaaclab/` แล้ว**
 >
-> โน้ต 05 อธิบาย *ทฤษฎี* จากศูนย์ ส่วน `training_numerical_walkthrough.md`
-> (เอกสารจาก Gemini/antigravity) ไล่ *ตัวเลขและ shape* ผ่าน 1 iteration
-> โน้ตนี้ทำสี่อย่าง: (1) ต่อสองเอกสารนั้นเข้าด้วยกันและเข้ากับบรรทัดโค้ดจริง
-> (2) สอนวิธีอ่าน notation ให้ได้ความหมายเชิงสัญชาตญาณ (3) ไล่สายส่งค่าจาก
-> observation ถึง gradient ทีละสมการ (E1–E15) พร้อมโค้ด 1:1 และตัวเลขจริง (§3.5)
-> (4) ชี้จุดที่ walkthrough หลวมหรือผิด — **ทุกข้ออ้างในโน้ตนี้ตรวจกับโค้ดใน `tron1-rl-isaaclab/` แล้ว**
+> **ทุกคำ ตัวย่อ สัญลักษณ์ และเลขสมการ นิยามที่เดียวใน [`00-glossary.md`](00-glossary.md)** —
+> โน้ตนี้ไม่นิยามซ้ำ (ตัวย่อ: หัวข้อ 1 · สัญลักษณ์: หัวข้อ 4–5 · คู่ที่สับสน: หัวข้อ 7 ·
+> ค่าทุกตัวของตาราง 2 × 4: หัวข้อ 8) · ตัวเลข 8 มิติใน §3.5.5 คือ "การขยาย" ช่อง e0 t0
+> ของตารางนั้น (อภิธานศัพท์หัวข้อ 8.6)
 >
-> ไดอะแกรมประกอบห้าชิ้น เปิดใน browser (สมการ render ด้วย MathJax):
+> ไดอะแกรมประกอบหกชิ้น เปิดใน browser (สมการ render ด้วย MathJax):
 > **A** [`tron1-actor-critic.html`](diagrams/tron1-actor-critic.html) ·
 > **B** [`tron1-ppo-iteration.html`](diagrams/tron1-ppo-iteration.html) ·
 > **C** [`tron1-value-flow.html`](diagrams/tron1-value-flow.html) ·
 > **D** [`tron1-deploy.html`](diagrams/tron1-deploy.html) ·
-> **E** [`tron1-policy-objects.html`](diagrams/tron1-policy-objects.html)
+> **E** [`tron1-policy-objects.html`](diagrams/tron1-policy-objects.html) ·
+> **F** [`tron1-five-units.html`](diagrams/tron1-five-units.html)
 
 ---
 
-## ตัวย่อทั้งหมดในโน้ตนี้
+## ตัวย่อและสัญลักษณ์ — อยู่ในอภิธานศัพท์
 
-อ่านก่อนเริ่ม · โน้ตนี้ใช้ตัวย่อเยอะและใช้ตั้งแต่บรรทัดแรก ๆ ตารางนี้กางให้ครบทีเดียว
-จะได้ไม่ต้องเดา
-
-| ตัวย่อ | ย่อมาจาก | คือ |
-| --- | --- | --- |
-| **RL** | Reinforcement Learning | การเรียนรู้แบบเสริมกำลัง — เรียนจากรางวัล ไม่ใช่จากเฉลย |
-| **PPO** | **P**roximal **P**olicy **O**ptimization | อัลกอริทึมที่ Tron1 ใช้เทรน · "proximal" = ห้ามขยับไกลจากของเดิม |
-| **TRPO** | Trust Region Policy Optimization | รุ่นพี่ของ PPO · บังคับระยะด้วยข้อจำกัดแทนการ clip |
-| **SAC** · **DDPG** · **TD3** | Soft Actor-Critic · Deep Deterministic Policy Gradient · Twin Delayed DDPG | อัลกอริทึมตระกูลอื่น · โน้ตนี้อ้างถึงเพื่อ**เทียบ**เท่านั้น ไม่ได้ใช้ |
-| **MDP** · **POMDP** | (Partially Observable) **M**arkov **D**ecision **P**rocess | กรอบคณิตศาสตร์ของปัญหา · "PO" = มองเห็นไม่ครบ ซึ่งเป็นกรณีของ Tron1 |
-| **GAE** | **G**eneralized **A**dvantage **E**stimation | วิธีประมาณ advantage ที่ Tron1 ใช้ |
-| **TD** | **T**emporal **D**ifference | "ผลจริงก้าวนี้ ต่างจากที่ critic เดาเท่าไร" |
-| **KL** | **K**ullback–**L**eibler divergence | ตัววัดว่าการแจกแจงสองอันต่างกันแค่ไหน — **ชื่อคนสองคน ไม่ใช่ตัวย่อศัพท์** · §3.4 |
-| **MSE** | **M**ean **S**quared **E**rror | ค่าเฉลี่ยของกำลังสองของส่วนต่าง — วิธีวัดว่าทำนายพลาดแค่ไหน |
-| **lr** | **l**earning **r**ate | ก้าวยาวแค่ไหนต่อหนึ่งสเต็ป · เขียนแทนด้วย $\alpha$ ก็ได้ · §3.4 |
-| **SGD** | **S**tochastic **G**radient **D**escent | กฎอัปเดตแบบง่ายสุด "ไถลลงเนิน" · §3.4 |
-| **SNR** | **S**ignal-to-**N**oise **R**atio | อัตราส่วนสัญญาณต่อสัญญาณรบกวน · ใช้อธิบายพฤติกรรมของ Adam · §3.4 |
-| **RNG** | **R**andom **N**umber **G**enerator | ตัวสร้างเลขสุ่มของเครื่อง |
-| **MLP** | **M**ulti-**L**ayer **P**erceptron | โครงข่ายประสาทแบบชั้นซ้อนธรรมดา (ไม่มี convolution ไม่มี recurrence) |
-| **NN** | **N**eural **N**etwork | โครงข่ายประสาทเทียม |
-| **ELU** | **E**xponential **L**inear **U**nit | ฟังก์ชันกระตุ้นที่ Tron1 ใช้ (`activation="elu"`) |
-| **VAE** | **V**ariational **A**uto**E**ncoder | สถาปัตยกรรมที่ encoder ของ repo นี้ **ปิดไว้** (`is_vae = False`) |
-| **ONNX** | **O**pen **N**eural **N**etwork **E**xchange | รูปแบบไฟล์กลางสำหรับ export โมเดลไปรันที่อื่น |
-| **PD** | **P**roportional–**D**erivative controller | ตัวคุมมอเตอร์ชั้นล่างสุด แปลงมุมเป้าหมายเป็นแรงบิด |
-| **IMU** | **I**nertial **M**easurement Unit | เซนเซอร์วัดความเร่งและอัตราหมุน |
-| **GPU** · **VRAM** | Graphics Processing Unit · Video RAM | การ์ดจอและหน่วยความจำบนการ์ด |
-
-> **Adam ไม่ใช่ตัวย่อ** — เป็นชื่อเรียกของ optimizer (มาจาก *adaptive moment estimation*
-> แต่ในทางปฏิบัติใช้เป็นชื่อเฉพาะ) · §3.4 อธิบายว่ามันทำอะไร
+โน้ตนี้ใช้ตัวย่อตั้งแต่บรรทัดแรก ๆ (RL, PPO, GAE, TD, KL, MSE, lr, SGD, SNR, RNG, MLP,
+NN, ELU, VAE, ONNX, PD, IMU) — ทุกตัวขยายไว้ใน [`00-glossary.md` หัวข้อ 1](00-glossary.md)
+พร้อมประโยคว่ามันคืออะไรในบริบท Tron1 · Adam ไม่ใช่ตัวย่อ เป็นชื่อเฉพาะของ optimizer
+(§3.4 อธิบายว่ามันทำอะไร) · ชนิดของวัตถุ 11 แบบ (ฟังก์ชัน · การแจกแจง · เวกเตอร์ · scalar
+· …) ที่ทุกตารางในโน้ตนี้ใช้ในคอลัมน์ "ชนิด" นิยามไว้ที่อภิธานศัพท์หัวข้อ 0
 
 ---
 
@@ -63,20 +44,19 @@
 | --- | --- | --- | --- |
 | **ทฤษฎี** | *ทำไม* ถึงต้องมีสิ่งนี้ | โน้ต 05 | — |
 | **โครงสร้าง** | *อะไร* คุยกับ *อะไร* | โน้ต 05 ภาค 2, 4 | **A — Actor-Critic** (architecture) |
-| **ขั้นตอน** | เกิด *ตามลำดับ* ยังไงใน 1 iteration | walkthrough §1–3, โน้ต 05 §4.6 | **B — PPO iteration** (flowchart) |
-| **ตัวเลข** | shape เท่าไหร่ ค่าประมาณเท่าไหร่ | walkthrough ทั้งเล่ม | — |
+| **ขั้นตอน** | เกิด *ตามลำดับ* ยังไงใน 1 iteration | โน้ต 05 §4.7, โน้ต 07 §0 | **B — PPO iteration** (flowchart) · **F — ห้าหน่วยนับ** |
+| **ตัวเลข** | shape เท่าไหร่ ค่าเท่าไหร่ | โน้ต 07 (ตาราง 2 × 4 ทุกระดับ) · §3.5.5 ของโน้ตนี้ (เวกเตอร์ 8 มิติ) | — |
 | **โค้ด** | บรรทัดไหน | ตาราง §2 ด้านล่าง | — |
 
-**วิธีใช้:** เจอสัญลักษณ์ที่ไม่เข้าใจใน walkthrough → ดู §3 (notation) → ตามลิงก์ไป
-โน้ต 05 ที่นิยามมัน → กลับมาดูตัวเลขใน walkthrough อีกครั้ง ความเข้าใจจะ "ล็อก"
+**วิธีใช้:** เจอสัญลักษณ์ที่ไม่เข้าใจ → เปิดอภิธานศัพท์ (ชนิดก่อน ค่าทีหลัง) → ตามลิงก์ไป
+โน้ต 05 ที่ derive มัน → กลับมาดูตัวเลขในโน้ต 07 หรือ §3.5.5 อีกครั้ง ความเข้าใจจะ "ล็อก"
 เมื่อสามระดับตรงกัน
 
 ---
 
 ## 1. แก้ก่อนอย่างอื่น: ปริศนา 42 vs 39 — ไขแล้ว
 
-โน้ต 05 หัวข้อ 2.2 เคยหมายเหตุไว้ว่า 36 + 3 = 39 ไม่ใช่ 42 และเดาว่าเป็นความ
-คลาดเคลื่อนของต้นฉบับ — **ไม่ใช่** ตัวเลข 42 ถูกต้อง เพราะมีก้อนที่สามที่โน้ต 03
+ถ้านับจากโน้ต 03 จะได้ 36 + 3 = 39 ไม่ใช่ 42 — แต่ตัวเลข 42 ถูกต้อง เพราะมีก้อนที่สามที่โน้ต 03
 ไม่ได้นับรวมใน "36":
 
 ```python
@@ -96,59 +76,61 @@ torch.cat((critic_obs, commands), dim=-1)
 
 | ก้อน | มิติ | มาจาก | ใครเห็น |
 | --- | --- | --- | --- |
-| latent (encoder output) | 3 | `obsHistory` 360 → MLP → 3 | actor |
+| latent $\hat v$ (encoder output) | 3 | `obsHistory` $h$ 360 → MLP → 3 | actor |
 | `policy` obs | 36 | IMU + joint encoder + gait clock | actor |
 | `commands` | 3 | เป้าหมายความเร็วที่สั่ง | **ทั้ง actor และ critic** |
 | `critic` obs (privileged) | 227 | ซิมรู้ทุกอย่าง | critic |
 
 $$\text{actor input} = 3 + 36 + 3 = 42 \qquad \text{critic input} = 227 + 3 = 230$$
 
-โน้ต 05 หัวข้อ 2.2 และ 4.3 แก้ตามนี้แล้ว (ลบหมายเหตุ "ความคลาดเคลื่อน" ออก)
+โน้ต 05 หัวข้อ 2.2 และ 4.4 ใช้ตัวเลขนี้แล้ว · ตัวเลข 227 เป็นความกว้างของ group `critic`
+ตอนรัน (`on_policy_runner.py:61`) ยืนยันจาก checkpoint จริง (`in_features=230` ของชั้นแรกของ critic)
 
 ---
 
-## 2. ตารางเชื่อมสามชั้น: walkthrough → โน้ต 05 → สมการ → โค้ด
+## 2. ตารางเชื่อมสามชั้น: สิ่งที่เกิดขึ้น → โน้ต 05 → สมการ → โค้ด
 
-อ่านแนวนอน: หนึ่งแถว = หนึ่งสิ่งที่เกิดขึ้น มองจากสี่มุม
+อ่านแนวนอน: หนึ่งแถว = หนึ่งสิ่งที่เกิดขึ้น มองจากสี่มุม · คอลัมน์แรกคือหมายเลขขั้นใน
+`sources/training_numerical_walkthrough.md` (เอกสารต้นทาง — ใช้เป็นดัชนีเท่านั้น ตัวเลขในนั้นอย่าเชื่อ)
 
-### ช่วง A — เก็บข้อมูล (walkthrough §1)
+### ช่วง A — เก็บข้อมูล (โน้ต 07 §2 · sources §1)
 
-| walkthrough | ทำอะไร | shape | โน้ต 05 | สมการ | โค้ด |
+| sources § | ทำอะไร | shape | โน้ต 05 | สมการ | โค้ด |
 | --- | --- | --- | --- | --- | --- |
 | 1.1 | อ่านเซนเซอร์ 4 ก้อน | `(B,36)` `(B,3)` `(B,360)` `(B,230)` | 2.1 ใครเห็นอะไร · 1.3 POMDP | — | [`ObservationsCfg`](../tron1-rl-isaaclab/exts/bipedal_locomotion/bipedal_locomotion/tasks/locomotion/cfg/SF/limx_base_env_cfg.py#L227) |
-| 1.2 | encoder: ประวัติ → latent | `(B,360)→(B,3)` | 4.3 | — | [ppo.py:136](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L136) |
-| 1.3 | concat เป็น actor input | `(B,42)` | 2.2 (แก้แล้ว) · §1 ข้างบน | — | [ppo.py:138](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L138) |
-| 1.4 | actor MLP → $\mu$ | `(B,42)→(B,8)` | 2.2 node/layer · ทำไมชั้นสุดท้ายไม่มี activation | (5) | [actor_critic.py:69-90](../tron1-rl-isaaclab/rsl_rl/rsl_rl/modules/actor_critic.py#L69-L90) |
-| 1.5 | สุ่ม $a=\mu+\sigma\varepsilon$ · คำนวณ $\log\pi$ | `(B,8)` · `(B,1)` | 2.3 μ/a/π · 2.4 ทำไมต้องสุ่ม | (7) (8) | [actor_critic.py:155-164](../tron1-rl-isaaclab/rsl_rl/rsl_rl/modules/actor_critic.py#L155-L164) |
-| 1.6 | critic → $V(s)$ | `(B,230)→(B,1)` | 2.1 · 1.6 · 4.1 | (2) | [actor_critic.py:170-172](../tron1-rl-isaaclab/rsl_rl/rsl_rl/modules/actor_critic.py#L170-L172) |
-| 1.7 | ×0.25 → PD → physics → reward | `(B,8)→(B,1)` | 2.5 ท่อ 5 ขั้น | (9) | [joint_actions.py:134,160](../IsaacLab/source/isaaclab/isaaclab/envs/mdp/actions/joint_actions.py#L134) |
-| 1.8 | เก็บลง buffer ×24 | `(24,B,·)` | 4.6 ช่วง A | — | [rollout_storage.py:131](../tron1-rl-isaaclab/rsl_rl/rsl_rl/storage/rollout_storage.py#L131) `add_transitions` |
+| 1.2 | encoder: ประวัติ $h$ → latent $\hat v$ | `(B,360)→(B,3)` | 4.4 | — | [ppo.py:136](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L136) |
+| 1.3 | concat เป็น actor input | `(B,42)` | 2.2 · §1 ข้างบน | — | [ppo.py:138](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L138) |
+| 1.4 | actor MLP → $\mu$ | `(B,42)→(B,8)` | 2.2 node/layer · ทำไมชั้นสุดท้ายไม่มี activation | (10) (11) | [actor_critic.py:69-90](../tron1-rl-isaaclab/rsl_rl/rsl_rl/modules/actor_critic.py#L69-L90) |
+| 1.5 | สุ่ม $a=\mu+\sigma\varepsilon$ · คำนวณ $\log\pi$ | `(B,8)` · `(B,1)` | 2.1 (9) · 2.3 μ/a/π · 2.4 ทำไมต้องสุ่ม | (13) (14) (15) (16) | [actor_critic.py:155-164](../tron1-rl-isaaclab/rsl_rl/rsl_rl/modules/actor_critic.py#L155-L164) |
+| 1.6 | critic → $V(s)$ | `(B,230)→(B,1)` | 2.1 · 1.6 · 4.2 | (3) | [actor_critic.py:170-172](../tron1-rl-isaaclab/rsl_rl/rsl_rl/modules/actor_critic.py#L170-L172) |
+| 1.7 | ×0.25 → PD → physics → reward | `(B,8)→(B,1)` | 2.5 ท่อ 5 ขั้น | (17) (18) | [joint_actions.py:134,160](../IsaacLab/source/isaaclab/isaaclab/envs/mdp/actions/joint_actions.py#L134) |
+| 1.8 | เก็บลง buffer ×24 | `(24,B,·)` | 4.7 ช่วง A | — | [rollout_storage.py:131](../tron1-rl-isaaclab/rsl_rl/rsl_rl/storage/rollout_storage.py#L131) `add_transitions` |
 
-### ช่วง B — advantage (walkthrough §2)
+### ช่วง B — advantage (โน้ต 07 §4 · sources §2)
 
-| walkthrough | ทำอะไร | shape | โน้ต 05 | สมการ | โค้ด |
+| sources § | ทำอะไร | shape | โน้ต 05 | สมการ | โค้ด |
 | --- | --- | --- | --- | --- | --- |
-| 2.1 | bootstrap $V(s_{24})$ | `(B,1)` | 3.2 bootstrapping · 4.6 ช่วง B | (3) | [on_policy_runner.py:221-225](../tron1-rl-isaaclab/rsl_rl/rsl_rl/runner/on_policy_runner.py#L221-L225) → [ppo.py:176](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L176) → [rollout_storage.py:187](../tron1-rl-isaaclab/rsl_rl/rsl_rl/storage/rollout_storage.py#L187) |
-| 2.2 | ไล่ย้อน $t=23\to0$: $\delta_t$, $A_t$, $R_t$ | `(24,B,1)` | 4.4 | (10) (11) | [rollout_storage.py:187-201](../tron1-rl-isaaclab/rsl_rl/rsl_rl/storage/rollout_storage.py#L187-L201) |
-| 2.3 | normalize $A\leftarrow(A-\bar A)/\sigma_A$ | `(24,B,1)` | 4.4 (ไม่ได้พูดตรง ๆ — ดู §4 ด้านล่าง) | — | [rollout_storage.py:204-206](../tron1-rl-isaaclab/rsl_rl/rsl_rl/storage/rollout_storage.py#L204-L206) |
+| 2.1 | bootstrap $V(s_{24})$ | `(B,1)` | 3.2 bootstrapping · 4.5 · 4.7 ช่วง B | (4) | [on_policy_runner.py:221-225](../tron1-rl-isaaclab/rsl_rl/rsl_rl/runner/on_policy_runner.py#L221-L225) → [ppo.py:176](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L176) → [rollout_storage.py:187](../tron1-rl-isaaclab/rsl_rl/rsl_rl/storage/rollout_storage.py#L187) |
+| 2.2 | ไล่ย้อน $t=23\to0$: $\delta_t$, $A_t$, $R_t$ | `(24,B,1)` | 3.2 (δ) · 4.5 | (19) (26) (27) | [rollout_storage.py:187-201](../tron1-rl-isaaclab/rsl_rl/rsl_rl/storage/rollout_storage.py#L187-L201) |
+| 2.3 | normalize $\hat A_t = (A_t - \bar A)/\text{std}(A)$ | `(24,B,1)` | 4.5 | (28) | [rollout_storage.py:204-206](../tron1-rl-isaaclab/rsl_rl/rsl_rl/storage/rollout_storage.py#L204-L206) |
 
-### ช่วง C — อัปเดต (walkthrough §3)
+### ช่วง C — อัปเดต (โน้ต 07 §5 · sources §3)
 
-| walkthrough | ทำอะไร | shape | โน้ต 05 | สมการ | โค้ด |
+| sources § | ทำอะไร | shape | โน้ต 05 | สมการ | โค้ด |
 | --- | --- | --- | --- | --- | --- |
-| 3.0 | flatten → 4 minibatch × 5 epochs | `(49152,·)→(12288,·)` | 4.6 กายวิภาค · ทำไม 24 steps | — | [rollout_storage.py:222](../tron1-rl-isaaclab/rsl_rl/rsl_rl/storage/rollout_storage.py#L222) `mini_batch_generator` |
-| 3.1 | $\rho=\exp(\log\pi_{new}-\log\pi_{old})$ | `(MB,)` | 4.5 ρ ใช้ตอนไหน | (12) | [ppo.py:252](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L252) |
-| 3.2 | clipped surrogate | scalar | 4.5 (ก) | (12) | [ppo.py:256-260](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L256-L260) |
-| 3.3 | value loss (clipped MSE) | scalar | 4.2 critic เรียนจาก reward | (4) | [ppo.py:263-268](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L263-L268) |
-| 3.4 | entropy $H$ | scalar | 4.5 (ค) · 2.4 σ | — | [actor_critic.py:151-153](../tron1-rl-isaaclab/rsl_rl/rsl_rl/modules/actor_critic.py#L151-L153) |
-| 3.5 | รวม loss → backward → Adam | — | 2.2 gradient descent | (6) | [ppo.py:287-290](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L287-L290) |
-| 3.6 | KL-adaptive lr (÷1.5 / ×1.5) | — | 4.5 (ข) | — | [ppo.py:236-244](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L236-L244) |
-| (encoder) | MSE(latent, base_lin_vel) แยก optimizer | — | 4.3 remark | — | [ppo.py:306-321](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L306-L321) |
+| 3.0 | flatten → 4 minibatch × 5 epochs | `(49152,·)→(12288,·)` | 4.7 กายวิภาค · ทำไม 24 step | — | [rollout_storage.py:222](../tron1-rl-isaaclab/rsl_rl/rsl_rl/storage/rollout_storage.py#L222) `mini_batch_generator` |
+| 3.1 | $\rho=\exp(\log\pi_{new}-\log\pi_{old})$ | `(MB,)` | 3.3 importance sampling · 4.6 (ก) | (20) (21) | [ppo.py:252](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L252) |
+| 3.2 | clipped surrogate | scalar | 4.1 (23) · 4.6 (ก) | (29) | [ppo.py:256-260](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L256-L260) |
+| 3.3 | value loss (clipped MSE) | scalar | 4.3 critic เรียนจาก reward · 4.6 (ง) | (32) | [ppo.py:263-269](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L263-L269) |
+| 3.4 | entropy $H$ | scalar | 4.6 (ค) · 2.4 σ | (31) | [actor_critic.py:151-153](../tron1-rl-isaaclab/rsl_rl/rsl_rl/modules/actor_critic.py#L151-L153) |
+| 3.5 | รวม loss → backward → Adam | — | 2.2 gradient descent · 4.6 (จ) | (33) (12) · (36) §3.4 | [ppo.py:287-290](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L287-L290) |
+| 3.6 | KL-adaptive lr (÷1.5 / ×1.5) | — | 4.6 (ข) | (30) · (37) §3.4 | [ppo.py:236-244](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L236-L244) |
+| (encoder) | MSE($\hat v$, `base_lin_vel`) แยก optimizer | — | 4.4 | — | [ppo.py:306-321](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L306-L321) |
 | 4 | export actor+encoder → ONNX | — | 2.6 act vs act_inference | — | [play.py:104-121](../tron1-rl-isaaclab/scripts/rsl_rl/play.py#L104-L121) |
 
-> **สังเกต:** คอลัมน์ "สมการ" ใช้เลขของโน้ต 05 หลังจัดใหม่ (1–12) — walkthrough
-> เขียนขึ้นก่อนการจัดใหม่ จึงอ้าง "สมการ 3, 5, 6, 1b" ตามเลขเก่า ตารางเทียบ:
-> เก่า (1b)→ใหม่ (6) · เก่า (5)→ใหม่ (11) · เก่า (6)→ใหม่ (12) · เก่า (3) = ใหม่ (3)
+> **สังเกต:** คอลัมน์ "สมการ" ใช้เลขเดียวทั้งชุด (1)–(37) ตามอภิธานศัพท์หัวข้อ 9 —
+> เอกสารต้นทางอ้าง "สมการ 3, 5, 6, 1b" ตามระบบของมันเอง ตารางแปลง:
+> (1b)→(12) · (3)→(4) · (5)→(26) · (6)→(29)
 
 ---
 
@@ -157,7 +139,7 @@ $$\text{actor input} = 3 + 36 + 3 = 42 \qquad \text{critic input} = 227 + 3 = 23
 สัญลักษณ์ RL ดูน่ากลัวเพราะ **ซ้อนกันหลายชั้นในตัวเดียว** — $\pi_\theta(a_t \mid s_t)$
 มีข้อมูล 5 อย่างอัดอยู่ พออ่านแยกชั้นได้ มันจะกลายเป็นประโยคธรรมดา
 
-### กฎการอ่าน 8 ข้อ — ท่องให้ได้ก่อน
+### 3.1 กฎการอ่าน 8 ข้อ — ท่องให้ได้ก่อน
 
 | # | เห็นอะไร | อ่านว่า | ตัวอย่าง |
 | --- | --- | --- | --- |
@@ -184,60 +166,30 @@ $$\text{actor input} = 3 + 36 + 3 = 42 \qquad \text{critic input} = 227 + 3 = 23
                  ความหนาแน่นที่จะเลือก action a_t เป็นเท่าไหร่"
 ```
 
-### ตารางสัญลักษณ์ครบชุด — พร้อม shape จริงและตัวอย่างค่า
+### 3.2 สัญลักษณ์ที่ใช้บ่อยในโน้ตนี้ — ชี้ไปอภิธานศัพท์
 
-เรียงตามลำดับที่เจอใน walkthrough · คอลัมน์ "ชนิด" คือสิ่งที่ต้องดูก่อนค่า
+ตารางสัญลักษณ์ครบชุด (ชนิด · shape · โค้ด · ค่าใน toy · ที่นิยาม) อยู่ที่อภิธานศัพท์หัวข้อ 3–5
+โน้ตนี้ไม่คัดลอกมา · หกตัวที่ §3.4–3.5 ใช้ถี่ที่สุด:
 
-| สัญลักษณ์ | อ่านว่า | ชนิด | shape ใน Tron1 | สัญชาตญาณ | ตัวอย่างค่า (walkthrough) | นิยามที่โน้ต 05 |
-| --- | --- | --- | --- | --- | --- | --- |
-| $s_t$ | state ที่ $t$ | เวกเตอร์ | actor เห็น `(42,)` · critic เห็น `(230,)` | "สถานการณ์ตอนนี้ที่ network มองเห็น" | `[0.47, 0.02, …]` | 1.2, 2.1 |
-| $a_t$ | action ที่ $t$ | เวกเตอร์ | `(8,)` | "ตัวเลข 8 ตัวที่ส่งไปมอเตอร์ (ก่อน ×0.25)" | `[0.61, −0.37, …]` | 1.2, 2.3, 2.5 |
-| $r_t$ | reward ที่ $t$ | scalar | `(1,)` | "คะแนน step เดียว จาก 20 term" | `0.72` | 1.7 |
-| $\pi_\theta$ | policy | network + วิธีสุ่ม | weight 187,272 ตัว | "ตัวตัดสินใจทั้งอัน" | — | 2.1 |
-| $\pi_\theta(a \mid s)$ | ความหนาแน่นของ $a$ ที่ $s$ | ฟังก์ชัน → scalar | `(1,)` ต่อ env | "policy ชอบ action นี้แค่ไหน" — ใช้เรียนรู้ ไม่ใช้ควบคุม | $\log\pi = -2.41$ | 2.3 |
-| $\mu_\theta(s)$ | ค่ากลางที่ actor คาย | เวกเตอร์ | `(8,)` | "action ที่ actor คิดว่าดีที่สุด" | `[0.42, −0.31, …]` | 2.3 |
-| $\sigma_\theta$ | ความกว้างการสุ่ม | เวกเตอร์ (ไม่ขึ้นกับ $s$) | `(8,)` broadcast → `(B,8)` | "กล้าลองแค่ไหน" · เริ่ม 1.0 ค่อย ๆ ลด | `0.5` | 2.1 remark, 2.4 |
-| $\varepsilon$ | noise มาตรฐาน | เวกเตอร์ | `(8,)` | "ลูกเต๋า" ที่ทำให้ $a \ne \mu$ | `[0.38, −0.12, …]` | 2.4 สมการ (8) |
-| $V_\phi(s)$ | value ของ $s$ | ฟังก์ชัน → scalar | `(1,)` | "critic เดาว่าจะเก็บได้อีกกี่แต้มจนจบ" | `650.0` | 1.6, 4.1 |
-| $\gamma$ | discount | ค่าคงที่ | — | "อนาคตสำคัญ 99% ของปัจจุบัน" | `0.99` | 1.5 |
-| $\lambda$ | GAE lambda | ค่าคงที่ | — | "เชื่อ critic แค่ไหน vs รอผลจริง" | `0.95` | 4.4 |
-| $\delta_t$ | TD error | scalar ต่อ step | `(1,)` | "ผลจริงก้าวนี้ ต่างจากที่ critic เดา เท่าไหร่" | `28.15` | 4.4 |
-| $A_t$ / $A^{GAE}_t$ / $\hat{A}$ | advantage (เขียน $\hat{A}$ เมื่อหมายถึงตัวที่ normalize แล้วในโค้ด) | scalar ต่อ step | `(1,)` | "action นี้ดีกว่าที่คาดแค่ไหน" — ตัวขับ gradient | `+1.10` (หลัง normalize) | 4.4 |
-| $R_t$ / $G_t$ | return | scalar | `(1,)` | "เป้าที่ critic ควรทำนายให้ตรง" | `676.15` | 1.7 |
-| $\rho_t$ | probability ratio | scalar | `(1,)` | "policy ใหม่ชอบ action นี้มากกว่าเดิมกี่เท่า" | `1.25` | 4.5 |
-| $\epsilon$ (clip) | ขอบ clip | ค่าคงที่ | — | "เปลี่ยนได้ไม่เกิน ±20% ต่อรอบ" | `0.2` | 4.5 |
-| $L^{CLIP}$ | surrogate loss | scalar | `(1,)` | "ตัวที่ actor พยายามทำให้เล็ก" | `−1.32` | 4.5 |
-| $L_V$ | value loss | scalar | `(1,)` | "critic เดาพลาดแค่ไหน (กำลังสอง)" | `781.2` | 4.2 |
-| $H$ | entropy | scalar | `(1,)` | "ยังสุ่มกว้างอยู่ไหม" — โบนัสถ้าใช่ | `5.81` | 4.5 (ค) |
-| $\theta$ | weight ของ actor | เวกเตอร์ยาว | 187,272 | "ตัวเลขที่การเรียนรู้ทั้งหมดไปเปลี่ยน" | — | 2.1, 2.2 |
-| $\phi$ | weight ของ critic | เวกเตอร์ยาว | 282,625 | เหมือน $\theta$ แต่ของ critic | — | 4.1 |
-| $\alpha$ / lr | learning rate | scalar ปรับได้ | — | "ก้าวยาวแค่ไหน" · KL คุม | `1e-3` เริ่ม | 2.2, 4.5 (ข) |
-| $B$ | batch = num_envs | จำนวน | 2048 | "หุ่นกี่ตัวขนานกัน" | 2048 | 4.6 |
-| `MB` | minibatch | จำนวน | 12,288 | "หั่น 49,152 เป็น 4 ก้อน" | 12,288 | 4.6 |
-| $z_i$ | ระยะมาตรฐาน | scalar ต่อมิติ | `(B,8)` | "$a_i$ ห่างจาก $\mu_i$ กี่เท่าของ $\sigma_i$" — $z_i = (a_i-\mu_i)/\sigma_i$ | `0.19` | §3.4, E8 |
-| $\ell$ | `logstd` | เวกเตอร์ | `(8,)` | "ลูกบิดคุมความกว้าง" — $\sigma = e^{\ell}$ · **ไม่ใช่ $L$** | `0.0` เริ่ม | §3.4, E4 |
-| $L$ | loss | **scalar** | `(1,)` | "เข็มวัดความแย่รวมทั้งระบบ" — ยิ่งน้อยยิ่งดี · **ไม่ใช่ $\ell$** | `−1.32` | §3.4 |
-| $\psi$ | weight ของ encoder | เวกเตอร์ยาว | 125,699 | เหมือน $\theta$ แต่ของ encoder · **มี optimizer แยก** | — | 4.3 |
+| สัญลักษณ์ | ชนิด | e0 t0 | อภิธานศัพท์ | derive ที่โน้ต 05 |
+| --- | --- | --- | --- | --- |
+| $s$ | เวกเตอร์ `(42,)` = $[\hat v; o; c]$ | — | หัวข้อ 4 | 2.2, 4.4 |
+| $\pi_\theta(a \mid s)$ · $\log\pi$ | scalar ต่อ env | 0.7365 · −0.3058 | หัวข้อ 4 | 2.3 สมการ (13)–(15) |
+| $\hat A_t$ | scalar ต่อช่อง (normalize ทั้งตารางแล้ว) | +0.7975 | หัวข้อ 5 | 4.5 สมการ (28) |
+| $\rho_t$ | scalar ต่อช่อง | 1.0356 (หลัง $\mu$ +0.05) | หัวข้อ 5 | 3.3 สมการ (21) |
+| $\ell$ · $\sigma = e^{\ell}$ | เวกเตอร์ `(8,)` — ลูกบิด · ความกว้าง | −0.6931 · 0.5 | หัวข้อ 4 | 2.1 สมการ (9) |
+| $L$ | scalar ตัวเดียวทั้งระบบ — เข็ม | — | หัวข้อ 5 | 4.6 สมการ (33) |
 
-### สัญลักษณ์ที่ "หน้าตาคล้าย" แต่คนละความหมาย — จุดสับสนบ่อย
+### 3.3 คู่ที่สับสน — และวิธีอ่านสมการยาว ๆ
 
-| คู่ที่สับสน | ต่างกันตรงไหน |
-| --- | --- |
-| $\theta$ vs $\phi$ | สองชุด weight ของสอง network — $\theta$ actor (deploy), $\phi$ critic (ทิ้ง) · gradient ไหลแยกกัน |
-| $\pi$ vs $\pi(a\mid s)$ | ตัว network ทั้งอัน vs ตัวเลขเดียวที่คำนวณจากมัน — โน้ต 05 หัวข้อ 2.3 |
-| $V(s)$ vs $V_\phi(s)$ | ค่าจริงในทฤษฎี vs ค่าที่ network ประมาณ — ตัวห้อย $\phi$ บอกว่า "นี่คือการเดา ผิดได้" |
-| $A_t$ vs $A^{GAE}_t$ | นิยาม (10) $Q - V$ vs วิธีประมาณจริง (11) — ในโค้ดมีแต่ตัวหลัง |
-| $R_t$ vs $r_t$ | ผลรวมจนจบ (return) vs step เดียว (reward) — ตัวใหญ่ = ยาว |
-| $\mathbb{E}[\cdot]$ vs `mean()` | ค่าคาดหวังทางทฤษฎี (เฉลี่ยจากอนันต์รอบ) vs ค่าเฉลี่ยจาก 12,288 ตัวอย่าง — อย่างหลังคือการประมาณอย่างแรก |
-| $\sim$ vs $=$ vs $\approx$ | สุ่มจาก / เท่ากับ / ประมาณ — $a \sim \mathcal N(\mu,\sigma)$ ไม่ได้แปลว่า $a \approx \mu$ |
-| $\epsilon$ (clip 0.2) vs $\varepsilon$ (noise) | ตัวอักษรกรีกคนละตัว — epsilon ธรรมดา = ขอบ clip · varepsilon = ตัวสุ่ม |
-| $\gamma\lambda$ | ไม่ใช่ตัวแปรใหม่ — คือ $0.99 \times 0.95 = 0.9405$ ตัวถ่วงน้ำหนักของ GAE |
+คู่ที่หน้าตาคล้ายแต่คนละความหมาย ($\theta$/$\phi$/$\psi$, $\pi$/$\pi(a\mid s)$, $V$/$V_\phi$,
+$A$/$A_t$/$\hat A_t$, $R(s,a)$/$R_t$/$G_t$/$r_t$, $\mathbb{E}$/`mean()`, $\sim$/$=$/$\approx$,
+$\epsilon$/$\varepsilon$/`eps`, $L$/$\ell$, $z_i$/$\hat v$, $T$) รวมไว้ที่เดียวใน
+**อภิธานศัพท์หัวข้อ 7** พร้อมกฎของโน้ตชุดนี้สำหรับแต่ละคู่ — เปิดตารางนั้นทุกครั้งที่สะดุด
 
-### วิธีอ่านสมการยาว ๆ — ทำสามรอบ
+**วิธีอ่านสมการยาว ๆ — ทำสามรอบ** · ใช้สมการ (29) ในรูปของเปเปอร์เป็นตัวอย่าง:
 
-ใช้สมการ (12) เป็นตัวอย่าง:
-
-$$L^{CLIP} = \mathbb{E}\Big[\min\big(\rho_t A_t,\; \text{clip}(\rho_t, 1-\epsilon, 1+\epsilon)\, A_t\big)\Big]$$
+$$L^{CLIP} = \mathbb{E}\Big[\min\big(\rho_t \hat A_t,\; \text{clip}(\rho_t, 1-\epsilon, 1+\epsilon)\, \hat A_t\big)\Big]$$
 
 | รอบ | ทำอะไร | ผลที่ได้ |
 | --- | --- | --- |
@@ -253,9 +205,11 @@ $$L^{CLIP} = \mathbb{E}\Big[\min\big(\rho_t A_t,\; \text{clip}(\rho_t, 1-\epsilo
 
 ## 3.4 ศัพท์ของการเทรน — $L$, $\ell$, gradient, optimizer
 
-หัวข้อนี้ไม่มีอะไรเกี่ยวกับ PPO โดยเฉพาะ มันคือคำศัพท์พื้นฐานของ *การเทรน NN ทุกชนิด*
-ซึ่งโน้ตนี้ใช้ตลอดตั้งแต่ §3.5 เป็นต้นไป · ถ้าอ่าน §3.5.4 แล้วสะดุดคำว่า "loss" "gradient"
-"Adam" ให้ย้อนกลับมาที่นี่
+โน้ต 05 นิยาม loss (§2.2 และ (33)), gradient descent (12), และสามพจน์ของ PPO ((29)–(32))
+ไว้แล้ว — หัวข้อนี้ไม่นิยามซ้ำ แต่ลงไปที่**กลไกระดับโค้ด**ที่โน้ต 05 ไม่ได้ derive: $\ell$ กับ
+`.grad` เป็นคนละกล่อง, สมการ (35) $\partial L/\partial\ell$, (36) ก้าวของ Adam, (37) กฎปรับ lr
+และพฤติกรรมของมันตลอดการเทรน · ถ้าอ่าน §3.5.4 แล้วสะดุดคำว่า "loss" "gradient" "Adam"
+ให้ย้อนกลับมาที่นี่
 
 ### ภาพก่อนสัญลักษณ์: การเทรนคือการหมุนลูกบิด
 
@@ -285,8 +239,8 @@ $L$ คือ **ตัวเลขตัวเดียว** (scalar) ที่�
 > ไม่ใช่เพิ่ม · อะไรที่อยากได้มาก ๆ ก็แค่ใส่เครื่องหมายลบข้างหน้าแล้วกลายเป็นของที่ต้องลด
 > — จะเห็นลูกเล่นนี้ทั้งใน $L^{CLIP}$ และในพจน์ entropy ของ PPO
 
-$L$ ไม่ได้ตกลงมาจากฟ้า — **เราออกแบบมันเอง** · ของ PPO มีสามพจน์บวกกัน ซึ่งจะแยกดู
-ทีละตัวท้ายหัวข้อนี้
+$L$ ไม่ได้ตกลงมาจากฟ้า — **เราออกแบบมันเอง** · ของ PPO มีสามพจน์บวกกัน (สมการ (33),
+derive ทีละพจน์ในโน้ต 05 §4.6) ซึ่งท้ายหัวข้อนี้จะทวนสั้น ๆ ในมุมของโค้ด
 
 ### $\ell$ กับ $L$ — หน้าตาเหมือนกัน คนละเรื่องสิ้นเชิง
 
@@ -305,7 +259,7 @@ $$\sigma = \exp(\ell)$$
 
 **$\ell$ คืออะไรแบบจับต้องได้** — ไม่ใช่ฟังก์ชัน ไม่ใช่เลเยอร์ ไม่ใช่ผลลัพธ์ของอะไรเลย
 มันคือ **รายการเลข 8 ตัว** · ตอนเทรนจริงมันอยู่บน GPU (`.to(device)`,
-`on_policy_runner.py:75-76`) พิมพ์ออกมาดูจะได้แบบนี้
+`on_policy_runner.py:77`) พิมพ์ออกมาดูจะได้แบบนี้
 
 ```python
 >>> self.logstd          # actor_critic.py:118
@@ -432,15 +386,16 @@ $\ell_i$ โผล่ในสูตร **สองที่** — ในตั�
 > ([actor_critic.py:164](../tron1-rl-isaaclab/rsl_rl/rsl_rl/modules/actor_critic.py#L164)) ·
 > ที่แสดงทีละมิติเพราะ $\partial/\partial\ell_i$ ของอีก 7 พจน์เป็นศูนย์อยู่แล้ว ผลจึงเท่ากัน
 
-**ไล่ตัวเลขให้เห็นกับตา** — จับ $a_i = 0.61$ กับ $\mu_i = 0.42$ **แช่แข็งไว้** แล้วขยับแค่ $\ell_i$
+**ไล่ตัวเลขให้เห็นกับตา** — ช่อง e0 t0: จับ $a_i = 0.40$ กับ $\mu_i = 0.20$ **แช่แข็งไว้** แล้วขยับ
+แค่ $\ell_i$ รอบค่า toy $\ell_i = \ln 0.5 = -0.6931$
 
 | $\ell_i$ | $\sigma_i = e^{\ell_i}$ | $\log\pi(a_i)$ |
 | --- | --- | --- |
-| $-0.02$ | 0.98020 | $-0.917725$ |
-| $-0.01$ | 0.99005 | $-0.927353$ |
-| **0.00** | **1.00000** | $\mathbf{-0.936989}$ |
-| $+0.01$ | 1.01005 | $-0.946631$ |
-| $+0.02$ | 1.02020 | $-0.956281$ |
+| $-0.7131$ | 0.49010 | $-0.289056$ |
+| $-0.7031$ | 0.49502 | $-0.297407$ |
+| **−0.6931** | **0.50000** | $\mathbf{-0.305791}$ |
+| $-0.6831$ | 0.50503 | $-0.314207$ |
+| $-0.6731$ | 0.51010 | $-0.322655$ |
 
 **$a_i$ ไม่เปลี่ยนเลยสักครั้ง แต่ $\log\pi(a_i)$ เปลี่ยนทุกแถว** — นั่นคือหลักฐานว่า $\ell_i$
 มีผลต่อผลลัพธ์โดย**ไม่ต้องผ่าน $a_i$**
@@ -449,11 +404,11 @@ $\ell_i$ โผล่ในสูตร **สองที่** — ในตั�
 
 | วิธี | ได้ |
 | --- | --- |
-| ผลต่างกลาง จากแถว $\pm 0.01$ | $-0.963898$ |
-| ผลต่างกลาง จากแถว $\pm 0.02$ | $-0.963890$ |
-| **สูตรจริง** $z_i^2-1$ โดย $z_i = 0.19/1.0$ | $\mathbf{-0.963900}$ |
+| ผลต่างกลาง จากแถว $\pm 0.01$ | $-0.839989$ |
+| ผลต่างกลาง จากแถว $\pm 0.02$ | $-0.839957$ |
+| **สูตรจริง** $z_i^2-1$ โดย $z_i = 0.20/0.5 = 0.40$ | $\mathbf{-0.840000}$ |
 
-สองแถวแรกต่างกันที่ทศนิยมตัวที่ 6 เพราะผลต่างกลางมีความคลาดเคลื่อนอันดับ $h^2$ —
+สองแถวแรกต่างกันที่ทศนิยมตัวที่ 5 เพราะผลต่างกลางมีความคลาดเคลื่อนอันดับ $h^2$ —
 ยิ่ง $h$ เล็กยิ่งเข้าใกล้สูตรจริง · **ไม่ใช่คนใดคนหนึ่งพิมพ์ผิด**
 
 **สายเต็มจาก $\ell$ ถึง $L$**
@@ -519,54 +474,63 @@ self.logstd = nn.Parameter(torch.zeros(num_actions))   # actor_critic.py:118
 
 *สายหลัก — ผ่าน $\log\pi$* มีสองข้อต่อ · ให้ $n$ เป็นเลขตัวอย่างใน minibatch
 
-| ข้อต่อ | อนุพันธ์ | ค่า (ตัวอย่างข้างล่าง) |
+| ข้อต่อ | อนุพันธ์ | ค่า (e0 t0, ρ = 1) |
 | --- | --- | --- |
-| $L$ ไวต่อ $\log\pi_n$ แค่ไหน | $\dfrac{\partial L}{\partial \log\pi_n} = -\dfrac{1}{\text{MB}}\hat{A}_n\rho_n$ | $-1.10/\text{MB}$ |
-| $\log\pi_n$ ไวต่อ $\ell_i$ แค่ไหน | $\dfrac{\partial \log\pi_n}{\partial \ell_i} = z_{n,i}^2-1$ | $-0.9639$ |
-| **คูณกันแล้วรวมทุกตัวอย่าง** | $-\dfrac{1}{\text{MB}}\displaystyle\sum_n \hat{A}_n\rho_n(z_{n,i}^2-1)$ | $+1.0603$ |
+| $L$ ไวต่อ $\log\pi_n$ แค่ไหน | $\dfrac{\partial L}{\partial \log\pi_n} = -\dfrac{1}{\text{MB}}\hat{A}_n\rho_n$ | $-0.7975/\text{MB}$ |
+| $\log\pi_n$ ไวต่อ $\ell_i$ แค่ไหน | $\dfrac{\partial \log\pi_n}{\partial \ell_i} = z_{n,i}^2-1$ | $-0.8400$ |
+| **คูณกันแล้วรวมทุกตัวอย่าง** | $-\dfrac{1}{\text{MB}}\displaystyle\sum_n \hat{A}_n\rho_n(z_{n,i}^2-1)$ | $+0.6699$ |
 
 *สายที่สอง — แยกออกจาก $\sigma$ ไปทาง entropy* ให้ $-0.01$ คงที่ · **ไม่มี $1/\text{MB}$**
 เพราะ $H$ ขึ้นกับ $\ell_i$ อย่างเดียว ทุกตัวอย่างได้ค่าเท่ากัน เฉลี่ยแล้วได้ตัวเดิม
-(เหตุผลเต็มอยู่ที่ E4)
+(เหตุผลเต็มอยู่ที่ E4) · เขียนสองสายเป็นสมการ (ต่อหนึ่งตัวอย่าง ก่อนหาร MB):
+
+$$\boxed{\;\frac{\partial L^{CLIP}_n}{\partial \ell_i} = -\hat A_n\,\rho_n\,(z_{n,i}^2 - 1), \qquad \frac{\partial H}{\partial \ell_i} = 1\;} \tag{35}$$
+
+**ความหมาย:** ท่าดี ($\hat A > 0$) ที่อยู่ไกล ($|z| > 1$) → ค่าลบ → เพิ่ม $\ell$ → กว้างขึ้น ·
+ท่าดีที่อยู่ใกล้ → ค่าบวก → แคบลง · ท่าแย่กลับเครื่องหมาย · ส่วน entropy ดันกว้างด้วยแรง
+คงที่ 1 (คูณ $-c_H$ ในสมการ (33) ได้ $-0.01$ ใน `.grad`) — มาจาก (31) ที่ $\partial H/\partial\ell_i = 1$
+เพราะ $H$ มี $\ell_i$ อยู่ตรง ๆ หนึ่งพจน์
 
 > **$\dfrac{1}{\text{MB}}$ ตัวนี้สำคัญ อย่ามองข้าม** — `surrogate_loss` จบด้วย `.mean()`
 > ([ppo.py:260](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L260)) · ตัวอย่าง
 > ข้างล่าง**สมมติว่าทั้ง minibatch 12,288 ตัวอย่างหน้าตาเหมือนกันหมด** ผลรวมหารด้วย
-> MB จึงได้ $+1.0603$ พอดี · ถ้าในความจริงมีตัวอย่างแบบนี้อยู่ตัวเดียว ที่เหลือเฉลี่ยเป็น
-> ศูนย์ พจน์นี้จะเหลือ $1.0603/12{,}288 \approx 0.000086$ ซึ่ง **แพ้** entropy $-0.01$ แล้ว
+> MB จึงได้ $+0.6699$ พอดี · ถ้าในความจริงมีตัวอย่างแบบนี้อยู่ตัวเดียว ที่เหลือเฉลี่ยเป็น
+> ศูนย์ พจน์นี้จะเหลือ $0.6699/12{,}288 \approx 0.0000545$ ซึ่ง **แพ้** entropy $-0.01$ แล้ว
 > $\sigma$ จะ **กางออก** แทนที่จะหุบ · ทิศสุดท้ายตัดสินด้วยค่าเฉลี่ยทั้ง minibatch เสมอ
 > ไม่ใช่ด้วยตัวอย่างเดียว
 
 **ไล่หนึ่งสเต็ปเต็ม ๆ ด้วยตัวเลขจริง**
 
-*ก่อนเริ่ม* — `l = 0.000000` · `l.grad = None` · $\sigma = e^0 = 1.0$
+*ก่อนเริ่ม* — toy ตรึง $\sigma = 0.5$: `l = -0.693147` · `l.grad = None` (Tron1 จริงเริ่มที่
+`l = 0`, $\sigma = 1.0$ — กลไกเหมือนกันทุกประการ)
 
-*ขั้น 1 · forward* — $a_i = 0.61$ **ไม่ได้สุ่มในรอบนี้** มันถูกสุ่มไว้ตั้งแต่ตอนเก็บ rollout
+*ขั้น 1 · forward* — $a_i = 0.40$ **ไม่ได้สุ่มในรอบนี้** มันถูกสุ่มไว้ตั้งแต่ตอนเก็บ rollout
 แล้วอ่านกลับมาจาก buffer ([ppo.py:212-214](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L212-L214)) ·
-forward รอบนี้คำนวณใหม่แค่ $\mu_i = 0.42$ กับ $\sigma$ จาก $\ell$ เท่านั้น
-(`act()` ที่ `:205` ก็สุ่มนะ แต่ค่าที่มันคืนถูกโยนทิ้ง) → $z_i = 0.19$, $z_i^2 = 0.0361$ ·
-critic บอกว่าท่านี้ดี $\hat{A} = +1.10$ · เป็น gradient step แรกจาก 20 จึงยังไม่ขยับ
-$\theta$ ทำให้ $\rho = 1$
+forward รอบนี้คำนวณใหม่แค่ $\mu_i = 0.20$ กับ $\sigma$ จาก $\ell$ เท่านั้น
+(`act()` ที่ `:205` ก็สุ่มนะ แต่ค่าที่มันคืนถูกโยนทิ้ง) → $z_i = 0.40$, $z_i^2 = 0.16$ ·
+critic บอกว่าท่านี้ดี $\hat{A} = +0.7975$ (อภิธานศัพท์ 8.4) · เป็น gradient step แรกจาก 4
+(Tron1: จาก 20) จึงยังไม่ขยับ $\theta$ ทำให้ $\rho = 1$
 
 *ขั้น 2 · `backward()`* — **ตรงนี้คือ backprop**
 
 | ที่มา | ค่าที่ได้ |
 | --- | --- |
-| จาก surrogate: $-\hat{A}\rho(z_i^2-1)$ | $+1.060290$ |
-| จาก entropy: $-$`entropy_coef` $= -0.01$ ([cfg:97](../tron1-rl-isaaclab/exts/bipedal_locomotion/bipedal_locomotion/tasks/locomotion/agents/limx_rsl_rl_ppo_cfg.py#L97)) | $-0.010000$ |
-| **รวม เขียนลง `l.grad`** | $\mathbf{+1.050290}$ |
+| จาก surrogate: $-\hat{A}\rho(z_i^2-1) = -0.7975 \times (0.16 - 1)$ — สมการ (35) | $+0.669900$ |
+| จาก entropy: $-$`entropy_coef` $\times 1 = -0.01$ ([cfg:97](../tron1-rl-isaaclab/exts/bipedal_locomotion/bipedal_locomotion/tasks/locomotion/agents/limx_rsl_rl_ppo_cfg.py#L97)) | $-0.010000$ |
+| **รวม เขียนลง `l.grad`** | $\mathbf{+0.659900}$ |
 
 *ขั้น 3 · `step()`* — **ตรงนี้คือการเขียนทับ**
 
-$$\ell_{\text{ใหม่}} = \underbrace{0.000000}_{\ell\ \text{เดิม}} \;-\; \underbrace{10^{-3}}_{lr} \times \underbrace{1.050290}_{\texttt{l.grad}} \;=\; -0.001050$$
+$$\ell_{\text{ใหม่}} = \underbrace{-0.693147}_{\ell\ \text{เดิม}} \;-\; \underbrace{10^{-3}}_{lr} \times \underbrace{0.659900}_{\texttt{l.grad}} \;=\; -0.693807$$
 
-$$\sigma_{\text{ใหม่}} = e^{-0.001050} = 0.998950 \qquad (\text{เดิม } 1.000000)$$
+$$\sigma_{\text{ใหม่}} = e^{-0.693807} = 0.499670 \qquad (\text{เดิม } 0.500000)$$
 
-**ตีความ** — ท่าดี ($\hat{A} > 0$) และอยู่ **ใกล้** จุดกลาง ($|z_i| = 0.19 < 1$) → **หุบแคบลง**
-ตรงกับตารางสี่กรณีในหัวข้อ *"กลไกที่ $\sigma$ เปลี่ยนค่า"* ที่ E4
+**ตีความ** — ท่าดี ($\hat{A} > 0$) และอยู่ **ใกล้** จุดกลาง ($|z_i| = 0.40 < 1$) → **หุบแคบลง**
+ตรงกับตารางสี่กรณีในหัวข้อ *"กลไกที่ $\sigma$ เปลี่ยนค่า"* ที่ E4 · ใช้ lr จริงของ Tron1
+($10^{-3}$) เพื่อให้เห็นว่าก้าวจริงเล็กแค่ไหน — ส่วนอื่นของ toy ตรึง $\sigma$ ไว้ที่ 0.5 ตลอด
 
-> บรรทัดสุดท้ายเขียนแบบ SGD เพื่อให้เห็นเลขชัด ๆ · ของจริงเป็น Adam ซึ่งก้าวแรก
-> จะออกมาราว ๆ $lr$ พอดี ไม่ได้เป็น $lr \times 1.050290$ (ดูหัวข้อ Adam)
+> บรรทัดสุดท้ายเขียนแบบ SGD (สมการ (12)) เพื่อให้เห็นเลขชัด ๆ · ของจริงเป็น Adam ซึ่งก้าวแรก
+> จะออกมาราว ๆ $lr$ พอดี ไม่ได้เป็น $lr \times 0.659900$ (ดูหัวข้อ Adam สมการ (36))
 >
 > บรรทัด `step()` ข้างบนยังสมมติอีกข้อว่า norm รวมของ gradient ไม่เกิน
 > `max_grad_norm = 1.0` ([cfg:105](../tron1-rl-isaaclab/exts/bipedal_locomotion/bipedal_locomotion/tasks/locomotion/agents/limx_rsl_rl_ppo_cfg.py#L105))
@@ -600,7 +564,7 @@ $$\frac{\partial L}{\partial \ell_i} \;=\; \text{"ถ้าเพิ่ม } \el
 
 รู้ทิศแล้วก็หมุนสวนทางกับความชัน:
 
-$$\boxed{\;\ell_i \;\leftarrow\; \ell_i \;-\; \alpha\,\frac{\partial L}{\partial \ell_i}\;}$$
+$$\boxed{\;\ell_i \;\leftarrow\; \ell_i \;-\; \alpha\,\frac{\partial L}{\partial \ell_i}\;} \qquad \text{(สมการ (12) ของโน้ต 05 เขียนเฉพาะลูกบิด } \ell_i\text{)}$$
 
 เรียกว่า **gradient descent** — "ไถลลงเนิน" · $\alpha$ คือ **learning rate** = ก้าวยาวแค่ไหน
 
@@ -621,8 +585,8 @@ $$\boxed{\;\ell_i \;\leftarrow\; \ell_i \;-\; \alpha\,\frac{\partial L}{\partial
 >
 > **แต่ของ Tron1 ไม่ได้หั่นเพราะแพง** — 49,152 ตัวอย่างใส่ GPU ได้สบาย · ที่หั่นเป็น
 > 4 ก้อน (`MB` = 12,288) แล้ววน 5 epoch ก็เพื่อให้ได้ **20 gradient step ต่อหนึ่งรอบ
-> การเก็บข้อมูล** ต่างหาก (โน้ต 05 §4.6) · การสุ่มยังเป็นการสุ่มจริง — `torch.randperm`
-> ที่ `rollout_storage.py:292`
+> การเก็บข้อมูล** ต่างหาก (โน้ต 05 §4.7) · การสุ่มยังเป็นการสุ่มจริง — `torch.randperm`
+> ที่ `rollout_storage.py:230` (สับครั้งเดียวต่อ iteration นอกลูป epoch `:251`)
 
 ### Adam — SGD ที่ปรับความยาวก้าวเอง
 
@@ -631,7 +595,7 @@ $$\boxed{\;\ell_i \;\leftarrow\; \ell_i \;-\; \alpha\,\frac{\partial L}{\partial
 
 **Adam** แก้ด้วยการจำสองอย่างต่อลูกบิดหนึ่งตัว แล้วหารความชันทิ้ง:
 
-$$\boxed{\;\ell_i \;\leftarrow\; \ell_i \;-\; \alpha\,\frac{\hat{m}_i}{\sqrt{\hat{v}_i}+\texttt{eps}}\;}$$
+$$\boxed{\;\ell_i \;\leftarrow\; \ell_i \;-\; \alpha\,\frac{\hat{m}_i}{\sqrt{\hat{v}_i}+\texttt{eps}}\;} \tag{36}$$
 
 > **ไม่ใช่ $\varepsilon$ นะ** — โน้ตนี้จอง $\varepsilon$ ไว้ให้ noise มาตรฐาน และ $\epsilon$ ให้ขอบ clip
 > ไปแล้ว (ตาราง "สัญลักษณ์หน้าตาคล้าย" ใน §3) · ตัวกันหารศูนย์ของ Adam จึงเขียนว่า
@@ -651,13 +615,15 @@ $$\boxed{\;\ell_i \;\leftarrow\; \ell_i \;-\; \alpha\,\frac{\hat{m}_i}{\sqrt{\ha
 > *อัตราส่วนสัญญาณต่อสัญญาณรบกวน* (signal-to-noise ratio, SNR)
 > ไม่ใช่ทิศล้วน ๆ · จำลองด้วยค่าปริยาย PyTorch ($\beta_1=0.9,\ \beta_2=0.999$):
 >
-> | ความชันที่ป้อนเข้า | ก้าวที่ได้ |
+> | ความชันที่ป้อนเข้า ($g = \mu_g + $ noise) | ก้าวสุทธิเฉลี่ยในทิศของ $\mu_g$ |
 > | --- | --- |
-> | ชี้ทางเดิมสม่ำเสมอ | $0.99\,\alpha$ |
-> | สลับทิศไปมา สัญญาณเท่าสัญญาณรบกวน | $0.55\,\alpha$ |
-> | สลับทิศไปมา สัญญาณน้อยกว่ามาก | $0.03\,\alpha$ |
+> | ชี้ทางเดิมสม่ำเสมอ (noise 0) | $1.00\,\alpha$ |
+> | สลับทิศไปมา สัญญาณเท่าสัญญาณรบกวน ($\mu_g = \sigma_g$) | $\approx 0.7\,\alpha$ |
+> | สลับทิศไปมา สัญญาณน้อยกว่ามาก ($\mu_g = 0.03\,\sigma_g$) | $\approx 0.03\,\alpha$ (แต่ละก้าวยาว ~0.2α แต่แกว่งไปมาจนหักล้างกัน) |
 > | เป็นศูนย์ | $0$ |
 > | สม่ำเสมอแต่เล็กมาก ($10^{-9}$) | $0.09\,\alpha$ — พื้น `eps` เริ่มมีผล |
+>
+> (จำลองด้วย Adam ของ PyTorch เอง 6,000 ก้าว เฉลี่ยครึ่งหลัง — ตัวเลขเปลี่ยนตาม seed เล็กน้อย)
 >
 > **เวลาอ่านสูตร gradient ในโน้ตนี้ ให้อ่านเอาทิศและอัตราส่วนของแรง อย่าอ่านเอา
 > ขนาดก้าวจริง**
@@ -692,7 +658,8 @@ $$D_{KL}(p \,\|\, q) = \mathbb{E}_{a \sim p}\big[\log p(a) - \log q(a)\big]$$
 
 อ่านว่า *"ถ้าคุณเชื่อว่าโลกเป็น $q$ แต่ความจริงมันเป็น $p$ — คุณจะเซอร์ไพรส์เกินจำเป็น
 เฉลี่ยกี่หน่วย"* · หน่วยคือ **nat** เพราะใช้ลอการิทึมฐาน $e$ · เท่ากับ 0 พอดีเมื่อ $p$ กับ $q$
-เหมือนกันทุกจุด · ความหมายของขีดตั้งสองอัน $\|$ และเหตุผลที่สลับที่ไม่ได้ อยู่ที่ §3.5.2
+เหมือนกันทุกจุด · รูปปิดสำหรับ Gaussian สองใบคือสมการ (30) ของโน้ต 05 §4.6 (ข) ซึ่งตรงกับ
+`ppo.py:223-232` ทุกพจน์ · ความหมายของขีดตั้งสองอัน $\|$ และเหตุผลที่สลับที่ไม่ได้ อยู่ที่ §3.5.2
 
 ใน Tron1 มันตอบคำถามเดียว: **"ตอนนี้ policy ห่างจากตอนเก็บข้อมูลไปแค่ไหนแล้ว"**
 
@@ -719,8 +686,10 @@ $$D_{KL}(p \,\|\, q) = \mathbb{E}_{a \sim p}\big[\log p(a) - \log q(a)\big]$$
 > (กิ่ง `early_stop` ที่ [ppo.py:246-249](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L246-L249) ก็ใช้ KL เหมือนกัน แต่
 > `early_stop` ใช้ค่า default คือปิด — กิ่งนั้นไม่เคยทำงาน)
 
-ตัวอย่างจริงจาก §3.5.2: KL รายมิติ $0.015874$ คูณ 8 มิติได้ $\approx 0.127$ เทียบกับ
-`desired_kl = 0.01` → เกิน $0.02$ ไปมาก → `lr` จะถูกหารด้วย 1.5
+ตัวอย่างจาก §3.5.2 (ขยับ $\mu$ 0.20 → 0.25 และ $\sigma$ 0.5 → 0.45): KL รายมิติ $0.018096$
+คูณ 8 มิติได้ $\approx 0.145$ เทียบกับ `desired_kl = 0.01` → เกิน $0.02$ ไปมาก → `lr` จะถูกหาร
+ด้วย 1.5 · ส่วนใน toy ที่ $\sigma$ คงที่และ $\mu$ ขยับ 0.05: $0.05^2/(2 \cdot 0.25) = 0.0050$ ต่อมิติ
+(โน้ต 07 §5.7)
 
 ### `lr` มาจากไหน — และทำไมมันไม่คงที่
 
@@ -763,11 +732,16 @@ for param_group in self.optimizer.param_groups:
     param_group["lr"] = self.learning_rate                # ppo.py:236-244
 ```
 
+$$\boxed{\;lr \leftarrow \begin{cases} \max(10^{-5},\ lr / 1.5) & \overline{kl} > 2\,d_{KL} = 0.02 \\[2pt] \min(10^{-2},\ lr \times 1.5) & 0 < \overline{kl} < d_{KL}/2 = 0.005 \\[2pt] lr & \text{อื่น ๆ} \end{cases}\;} \tag{37}$$
+
 | อ่าน `kl_mean` ได้ | แปลว่า | ทำอะไร |
 | --- | --- | --- |
 | **> 0.02** | policy ขยับ **เยอะเกิน** | **หรี่** `lr` $\div 1.5$ (ไม่ต่ำกว่า `1e-5`) |
 | **< 0.005** | ขยับ **น้อยเกิน** เสียเวลา | **เร่ง** `lr` $\times 1.5$ (ไม่เกิน `1e-2`) |
 | อยู่ระหว่างนั้น | กำลังดี | ไม่แตะ |
+
+ใน toy: ขยับ $\mu$ 0.05 ทุกช่อง → $\overline{kl} = 0.0050$ → คงเดิม · ขยับ ±0.15 ตามกฎคู่แฝดของ
+โน้ต 07 §5.3 → 0.045 → ÷1.5
 
 `desired_kl = 0.01` ([cfg:104](../tron1-rl-isaaclab/exts/bipedal_locomotion/bipedal_locomotion/tasks/locomotion/agents/limx_rsl_rl_ppo_cfg.py#L104)) คือ **อุณหภูมิเป้าหมาย** · `kl_mean` คือ
 **อุณหภูมิที่วัดได้** · `lr` คือ **วาล์ว**
@@ -794,7 +768,7 @@ for param_group in self.optimizer.param_groups:
 > **ระยะทางสะสม**ตั้งแต่ต้น `update()` ไม่ใช่ระยะของ gradient step ล่าสุด · ผลที่ตามมา
 > ที่สังเกตได้: ที่ minibatch แรกของทุก iteration ยังไม่มี `.step()` เกิดขึ้นเลย
 > $\mu,\sigma$ จึงเท่าของเก่าเป๊ะ และ `kl` เหลือแค่ $8\log(1+10^{-5}) \approx 8\times10^{-5}$
-> จาก $\varepsilon$ กันหารศูนย์ที่ `ppo.py:224` — ซึ่ง **น้อยกว่า 0.005** ทำให้กิ่ง "เร่ง"
+> จาก `eps` $10^{-5}$ กันหารศูนย์ที่ `ppo.py:224` — ซึ่ง **น้อยกว่า 0.005** ทำให้กิ่ง "เร่ง"
 > ทำงาน **ทุก iteration** ที่ minibatch แรก
 >
 > **เกร็ด** — `anneal_lr = False` ([ppo.py:64](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L64))
@@ -819,12 +793,15 @@ for param_group in self.optimizer.param_groups:
 | `clip_grad_norm_(...)` | ถ้า norm ของ gradient ทั้งก้อนเกิน `max_grad_norm` ให้ย่อลงตามสัดส่วน — **เขียนทับ `.grad`** | [:289](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L289) |
 | `optimizer.step()` | **เขียนทับค่าลูกบิด** ตามกฎข้างบน | [:290](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L290) |
 
-บรรทัดที่สามคือ**ที่เดียว**ที่ตัวเลขของ actor, critic และ `logstd` เปลี่ยนค่า (encoder
+บรรทัดที่สี่ (`optimizer.step()`, `ppo.py:290`) คือ**ที่เดียว**ที่ตัวเลขของ actor, critic และ `logstd` เปลี่ยนค่า (encoder
 มี `.step()` ของตัวเองที่ `:321`)
 
-### $L$ ของ PPO ประกอบด้วยสามพจน์
+### $L$ ของ PPO ประกอบด้วยสามพจน์ — ทวนในมุมของโค้ด
 
-$$L \;=\; \underbrace{L^{CLIP}}_{\text{actor เรียน}} \;+\; \underbrace{1.0 \cdot L_V}_{\text{critic เรียน}} \;-\; \underbrace{0.01 \cdot H}_{\text{โบนัสความมั่ว}}$$
+โน้ต 05 §4.6 derive ทั้งสามพจน์แล้ว ((29) surrogate, (32) value loss, (31) entropy → (33) รวม)
+ตรงนี้ทวนเฉพาะสิ่งที่เห็นจากโค้ด:
+
+$$L \;=\; \underbrace{L^{CLIP}}_{\text{actor เรียน}} \;+\; \underbrace{1.0 \cdot L_V}_{\text{critic เรียน}} \;-\; \underbrace{0.01 \cdot H}_{\text{โบนัสความมั่ว}} \qquad \text{(สมการ (33))}$$
 
 ([ppo.py:274-278](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L274-L278) ·
 สัมประสิทธิ์ `1.0` และ `0.01` มาจาก [cfg:94](../tron1-rl-isaaclab/exts/bipedal_locomotion/bipedal_locomotion/tasks/locomotion/agents/limx_rsl_rl_ppo_cfg.py#L94)
@@ -850,7 +827,7 @@ $$L \;=\; \underbrace{L^{CLIP}}_{\text{actor เรียน}} \;+\; \underbrace
 $L^{CLIP}$ จึงเป็น **ฟังก์ชันตัวแทน**: คำนวณได้จากข้อมูล**เก่า** แต่มีความชัน ณ จุดปัจจุบัน
 ตรงกับของจริง · ตรงจุดที่ยังไม่ขยับ ($\theta = \theta_{old}$) จะได้ $\rho = 1$ พอดี และ
 ความชันของ $\rho\hat{A}$ กลายเป็น $\hat{A}\,\nabla\log\pi$ ซึ่งคือ **policy gradient**
-(นิยามอยู่ในโน้ต 05 §4.1) — ต่างกันแค่เครื่องหมายลบที่โค้ดเติมไว้ ตามกรอบข้างบน
+(สมการ (23) ของโน้ต 05 §4.1) — ต่างกันแค่เครื่องหมายลบที่โค้ดเติมไว้ ตามกรอบข้างบน
 
 **แต่ตัวแทนจะเหมือนของจริงเฉพาะแถว ๆ จุดเดิมเท่านั้น** ขยับไกลเมื่อไรมันเริ่มโกหก —
 และนี่คือเหตุผลหลักที่ต้องมี **clip** · ระวังคำ: clip ไม่ได้ *บังคับ* ไม่ให้เดินไกล มันแค่
@@ -883,8 +860,8 @@ $L^{CLIP}$ จึงเป็น **ฟังก์ชันตัวแทน**:
 
 $$H = \sum_{i=1}^{8}\Big[\tfrac{1}{2}\log(2\pi e) + \ell_i\Big] = 8(1.4189) + \sum_i \ell_i$$
 
-ตรวจกับเลขในตาราง §3: $\sigma = 0.5$ ทั้ง 8 มิติ → $8 \times 0.7258 = 5.8063 \approx 5.81$ ✓
-(ถ้าใช้สูตรมิติเดียวจะได้ $0.7258$ ซึ่งไม่ตรง)
+ตรวจกับ toy: $\sigma = 0.5$ ทั้ง 8 มิติ → $8 \times 0.7258 = 5.8063$ ✓ (สมการ (31) ต่อมิติ
+ให้ $0.7258$ — ตัวที่เข้า loss คือผลรวม 8 มิติ)
 
 เครื่องหมาย **ลบ** หน้า $0.01 H$ คือลูกเล่น "อยากได้มากก็ใส่ลบ" จากต้นหัวข้อ · ทำให้
 optimizer ซึ่งพยายามลด $L$ กลายเป็นพยายาม **เพิ่ม** $H$ → **เพิ่ม $\sigma$** → บังคับให้
@@ -896,10 +873,10 @@ optimizer ซึ่งพยายามลด $L$ กลายเป็นพ�
 | --- | --- | --- |
 | $L$ | scalar | เข็มวัดความแย่ · ยิ่งน้อยยิ่งดี |
 | $\ell$ | เวกเตอร์ `(8,)` | ลูกบิดที่คุม $\sigma$ ผ่าน $\sigma = e^{\ell}$ · **ไม่ใช่ $L$** |
-| gradient | ตัวเลขต่อลูกบิด | "หมุนขึ้นแล้วเข็มไปทางไหน" · ได้จาก `.backward()` |
-| learning rate $\alpha$ | scalar | ก้าวยาวแค่ไหน |
-| SGD | กฎ | ไถลสวนความชัน — ก้าวแปรตามขนาดความชัน |
-| Adam | กฎ | ไถลสวนความชัน แต่**หารขนาดทิ้ง** — ถ้าความชันชี้ทางเดิมสม่ำเสมอ ก้าวจะราว ๆ $\alpha$ · ถ้ามั่วจะน้อยกว่านั้นมาก |
+| gradient | ตัวเลขต่อลูกบิด | "หมุนขึ้นแล้วเข็มไปทางไหน" · ได้จาก `.backward()` · ของ $\ell$ คือสมการ (35) |
+| learning rate $\alpha$ | scalar | ก้าวยาวแค่ไหน · ปรับด้วยกฎ (37) |
+| SGD | กฎ (12) | ไถลสวนความชัน — ก้าวแปรตามขนาดความชัน |
+| Adam | กฎ (36) | ไถลสวนความชัน แต่**หารขนาดทิ้ง** — ถ้าความชันชี้ทางเดิมสม่ำเสมอ ก้าวจะราว ๆ $\alpha$ · ถ้ามั่วจะน้อยกว่านั้นมาก |
 | optimizer | วัตถุ | ผู้ถือกฎและรายชื่อลูกบิด · `.step()` คือที่เดียวที่ค่าเปลี่ยน |
 | surrogate | ฟังก์ชัน | ตัวแทนของเป้าหมายจริงที่คำนวณไม่ได้ · เชื่อได้เฉพาะใกล้จุดเดิม → จึงต้อง clip |
 | entropy $H$ | scalar | ความไม่แน่นอนของระฆัง · ขึ้นกับ $\sigma$ อย่างเดียว · ในโค้ดรวมครบ 8 มิติแล้ว |
@@ -967,7 +944,7 @@ $$\pi_\theta : \mathcal{S} \longrightarrow \Delta(\mathcal{A})$$
 ```
   ข้อ 2
     1 ┌───────────────┐
-      │       ● a = (0.61, −0.37)
+      │       ● a = (0.40, −0.40)
     0 │               │      𝒜 = สี่เหลี่ยมทั้งใบ
       │  ●            │      a  = จุดเดียวในนั้น
    -1 └───────────────┘
@@ -991,7 +968,7 @@ $$\pi_\theta : \mathcal{S} \longrightarrow \Delta(\mathcal{A})$$
 | สมาชิกหนึ่งตัว (= action หนึ่งอัน) | แปลว่าหุ่นทำอะไร |
 | --- | --- |
 | $[0, 0, 0, 0, 0, 0, 0, 0]$ | ยืนตามท่าเริ่มต้น ไม่ขยับข้อไหนเลย |
-| $[0.61, -0.37, 0.505, 0.645, -0.095, 0.815, -0.88, 0.40]$ | ท่าที่สุ่มได้ตอน step นี้ (ตัวเลขจาก §3.5.5) |
+| $[0.40, -0.40, 0.40, 0.40, -0.40, 1.20, -0.90, 0.40]$ | ท่าที่สุ่มได้ตอน step นี้ (ตัวเลขจาก §3.5.5) |
 | $[-2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0]$ | ย่อตัวสุดแรง น่าจะล้ม แต่**ยังเป็นสมาชิกที่ถูกต้อง** |
 | … อีกอนันต์ท่า | |
 
@@ -1091,7 +1068,7 @@ $$\mu_\theta : \mathcal{S} \to \mathcal{A} \qquad\text{เทียบกับ}
 | "การแจกแจง**บน**ผลการทอย" | ✗ ผลการทอยเป็นเลขตัวเดียว |
 
 *ตัวอย่างที่ 3 — Tron1* · $\mathcal{A} = \mathbb{R}^8$ ท่าที่เป็นไปได้ทั้งหมด ·
-$a = [0.61, -0.37, 0.505, \dots]$ ท่าที่สุ่มได้จริงในสเต็ปนี้
+$a = [0.40, -0.40, 0.40, \dots]$ ท่าที่สุ่มได้จริงในสเต็ปนี้
 
 | ประโยค | ถูกไหม |
 | --- | --- |
@@ -1120,7 +1097,7 @@ $$\underbrace{\text{"บน } \mathcal{A}\text{"}}_{\text{บรรยาย}\ \
        ขั้นที่ 1: ใส่ s เข้าไป              ขั้นที่ 2: เลือกทำอย่างใดอย่างหนึ่ง
                                           ┌── สุ่ม  ────▶ a        (ได้ action)
    π_θ  ──────────────▶  π_θ(·|s)  ───────┤
-  policy              ระฆัง 1 ใบ           └── แทนค่า a ──▶ 0.7423  (ได้ตัวเลข)
+  policy              ระฆัง 1 ใบ           └── แทนค่า a ──▶ 0.7365  (ได้ตัวเลข)
 ```
 
 ขั้นที่ 1 คือการเรียกฟังก์ชัน · ขั้นที่ 2 มีสองอย่างให้ทำกับระฆังใบนั้น **ซึ่งเป็นคนละ
@@ -1293,7 +1270,7 @@ $$\int \pi_\theta(a \mid s)\, da = 1 \qquad \text{สำหรับ } s \text{ 
 รวมทางฝั่ง**ซ้าย**ของขีดได้ 1 เสมอ · รวมทางฝั่ง**ขวา**ไม่มีความหมาย ($\sum_s \pi(a\mid s) \ne 1$)
 ขีดตั้งจึงเป็นตัวบอกว่า **ตัวไหนคือตัวแปรสุ่ม ตัวไหนคือสิ่งที่ตรึงไว้** ถ้าเขียน $\pi(a, s)$
 จะแปลว่าเป็น joint distribution — กระจายบนทั้งคู่ ซึ่งผิด เพราะ policy ไม่ได้บอกว่า
-state ไหนน่าจะเกิด (นั่นเป็นหน้าที่ของ $P$ ใน MDP — โน้ต 05 หัวข้อ 1.3)
+state ไหนน่าจะเกิด (นั่นเป็นหน้าที่ของ $P$ ใน MDP — โน้ต 05 หัวข้อ 1.2)
 
 ในวงเล็บนี้มีถึง **สามช่อง คนละชนิด**:
 
@@ -1336,22 +1313,22 @@ $$\pi_{\underbrace{\theta}_{\text{parameter}}}\big(\ \underbrace{a}_{\text{ต�
 > **วิธีแยกที่ใช้ได้ทุกครั้ง** — ถามว่า *"ตอบเป็นตัวเลขได้ไหม"* · $f$ ตอบไม่ได้ เพราะมันคือ
 > กฎ/กราฟทั้งเส้น · $f(3)$ ตอบได้ คือ 9
 
-**เอามาใช้กับ policy** — ถ้า $\mu = 0.42$ และ $\sigma = 0.5$ ระฆังอันนี้กำหนดความสูงไว้ให้
+**เอามาใช้กับ policy** — ช่อง e0 t0: $\mu = 0.20$ และ $\sigma = 0.5$ ระฆังอันนี้กำหนดความสูงไว้ให้
 **ทุกค่าของ $a$ ที่เป็นไปได้** ไม่ใช่แค่ค่าเดียว:
 
-| $a$ | $-1.0$ | $0.0$ | $0.42$ | $0.61$ | $1.5$ | … ทุกค่าบนเส้นจำนวนจริง |
+| $a$ | $-1.0$ | $0.0$ | $0.20$ | $0.40$ | $1.5$ | … ทุกค่าบนเส้นจำนวนจริง |
 | --- | --- | --- | --- | --- | --- | --- |
-| ความสูง | $0.0141$ | $0.5607$ | $0.7979$ | $0.7423$ | $0.0774$ | … |
+| ความสูง | $0.0448$ | $0.7365$ | $0.7979$ | $0.7365$ | $0.0272$ | … |
 
 - **ทั้งตารางรวมกัน** (ที่จริงยาวไม่รู้จบ) $= \pi_\theta(\cdot\mid s)$ — *ตัวเครื่อง*
 - **หนึ่งช่องในตาราง** $= \pi_\theta(a\mid s)$ — *ของที่ออกมา*
 
-ในโค้ดก็แยกกันชัดแบบเดียวกัน · `print(dist)` จะได้ `Normal(loc: 0.42, scale: 0.5)`
+ในโค้ดก็แยกกันชัดแบบเดียวกัน · `print(dist)` จะได้ `Normal(loc: 0.2, scale: 0.5)`
 ไม่ใช่ตัวเลข เพราะมันคือเครื่อง ไม่ใช่กาแฟ:
 
 ```python
-dist = Normal(0.42, 0.5)     # ← ตัวเครื่อง : ตัวแปร dist เก็บระฆังทั้งอัน
-dist.log_prob(0.61)          # ← หนึ่งช่อง  : เลขตัวเดียว
+dist = Normal(0.20, 0.5)     # ← ตัวเครื่อง : ตัวแปร dist เก็บระฆังทั้งอัน
+dist.log_prob(0.40)          # ← หนึ่งช่อง  : เลขตัวเดียว  (-0.3058)
 ```
 
 > **ศัพท์ที่โน้ตนี้ใช้** — เรียก $\pi_\theta(\cdot\mid s)$ ว่า **"ตัวการแจกแจง"** และบางที่เรียก
@@ -1406,9 +1383,9 @@ dist.log_prob(0.61)          # ← หนึ่งช่อง  : เลขต�
 
 | ในอุปมา | สัญกรณ์ | ใน Tron1 จริง |
 | --- | --- | --- |
-| ตารางความน่าจะเป็นของลูกเต๋า | $\pi_\theta(\cdot\mid s)$ | ระฆัง $\mathcal{N}(0.42,\ 0.5)$ |
-| **ทอย** แล้วออกหน้า 6 · ทอยใหม่ได้คนละหน้า | $a \sim \pi_\theta(\cdot\mid s)$ | สุ่มได้ $a = 0.61$ |
-| **เปิดตารางดู** ว่าหน้า 6 มีโอกาสเท่าไร · เปิดกี่ครั้งก็ได้เลขเดิม | $\pi_\theta(a{=}6\mid s)$ | $\pi_\theta(0.61\mid s) = 0.7423$ |
+| ตารางความน่าจะเป็นของลูกเต๋า | $\pi_\theta(\cdot\mid s)$ | ระฆัง $\mathcal{N}(0.20,\ 0.5)$ |
+| **ทอย** แล้วออกหน้า 6 · ทอยใหม่ได้คนละหน้า | $a \sim \pi_\theta(\cdot\mid s)$ | สุ่มได้ $a = 0.40$ |
+| **เปิดตารางดู** ว่าหน้า 6 มีโอกาสเท่าไร · เปิดกี่ครั้งก็ได้เลขเดิม | $\pi_\theta(a{=}6\mid s)$ | $\pi_\theta(0.40\mid s) = 0.7365$ |
 
 ทั้งสองอย่างใช้ตารางใบเดียวกันแต่เป็นคนละกิจกรรม และ**ไม่มีการ "ยัดหน้า 6 กลับเข้าไป
 ในลูกเต๋า"** เพราะการเปิดตารางดูไม่ได้ทำอะไรกับลูกเต๋าเลย แค่อ่านค่าจากกระดาษ
@@ -1447,13 +1424,13 @@ dist.log_prob(0.61)          # ← หนึ่งช่อง  : เลขต�
 
 $$\pi_\theta(a \mid s) = \mathcal{N}(a;\ \mu,\ \sigma) \qquad \textbf{สำหรับ } a \textbf{ ทุกค่าที่เป็นไปได้}$$
 
-ตรวจด้วยตัวเลขได้ ($\mu = 0.42$, $\sigma = 0.5$, ดูมิติเดียว):
+ตรวจด้วยตัวเลขได้ ($\mu = 0.20$, $\sigma = 0.5$, ดูมิติเดียว):
 
 | ป้อน $a$ | ข้างซ้ายให้ | ข้างขวาให้ |
 | --- | --- | --- |
-| $0.61$ | $0.7423$ | $0.7423$ |
-| $0.42$ | $0.7979$ | $0.7979$ |
-| $1.50$ | $0.0774$ | $0.0774$ |
+| $0.40$ | $0.7365$ | $0.7365$ |
+| $0.20$ | $0.7979$ | $0.7979$ |
+| $1.50$ | $0.0272$ | $0.0272$ |
 
 **ซ้ายคือ "ตำแหน่ง" ขวาคือ "คนที่มานั่งตำแหน่งนั้น"** — เหมือนประโยค *"ผู้จัดการฝ่ายขาย
 = สมชาย"* ซึ่งเท่ากันได้เพราะทั้งสองข้างชี้ไปที่คนคนเดียวกัน · ข้างซ้ายบอก **บทบาท**
@@ -1507,7 +1484,7 @@ ELU ไม่ได้สร้างความสุ่ม มันแค่
 > มีเท่าไร** ในสูตรปิดสามพจน์
 
 Gaussian ให้สองอย่างพร้อมกัน ซึ่งหายาก — และทั้งคู่เป็นแค่บวกลบคูณหาร จึงทำ
-49,152 × 20 ครั้งต่อ iteration ไหว:
+12,288 × 20 = 245,760 ครั้งต่อ iteration (= ทุกช่อง 49,152 ช่อง × 5 epoch) ไหว:
 
 $$\underbrace{a = \mu + \sigma\varepsilon}_{\text{สุ่มง่ายมาก}} \qquad\qquad \underbrace{\log\pi = -\tfrac{(a-\mu)^2}{2\sigma^2} - \log\sigma - 0.919}_{\text{ประเมินย้อนหลังง่ายมาก}}$$
 
@@ -1586,7 +1563,7 @@ Tron1 และทุกอันต้องการตัวการแจ�
 
 $$a \sim \pi_\theta(\cdot\mid s) \qquad H\big[\pi_\theta(\cdot\mid s)\big] \qquad D_{KL}\big(\pi_{\theta_{old}}(\cdot\mid s)\ \|\ \pi_{\theta_{new}}(\cdot\mid s)\big)$$
 
-- **สุ่ม** — ต้องมีระฆังทั้งอันก่อน ถ้ามีแค่ "ความสูงที่ $a = 0.61$" สุ่มไม่ได้
+- **สุ่ม** — ต้องมีระฆังทั้งอันก่อน ถ้ามีแค่ "ความสูงที่ $a = 0.40$" สุ่มไม่ได้
 - **entropy** — "ระฆังนี้กว้างแค่ไหน" เป็นสมบัติของระฆังทั้งอัน จุดเดียวตอบไม่ได้
 - **KL** — "สองระฆังนี้ต่างกันแค่ไหน" ต้องมีสองตัวมาเทียบ
 
@@ -1607,16 +1584,17 @@ $$a \sim \pi_\theta(\cdot\mid s) \qquad H\big[\pi_\theta(\cdot\mid s)\big] \qqua
 $$D_{KL}(p \,\|\, q) = \mathbb{E}_{a \sim p}\big[\log p(a) - \log q(a)\big]$$
 
 **ตัวซ้าย = ตัวที่เราสุ่มมาเฉลี่ย · ตัวขวา = ตัวที่ถูกเอามาเทียบ** หน้าที่คนละอย่าง
-สลับแล้วได้คนละเลข · ลองด้วยสูตรที่อยู่ในโค้ดนี้เอง ใส่ $\mu_{old}=0.42,\ \sigma_{old}=1.0$
-กับ $\mu_{new}=0.50,\ \sigma_{new}=0.9$
+สลับแล้วได้คนละเลข · ลองด้วยสูตรที่อยู่ในโค้ดนี้เอง (สมการ (30)) ใส่ระฆังเก่าของ e0 t0
+$\mu_{old}=0.20,\ \sigma_{old}=0.5$ กับระฆังใหม่สมมติ $\mu_{new}=0.25,\ \sigma_{new}=0.45$
+(ต้องให้ $\sigma$ ต่างกันด้วย — ถ้า $\sigma$ เท่ากัน KL สองทิศจะบังเอิญเท่ากัน)
 
 | **รายมิติ** (ช่อง $i$ ช่องเดียว) | ค่า |
 | --- | --- |
-| $D_{KL}(\pi_{old} \,\|\, \pi_{new})$ | $0.015874$ |
-| $D_{KL}(\pi_{new} \,\|\, \pi_{old})$ | $0.013561$ ← ต่างกัน 1.17 เท่า |
+| $D_{KL}(\pi_{old} \,\|\, \pi_{new})$ | $0.018096$ |
+| $D_{KL}(\pi_{new} \,\|\, \pi_{old})$ | $0.015361$ ← ต่างกัน 1.18 เท่า |
 
-(ของจริง `axis=-1` บวกครบ 8 มิติก่อน — ถ้าทุกมิติหน้าตาแบบนี้จะได้ $\approx 0.127$
-ซึ่งสูงกว่า `desired_kl = 0.01` มาก แล้ว learning rate จะถูกหารด้วย 1.5)
+(ของจริง `axis=-1` บวกครบ 8 มิติก่อน — ถ้าทุกมิติหน้าตาแบบนี้จะได้ $\approx 0.145$
+ซึ่งสูงกว่า `desired_kl = 0.01` มาก แล้ว learning rate จะถูกหารด้วย 1.5 — สมการ (37))
 
 ถ้าสลับที่ได้ สองบรรทัดนี้ต้องเท่ากัน · มันไม่เท่า — **นี่คือสิ่งที่ $\|$ เตือน** และเป็น
 เหตุผลที่ KL **ไม่ใช่ "ระยะทาง"** (ระยะทางต้องสมมาตร) ตำราจึงเรียกว่า *divergence*
@@ -1628,7 +1606,7 @@ $$\log\frac{\sigma_{new}}{\sigma_{old}} + \frac{\sigma_{old}^2 + (\mu_{old}-\mu_
 
 > **โค้ดไม่ตรงสูตรเป๊ะ ๆ** — บรรทัดจริงเขียน `torch.log(sigma_batch / old_sigma_batch + 1.0e-5)`
 > คือมี $10^{-5}$ บวกอยู่**ข้างในลอการิทึม** กัน `log 0` · มันไม่เปลี่ยนว่าเป็น KL ทิศไหน
-> แค่ทำให้ค่าสูงขึ้นนิดหน่อย (ตัวอย่างข้างบนจะได้ $0.015885$ แทน $0.015874$)
+> แค่ทำให้ค่าสูงขึ้นนิดหน่อย (ตัวอย่างข้างบนจะได้ $0.018107$ แทน $0.018096$)
 
 เทียบกับสูตรปิดของเกาส์เซียนแล้วคือ $D_{KL}(\pi_{old} \,\|\, \pi_{new})$ — **ตรงกับลำดับที่
 เขียนไว้ข้างบนพอดี**
@@ -1675,19 +1653,20 @@ dist.entropy().sum(-1)          # ↗
 
 ### 3.5.3 สามทิศทางที่ต้องแยกให้ออก
 
-**ทิศ ① $\mu_\theta(s) \Rightarrow \pi_\theta$ — ประกอบร่าง (มีการคำนวณ)** ต้องมี $\sigma$ มาสมทบ
+**ทิศ ก $\mu_\theta(s) \Rightarrow \pi_\theta$ — ประกอบร่าง (มีการคำนวณ)** ต้องมี $\sigma$ มาสมทบ
 จึงจะได้ $\pi$ · เกิดที่ [actor_critic.py:155-157](../tron1-rl-isaaclab/rsl_rl/rsl_rl/modules/actor_critic.py#L155-L157)
 
-**ทิศ ② $\pi_\theta \Rightarrow \mu_\theta(s)$ — อ่านฉลาก (ไม่มีการคำนวณ)** เพราะ $\mu$ คือ
+**ทิศ ข $\pi_\theta \Rightarrow \mu_\theta(s)$ — อ่านฉลาก (ไม่มีการคำนวณ)** เพราะ $\mu$ คือ
 พารามิเตอร์ตัวที่หนึ่งของ $\pi$ อยู่แล้ว `action_mean` คือ `return self.distribution.mean`
 ซึ่งใน torch คือ `return self.loc` — tensor ตัวเดิมเป๊ะ
 
-**ทิศ ③ $\pi_\theta \Rightarrow \pi_\theta(a\mid s)$ — ประเมินค่า (ต้องมี $a$ ก่อน)** เอา $a$ หย่อนกลับ
+**ทิศ ค $\pi_\theta \Rightarrow \pi_\theta(a\mid s)$ — ประเมินค่า (ต้องมี $a$ ก่อน)** เอา $a$ หย่อนกลับ
 เข้าสูตรระฆัง ได้ scalar · เกิดที่ [actor_critic.py:163-164](../tron1-rl-isaaclab/rsl_rl/rsl_rl/modules/actor_critic.py#L163-L164)
 
-> เปรียบเทียบ: $\mu, \sigma$ คือ**ส่วนผสม** · $\pi$ คือ**ขนมที่อบแล้ว** · ทิศ ① คืออบ ·
-> ทิศ ② คือแกะฉลากดูว่าใส่อะไรไป — ไม่ใช่การแยกขนมกลับเป็นแป้งกับไข่ ·
-> ทิศ ③ คือชิมแล้วให้คะแนนชิ้นที่หยิบมา
+> เปรียบเทียบ: $\mu, \sigma$ คือ**ส่วนผสม** · $\pi$ คือ**ขนมที่อบแล้ว** · ทิศ ก คืออบ ·
+> ทิศ ข คือแกะฉลากดูว่าใส่อะไรไป — ไม่ใช่การแยกขนมกลับเป็นแป้งกับไข่ ·
+> ทิศ ค คือชิมแล้วให้คะแนนชิ้นที่หยิบมา · (ใช้ตัวอักษรไทย ก/ข/ค เพื่อไม่ชนกับ ①②③ ที่
+> §3.5.0 ใช้เรียกสามชิ้นของ policy)
 
 ### 3.5.4 สมการทั้ง 15 ข้อ เรียงตามลำดับการส่งค่า
 
@@ -1699,9 +1678,9 @@ $B = 2048$ (ตอนเก็บข้อมูล) · $MB = 12{,}288$ (ตอ�
 
 **E1 · encoder เดาสิ่งที่วัดไม่ได้**
 
-$$z = f_\psi(h)$$
+$$\hat v = f_\psi(h)$$
 
-รับ $h$ `(B,360)` → คืน $z$ `(B,3)` · [ppo.py:136](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L136)
+รับ $h$ `(B,360)` → คืน $\hat v$ `(B,3)` · [ppo.py:136](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L136)
 
 > **หมายถึงอะไร** — "ดูประวัติ 10 step ล่าสุด (36 ค่า × 10) แล้วสรุปเป็นตัวเลข 3 ตัว
 > ที่บอกสิ่งที่เซนเซอร์วัดตรง ๆ ไม่ได้"
@@ -1714,11 +1693,11 @@ $$z = f_\psi(h)$$
 
 **E2 · ต่อ input ของ actor**
 
-$$s = \big[\, z \,;\, o \,;\, c \,\big]$$
+$$s = \big[\, \hat v \,;\, o \,;\, c \,\big]$$
 
 รับ `(B,3)`, `(B,36)`, `(B,3)` → คืน $s$ `(B,42)` · [ppo.py:138](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L138)
 
-> **หมายถึงอะไร** — ต่อสามอย่างเป็นแถวเดียว: สิ่งที่*เดา*ได้ ($z$) + สิ่งที่*วัด*ได้ ($o$) +
+> **หมายถึงอะไร** — ต่อสามอย่างเป็นแถวเดียว: สิ่งที่*เดา*ได้ ($\hat v$ — ค่าประมาณของ `base_lin_vel`, โน้ต 05 §4.4) + สิ่งที่*วัด*ได้ ($o$) +
 > สิ่งที่*คนสั่ง* ($c$)
 >
 > **ทำไปทำไม** — NN รับได้แค่เวกเตอร์ก้อนเดียว · และ $c$ ต้องอยู่ในนั้นด้วย ไม่งั้น policy
@@ -1761,7 +1740,7 @@ $$\sigma = \exp(\ell), \qquad \ell \in \mathbb{R}^8 \text{ เป็น \texttt{
 
 | | ได้มาจาก | เป็นอะไร | ขึ้นกับ $s$ ไหม |
 | --- | --- | --- | --- |
-| $\mu$ | `self.actor(observations)` โดย `observations = [z;o;c]` `(B,42)` — NN 187,272 weight ([:156](../tron1-rl-isaaclab/rsl_rl/rsl_rl/modules/actor_critic.py#L156)) | เวกเตอร์ `(B,8)` | **ขึ้น** — เปลี่ยนทุก state |
+| $\mu$ | `self.actor(observations)` โดย `observations = [v̂;o;c]` `(B,42)` — NN 187,272 weight ([:156](../tron1-rl-isaaclab/rsl_rl/rsl_rl/modules/actor_critic.py#L156)) | เวกเตอร์ `(B,8)` | **ขึ้น** — เปลี่ยนทุก state |
 | $\sigma$ | `torch.exp(self.logstd)` ([:157](../tron1-rl-isaaclab/rsl_rl/rsl_rl/modules/actor_critic.py#L157)) — `nn.Parameter` **ลอย ๆ 8 ตัว** ประกาศที่ [:118](../tron1-rl-isaaclab/rsl_rl/rsl_rl/modules/actor_critic.py#L118) | เวกเตอร์ `(8,)` broadcast | **ไม่ขึ้น** — ทุก state ทุก env ใช้ชุดเดียวกัน |
 | $V(s)$ | `self.critic(critic_obs)` — NN 282,625 weight ([:170-172](../tron1-rl-isaaclab/rsl_rl/rsl_rl/modules/actor_critic.py#L170-L172)) | **หนึ่งค่าต่อ env** — tensor `(B,1)` ไม่ใช่ scalar เดี่ยว | ขึ้น — แต่ไม่เกี่ยวกับ $\sigma$ |
 
@@ -1843,18 +1822,19 @@ $$\ell_i \;\leftarrow\; \ell_i + \text{lr}\cdot\Big[\underbrace{\tfrac{1}{\text{
 *แรงที่ 1 — entropy bonus: ดันขึ้น* ด้วยค่าคงที่ $+0.01$ ทุกสเต็ป ทุกมิติ ไม่สนว่า
 เกิดอะไรขึ้น
 
-*แรงที่ 2 — surrogate: ขึ้นกับว่าท่าที่ดีอยู่ไกลหรือใกล้จุดกลาง* · ใส่ $\sigma_i = 1$,
-$\mu_i = 0.42$, $\hat{A} = \pm 1.10$, $\rho = 1$
+*แรงที่ 2 — surrogate: ขึ้นกับว่าท่าที่ดีอยู่ไกลหรือใกล้จุดกลาง* · ใส่ค่าของ e0 t0: $\sigma_i = 0.5$,
+$\mu_i = 0.20$, $\hat{A} = \pm 0.7975$, $\rho = 1$ (สมการ (35) กลับเครื่องหมาย = แรงผลัก $\ell$)
 
 | กรณี | $a_i$ | $z_i^2-1$ | พจน์ surrogate | ผล |
 | --- | --- | --- | --- | --- |
-| ท่า**ดี** อยู่**ไกล** (เกิน $1\sigma$) | 2.00 | $+1.496$ | $+1.646$ | $\sigma$ **กว้างขึ้น** |
-| ท่า**ดี** อยู่**ใกล้** | 0.70 | $-0.922$ | $-1.014$ | $\sigma$ **แคบลง** |
-| ท่า**แย่** อยู่**ไกล** | 2.00 | $+1.496$ | $-1.646$ | $\sigma$ **แคบลง** |
-| ท่า**แย่** อยู่**ใกล้** | 0.70 | $-0.922$ | $+1.014$ | $\sigma$ **กว้างขึ้น** |
+| ท่า**ดี** อยู่**ไกล** (เกิน $1\sigma$) | 1.00 | $+1.560$ | $+1.244$ | $\sigma$ **กว้างขึ้น** |
+| ท่า**ดี** อยู่**ใกล้** | 0.35 | $-0.910$ | $-0.726$ | $\sigma$ **แคบลง** |
+| ท่า**แย่** อยู่**ไกล** | 1.00 | $+1.560$ | $-1.244$ | $\sigma$ **แคบลง** |
+| ท่า**แย่** อยู่**ใกล้** | 0.35 | $-0.910$ | $+0.726$ | $\sigma$ **กว้างขึ้น** |
 
 (สี่ค่านี้เป็น**พจน์ surrogate ล้วน** ยังไม่รวม entropy · บวก $+0.01$ เข้าไปจะได้
-$+1.656 / -1.004 / -1.636 / +1.024$ — ทิศไม่เปลี่ยนสักแถว)
+$+1.254 / -0.716 / -1.234 / +0.736$ — ทิศไม่เปลี่ยนสักแถว · ช่อง e0 t0 จริง ($a = 0.40$,
+$z^2 - 1 = -0.84$) อยู่แถวที่สอง: $-0.670$ → แคบลง ตรงกับ §3.4)
 
 อ่านเป็นประโยคเดียว: **$\sigma$ ขยับเพื่อให้ระฆังไปคลุมตรงที่ท่าดี ๆ อยู่** — เจอของดี
 ไกลจุดกลางก็กางออกไปหา · ของดีอยู่ใกล้อยู่แล้วก็หุบเข้าเลิกเสี่ยง · ของแย่อยู่ไกลก็หุบเข้า
@@ -1901,7 +1881,7 @@ loss ใช้ `torch.max(surrogate, surrogate_clipped)` ([:260](../tron1-rl-isa
 และแม้ในกรณีที่ gradient เป็น 0 ตัวอย่างนั้นก็ยัง**นับอยู่ในตัวหารของ `.mean()`**
 และยังออกเสียงใน พจน์ entropy ตามส่วนของมันอยู่ดี
 
-**E5 · ประกอบร่างเป็น $\pi$ — ทิศ ①**
+**E5 · ประกอบร่างเป็น $\pi$ — ทิศ ก · สมการ (9)**
 
 $$\pi_\theta(\,\cdot \mid s\,) \;=\; \mathcal{N}\big(\mu,\ \sigma\big)$$
 
@@ -1924,25 +1904,26 @@ $$\frac{\partial L}{\partial \mu_i} = -\hat{A}\,\rho\,\frac{\mathbf{(a_i - \mu_i
 ทุก step ตลอด 15,000 iteration** หุ่นจะไม่ขยับเลยแม้แต่นิดเดียว นี่ไม่ใช่การเปรียบเปรย
 แต่เป็นเลข 0 จริง ๆ ในสมการ
 
-เห็นภาพด้วยตัวเลข — 3 env อยู่ในสถานการณ์เดียวกัน actor บอก $\mu = 0.42$
+เห็นภาพด้วยตัวเลข — 3 env อยู่ในสถานการณ์เดียวกัน actor บอก $\mu = 0.20$ (env 1 คือ e0 t0
+จริง อีกสองตัวสมมติ)
 
 **กรณีสุ่ม ($\sigma = 0.5$)**
 
 | env | $a$ ที่สุ่มได้ | reward | $\hat{A}$ | $(a - \mu)$ | ผลต่อ $\mu$ |
 | --- | --- | --- | --- | --- | --- |
-| 1 | $0.61$ | 0.9 | $+1.1$ | $+0.19$ | ดึงขึ้น |
-| 2 | $0.30$ | 0.5 | $-0.8$ | $-0.12$ | ดึงขึ้น (หนีจากที่แย่) |
-| 3 | $0.45$ | 0.7 | $+0.1$ | $+0.03$ | ดึงขึ้นนิดเดียว |
+| 1 | $0.40$ | 1.0 | $+0.80$ | $+0.20$ | ดึงขึ้น |
+| 2 | $-0.10$ | 0.5 | $-0.80$ | $-0.30$ | ดึงขึ้น (หนีจากที่แย่) |
+| 3 | $0.25$ | 0.7 | $+0.10$ | $+0.05$ | ดึงขึ้นนิดเดียว |
 
-สามตัวนี้**ต่างกัน** → เปรียบเทียบได้ → รู้ว่า 0.42 ควรขยับไปทาง 0.6
+สามตัวนี้**ต่างกัน** → เปรียบเทียบได้ → รู้ว่า 0.20 ควรขยับไปทาง 0.4
 
 **กรณีไม่สุ่ม ($\sigma = 0$)**
 
 | env | $a$ | reward | $\hat{A}$ | $(a-\mu)$ | ผลต่อ $\mu$ |
 | --- | --- | --- | --- | --- | --- |
-| 1 | $0.42$ | 0.7 | $0.0$ | $0$ | **ไม่ขยับ** |
-| 2 | $0.42$ | 0.7 | $0.0$ | $0$ | **ไม่ขยับ** |
-| 3 | $0.42$ | 0.7 | $0.0$ | $0$ | **ไม่ขยับ** |
+| 1 | $0.20$ | 0.7 | $0.0$ | $0$ | **ไม่ขยับ** |
+| 2 | $0.20$ | 0.7 | $0.0$ | $0$ | **ไม่ขยับ** |
+| 3 | $0.20$ | 0.7 | $0.0$ | $0$ | **ไม่ขยับ** |
 
 ทุกตัวได้เหมือนกันหมด → ไม่มีอะไรให้เทียบ → critic ทายถูกทุกครั้ง advantage เป็น 0 หมด
 
@@ -1951,7 +1932,7 @@ $$\frac{\partial L}{\partial \mu_i} = -\hat{A}\,\rho\,\frac{\mathbf{(a_i - \mu_i
 
 ส่วนข้อ (2) "มาตรวัดว่าชอบแค่ไหน" ก็พังเหมือนกัน: $\rho$ ใน E13 คือการ**หาร**
 $\pi_{\text{new}} / \pi_{\text{old}}$ ต้องมีเลขสองตัวมาหารกัน · ถ้า policy ไม่สุ่ม การแจกแจง
-จะกลายเป็น**เข็มแหลม** — สูงเป็นอนันต์ที่จุด $0.42$ เท่านั้น เป็นศูนย์ทุกที่อื่น ทำให้
+จะกลายเป็น**เข็มแหลม** — สูงเป็นอนันต์ที่จุด $0.20$ เท่านั้น เป็นศูนย์ทุกที่อื่น ทำให้
 $\rho = \infty/\infty$ หรือ $0/0$ คำนวณไม่ได้
 
 **สรุปหนึ่งประโยค — จุดเดียวไม่มีความชัน ระฆังมีความชันทุกจุด และการเรียนรู้ทั้งหมด
@@ -2083,15 +2064,15 @@ $\log\pi_\theta(a\mid s)$ ต่างหาก · $a$ ถูก `.detach()` ต
 
 **$\odot$ ทำงานยังไง — ดูด้วยตัวเลข 3 มิติ (ของจริง 8)**
 
-$$\begin{aligned} \mu &= [\,0.42,\ -0.31,\ 0.05\,] \\ \sigma &= [\,0.5,\ \ \ \ \ 0.5,\ \ \ \ 0.5\,] \\ \varepsilon &= [\,0.38,\ -0.12,\ 0.91\,] \quad \leftarrow \text{สุ่มใหม่ทุกครั้ง} \end{aligned}$$
+$$\begin{aligned} \mu &= [\,0.20,\ -0.30,\ 0.10\,] \\ \sigma &= [\,0.5,\ \ \ \ \ 0.5,\ \ \ \ 0.5\,] \\ \varepsilon &= [\,0.40,\ -0.20,\ 0.60\,] \quad \leftarrow \text{สุ่มใหม่ทุกครั้ง} \end{aligned}$$
 
-$$\sigma \odot \varepsilon = [\,0.5{\times}0.38,\ \ 0.5{\times}(-0.12),\ \ 0.5{\times}0.91\,] = [\,0.19,\ -0.06,\ 0.455\,]$$
+$$\sigma \odot \varepsilon = [\,0.5{\times}0.40,\ \ 0.5{\times}(-0.20),\ \ 0.5{\times}0.60\,] = [\,0.20,\ -0.10,\ 0.30\,]$$
 
-$$a = \mu + (\sigma\odot\varepsilon) = [\,0.61,\ -0.37,\ 0.505\,]$$
+$$a = \mu + (\sigma\odot\varepsilon) = [\,0.40,\ -0.40,\ 0.40\,]$$
 
 ตรงกับสามแถวแรกของตารางใน §3.5.5 พอดี
 
-> ถ้าเป็น dot product ผลลัพธ์จะเป็นเลขตัวเดียว ($0.19 - 0.06 + 0.455 = 0.585$) ซึ่งผิด
+> ถ้าเป็น dot product ผลลัพธ์จะเป็นเลขตัวเดียว ($0.20 - 0.10 + 0.30 = 0.40$) ซึ่งผิด
 > เพราะเราต้องการ action 8 ค่า ไม่ใช่ค่าเดียว — นี่คือเหตุผลที่ต้องใช้ $\odot$ ไม่ใช่ $\cdot$
 
 **$I_8$ บอกอะไร** — ช่องที่สองของ $\mathcal{N}$ ในโลกหลายมิติคือ *เมทริกซ์ความแปรปรวนร่วม*
@@ -2152,7 +2133,7 @@ $\sigma \to 0$ ไม่ใช่การแทนค่า
 > น่าจะเป็นที่สุด" พอดี · ถ้าใช้การแจกแจงที่เบ้ (เช่น tanh-normal ของ SAC) สองอย่างนี้
 > จะคนละจุด แล้วต้องเลือกว่าจะเอาอันไหน
 
-#### ช่วง C — จาก $\pi_\theta$ ไปเป็น $\pi_\theta(a\mid s)$ — ทิศ ③
+#### ช่วง C — จาก $\pi_\theta$ ไปเป็น $\pi_\theta(a\mid s)$ — ทิศ ค
 
 *ประโยคเดียวของช่วงนี้: จากการกระทำ → ตัวเลขที่บอกว่า "ตอนนั้นเราชอบมันแค่ไหน" เก็บไว้เทียบทีหลัง*
 
@@ -2249,7 +2230,7 @@ self.actor_critic.act(                       # ← เรียกแล้ว�
 
 เรียก `act()` แต่ไม่เอา return value เพราะที่ต้องการคือ **side effect** — ให้
 `self.distribution` ถูกสร้างใหม่ด้วย $\theta$ ปัจจุบัน action ที่มันสุ่มออกมาถูกทิ้งทันที
-เพราะ PPO ต้องประเมิน $a_{\text{old}}$ ตัวเดิมเท่านั้น บรรทัดนี้คือ **ทิศ ① ที่ถูกเรียกซ้ำ
+เพราะ PPO ต้องประเมิน $a_{\text{old}}$ ตัวเดิมเท่านั้น บรรทัดนี้คือ **ทิศ ก ที่ถูกเรียกซ้ำ
 20 ครั้งต่อ iteration**
 
 > **หมายถึงอะไร** — หลัง $\theta$ ขยับ ความเห็นของ actor เปลี่ยนไปแล้ว ต้องปั้นก้อนหมอก
@@ -2321,114 +2302,129 @@ $$\frac{\partial L}{\partial \mu_i} = -\hat{A}\,\rho\,\frac{a_i - \mu_i}{\sigma_
 
 ### 3.5.5 ไล่แทนค่าจริงทั้งสาย
 
-ตั้งต้น: หนึ่ง env · $\sigma = 0.5$ ทุกมิติ (แปลว่า $\ell = \ln 0.5 = -0.6931$) · $\hat{A} = +1.10$
+ตั้งต้น: หนึ่ง env · $\sigma = 0.5$ ทุกมิติ (แปลว่า $\ell = \ln 0.5 = -0.6931$) · $\hat{A} = +0.7975$ —
+นี่คือช่อง **e0 t0** ของตาราง 2 × 4 ขยายเป็น 8 ข้อต่อ: ข้อต่อที่ 1 คือช่องนั้นเป๊ะ ($\mu = 0.20$,
+$\varepsilon = +0.40$) ส่วนข้อต่อ 2–8 เลือกให้เห็นกรณีต่าง ๆ (อภิธานศัพท์หัวข้อ 8.6 · คำนวณด้วย
+`scripts/toy_answer_key.py` ส่วนท้าย และสคริปต์ §3.5.7)
 
-**E3 → E5 · ได้ $\pi$**
+**E3 → E5 · ได้ $\pi$** (สมการ (9))
 
-$$\mu = [\,0.42,\ -0.31,\ 0.05,\ 0.88,\ -0.12,\ 0.20,\ -0.55,\ 0.33\,]$$
+$$\mu = [\,0.20,\ -0.30,\ 0.10,\ 0.40,\ -0.10,\ 0.60,\ -0.50,\ 0.30\,]$$
 
 $$\sigma = \exp(-0.6931) = 0.5 \quad\Longrightarrow\quad \pi_\theta(\cdot\mid s) = \mathcal{N}\big(\mu,\ 0.5\big)$$
 
-**E6 · สุ่มออกมาเป็น action** — $a_i = \mu_i + 0.5\,\varepsilon_i$
+**E6 · สุ่มออกมาเป็น action** — $a_i = \mu_i + 0.5\,\varepsilon_i$ (สมการ (16))
 
 | $i$ | $\mu_i$ | $\varepsilon_i$ | $a_i$ |
 | --- | --- | --- | --- |
-| 1 | $+0.42$ | $+0.38$ | $+0.610$ |
-| 2 | $-0.31$ | $-0.12$ | $-0.370$ |
-| 3 | $+0.05$ | $+0.91$ | $+0.505$ |
-| 4 | $+0.88$ | $-0.47$ | $+0.645$ |
-| 5 | $-0.12$ | $+0.05$ | $-0.095$ |
-| 6 | $+0.20$ | $+1.23$ | $+0.815$ |
-| 7 | $-0.55$ | $-0.66$ | $-0.880$ |
-| 8 | $+0.33$ | $+0.14$ | $+0.400$ |
+| 1 | $+0.20$ | $+0.40$ | $+0.40$ |
+| 2 | $-0.30$ | $-0.20$ | $-0.40$ |
+| 3 | $+0.10$ | $+0.60$ | $+0.40$ |
+| 4 | $+0.40$ | $0.00$ | $+0.40$ |
+| 5 | $-0.10$ | $-0.60$ | $-0.40$ |
+| 6 | $+0.60$ | $+1.20$ | $+1.20$ |
+| 7 | $-0.50$ | $-0.80$ | $-0.90$ |
+| 8 | $+0.30$ | $+0.20$ | $+0.40$ |
 
-เวกเตอร์ 8 ตัวนี้คือสิ่งที่ถูกส่งไปคูณ 0.25 แล้วเข้า PD controller — **จบหน้าที่ฝั่งควบคุม**
+เวกเตอร์ 8 ตัวนี้คือสิ่งที่ถูกส่งไปคูณ 0.25 แล้วเข้า PD controller (สมการ (17)(18)) — **จบหน้าที่
+ฝั่งควบคุม** · สังเกตข้อต่อ 4: $\varepsilon = 0$ พอดี $a = \mu$ — จะเห็นผลใน E8
 
-**E8 · ความหนาแน่นรายมิติ** — ยกมิติที่ 1 มาทำเต็ม ๆ ก่อน: $a_1 - \mu_1 = 0.610 - 0.42 = +0.190$
+**E8 · ความหนาแน่นรายมิติ** (สมการ (14)) — ยกมิติที่ 1 มาทำเต็ม ๆ ก่อน: $a_1 - \mu_1 = 0.40 - 0.20 = +0.20$
 
-$$\log\mathcal{N}(a_1) = -\frac{(0.190)^2}{2(0.5)^2} - \log(0.5) - 0.9189 = -0.0722 + 0.6931 - 0.9189 = \mathbf{-0.2980}$$
+$$\log\mathcal{N}(a_1) = -\frac{(0.20)^2}{2(0.5)^2} - \log(0.5) - 0.9189 = -0.0800 + 0.6931 - 0.9189 = \mathbf{-0.3058}$$
+
+(ตัวเลขเดียวกับ $\log\pi_{old}$ ของ e0 t0 ในโน้ต 07 §2.2 — เพราะข้อต่อ 1 คือช่องนั้น)
 
 ครบทั้ง 8 มิติ (พจน์ 2 และ 3 เท่ากันหมด เปลี่ยนแค่พจน์แรก):
 
 | $i$ | $a_i - \mu_i$ | พจน์ 1 | พจน์ 2 | พจน์ 3 | $\log\mathcal{N}(a_i)$ |
 | --- | --- | --- | --- | --- | --- |
-| 1 | $+0.190$ | $-0.0722$ | $+0.6931$ | $-0.9189$ | $-0.2980$ |
-| 2 | $-0.060$ | $-0.0072$ | $+0.6931$ | $-0.9189$ | $-0.2330$ |
-| 3 | $+0.455$ | $-0.4141$ | $+0.6931$ | $-0.9189$ | $-0.6398$ |
-| 4 | $-0.235$ | $-0.1105$ | $+0.6931$ | $-0.9189$ | $-0.3362$ |
-| 5 | $+0.025$ | $-0.0013$ | $+0.6931$ | $-0.9189$ | $-0.2270$ |
-| 6 | $+0.615$ | $-0.7565$ | $+0.6931$ | $-0.9189$ | $-0.9822$ |
-| 7 | $-0.330$ | $-0.2178$ | $+0.6931$ | $-0.9189$ | $-0.4436$ |
-| 8 | $+0.070$ | $-0.0098$ | $+0.6931$ | $-0.9189$ | $-0.2356$ |
+| 1 | $+0.20$ | $-0.0800$ | $+0.6931$ | $-0.9189$ | $-0.3058$ |
+| 2 | $-0.10$ | $-0.0200$ | $+0.6931$ | $-0.9189$ | $-0.2458$ |
+| 3 | $+0.30$ | $-0.1800$ | $+0.6931$ | $-0.9189$ | $-0.4058$ |
+| 4 | $0.00$ | $0.0000$ | $+0.6931$ | $-0.9189$ | $-0.2258$ |
+| 5 | $-0.30$ | $-0.1800$ | $+0.6931$ | $-0.9189$ | $-0.4058$ |
+| 6 | $+0.60$ | $-0.7200$ | $+0.6931$ | $-0.9189$ | $-0.9458$ |
+| 7 | $-0.40$ | $-0.3200$ | $+0.6931$ | $-0.9189$ | $-0.5458$ |
+| 8 | $+0.10$ | $-0.0200$ | $+0.6931$ | $-0.9189$ | $-0.2458$ |
 
-มิติที่ 6 สุ่มไปไกลจาก $\mu$ ที่สุด ($+0.615$) จึงได้ค่าติดลบมากที่สุด — **ยิ่งไกลจากค่ากลาง
-ยิ่งหนาแน่นน้อย**
+มิติที่ 6 สุ่มไปไกลจาก $\mu$ ที่สุด ($+0.60 = 1.2\sigma$) จึงได้ค่าติดลบมากที่สุด — **ยิ่งไกลจาก
+ค่ากลางยิ่งหนาแน่นน้อย** · มิติที่ 4 อยู่ที่ยอดพอดี ได้ค่าสูงสุดที่เป็นไปได้ $-0.2258 = \log 0.7979$
+(ความสูงยอดระฆังของโน้ต 05 §2.3)
 
-**E9 · ยุบเหลือเลขเดียว**
+**E9 · ยุบเหลือเลขเดียว** (สมการ (15))
 
-$$\log\pi_\theta(a\mid s) = \sum_{i=1}^{8}\log\mathcal{N}(a_i) = \mathbf{-3.3955} \qquad\Longrightarrow\qquad \pi_\theta(a\mid s) = e^{-3.3955} = 0.0335$$
+$$\log\pi_\theta(a\mid s) = \sum_{i=1}^{8}\log\mathcal{N}(a_i) = \mathbf{-3.3263} \qquad\Longrightarrow\qquad \pi_\theta(a\mid s) = e^{-3.3263} = 0.0359$$
 
-จาก 8 ตัวเหลือ 1 ตัวที่บรรทัดเดียว (`.sum(dim=-1)`) และ $-3.3955$ นี่แหละที่ถูกเก็บใส่
-buffer ตาม E10
+จาก 8 ตัวเหลือ 1 ตัวที่บรรทัดเดียว (`.sum(dim=-1)`) และ $-3.3263$ นี่แหละที่ถูกเก็บใส่
+buffer ตาม E10 · สังเกตว่าความหนาแน่นของ "ท่าทั้งตัว" (0.036) เล็กกว่าของข้อต่อเดียว (0.7365)
+มาก เพราะเป็นผลคูณ 8 ตัวที่แต่ละตัวต่ำกว่า 1
 
-**E11 → E12 · หลัง Adam ขยับ $\theta$ แล้วมาประเมินใหม่**
+**E11 → E12 · หลัง Adam ขยับ $\theta$ แล้วมาประเมินใหม่** — สมมติทุกข้อต่อขยับ $+0.05$
+(กฎเดียวกับโน้ต 07 §5.2):
 
-$$\mu_{\text{new}} = [\,0.45,\ -0.33,\ 0.06,\ 0.92,\ -0.12,\ 0.22,\ -0.58,\ 0.34\,]$$
+$$\mu_{\text{new}} = [\,0.25,\ -0.25,\ 0.15,\ 0.45,\ -0.05,\ 0.65,\ -0.45,\ 0.35\,]$$
 
 $a$ ยังเป็นชุดเดิมจากตารางข้างบน คำนวณ E8–E9 ซ้ำด้วย $\mu_{\text{new}}$ ได้
-$\log\pi_{\theta_{\text{new}}}(a\mid s) = -3.3045$
+$\log\pi_{\theta_{\text{new}}}(a\mid s) = -3.2863$
 
-**E13 · อัตราส่วน**
+**E13 · อัตราส่วน** (สมการ (21))
 
-$$\rho = \exp\big(-3.3045 - (-3.3955)\big) = \exp(0.0910) = \mathbf{1.0953}$$
+$$\rho = \exp\big(-3.2863 - (-3.3263)\big) = \exp(0.0400) = \mathbf{1.0408}$$
 
-อ่านว่า *"policy ใหม่ชอบ action ชุดนี้มากกว่าเดิม 9.5%"* — ยังไม่เกินขอบ $[0.8,\ 1.2]$
-จึงไม่โดน clip
+อ่านว่า *"policy ใหม่ชอบ action ชุดนี้มากกว่าเดิม 4.1%"* — ยังไม่เกินขอบ $[0.8,\ 1.2]$
+จึงไม่โดน clip · เทียบกับข้อต่อเดียวในโน้ต 07 ($\rho = 1.0356$): 8 ข้อต่อขยับพร้อมกัน $\rho$ รวม
+คือผลคูณ 8 ตัว — บางมิติมากกว่า 1 บางมิติน้อยกว่า (มิติที่ $a < \mu$ ถูกขยับหนี) หักล้างกันแล้วผลรวม
+ของ log เป็น +0.0400 มากกว่าของมิติเดียว (+0.0350) เล็กน้อย
 
-**E14 · loss**
+**E14 · loss** (สมการ (29))
 
-$$-\hat{A}\rho = -1.10 \times 1.0953 = -1.2048 \qquad -\hat{A}\cdot\text{clip}(1.0953) = -1.2048$$
+$$-\hat{A}\rho = -0.7975 \times 1.0408 = -0.8300 \qquad -\hat{A}\cdot\text{clip}(1.0408) = -0.8300$$
 
-$$L^{CLIP} = \max(-1.2048,\ -1.2048) = \mathbf{-1.2048}$$
+$$L^{CLIP} = \max(-0.8300,\ -0.8300) = \mathbf{-0.8300}$$
 
-**E15 · gradient กลับถึง $\mu$ แต่ละตัว**
+**E15 · gradient กลับถึง $\mu$ แต่ละตัว** (สมการ (24) ผ่าน $\rho$ — โน้ต 07 สมการ (G))
 
-$$\frac{\partial L}{\partial \mu_i} = -1.10 \times 1.0953 \times \frac{a_i - \mu_i^{\text{new}}}{0.25}$$
+$$\frac{\partial L}{\partial \mu_i} = -0.7975 \times 1.0408 \times \frac{a_i - \mu_i^{\text{new}}}{0.25}$$
 
 | $i$ | $a_i - \mu_i^{\text{new}}$ | $\partial L/\partial\mu_i$ | Adam จะ… |
 | --- | --- | --- | --- |
-| 1 | $+0.160$ | $-0.7711$ | **เพิ่ม** $\mu_1$ |
-| 2 | $-0.040$ | $+0.1928$ | ลด $\mu_2$ |
-| 3 | $+0.445$ | $-2.1445$ | **เพิ่มแรง** $\mu_3$ |
-| 4 | $-0.275$ | $+1.3253$ | ลด $\mu_4$ |
-| 5 | $+0.025$ | $-0.1205$ | เพิ่มนิดเดียว |
-| 6 | $+0.595$ | $-2.8674$ | **เพิ่มแรงสุด** $\mu_6$ |
-| 7 | $-0.300$ | $+1.4458$ | ลด $\mu_7$ |
-| 8 | $+0.060$ | $-0.2892$ | เพิ่ม $\mu_8$ |
+| 1 | $+0.15$ | $-0.498$ | **เพิ่ม** $\mu_1$ |
+| 2 | $-0.15$ | $+0.498$ | ลด $\mu_2$ |
+| 3 | $+0.25$ | $-0.830$ | **เพิ่มแรง** $\mu_3$ |
+| 4 | $-0.05$ | $+0.166$ | ลดนิดเดียว — $\mu_4$ ขยับ +0.05 **เลย** $a_4$ ไปแล้ว จึงถูกดึงกลับ |
+| 5 | $-0.35$ | $+1.162$ | ลด $\mu_5$ |
+| 6 | $+0.55$ | $-1.826$ | **เพิ่มแรงสุด** $\mu_6$ |
+| 7 | $-0.45$ | $+1.494$ | ลด $\mu_7$ |
+| 8 | $+0.05$ | $-0.166$ | เพิ่มนิดเดียว |
 
-**อ่านตารางนี้ให้ออกคือเข้าใจ PPO ทั้งหมด** — เพราะ $\hat{A} = +1.10 > 0$ แปลว่า *"ครั้งนั้น
+**อ่านตารางนี้ให้ออกคือเข้าใจ PPO ทั้งหมด** — เพราะ $\hat{A} = +0.7975 > 0$ แปลว่า *"ครั้งนั้น
 ทำได้ดีกว่าที่ critic คาด"* gradient จึงลาก $\mu$ **เข้าหา $a$ ที่สุ่มไป** ทุกมิติ (เครื่องหมายของ
-$\partial L/\partial\mu_i$ ตรงข้ามกับ $a_i - \mu_i$ เสมอ) และมิติที่สุ่มไปไกลที่สุด (มิติ 6) ถูกลากแรงที่สุด
-ถ้า $\hat{A}$ เป็นลบ เครื่องหมายทั้งคอลัมน์จะกลับหมด → **ผลัก $\mu$ หนีจาก $a$**
+$\partial L/\partial\mu_i$ ตรงข้ามกับ $a_i - \mu_i^{\text{new}}$ เสมอ) และมิติที่ยังห่างที่สุด (มิติ 6)
+ถูกลากแรงที่สุด · ถ้า $\hat{A}$ เป็นลบ เครื่องหมายทั้งคอลัมน์จะกลับหมด → **ผลัก $\mu$ หนีจาก $a$**
+
+> ของแถมสองตัวจากระฆัง 8 มิติใบนี้: entropy $= 8 \times 0.7258 = 5.8063$ (สมการ (31)) และ KL
+> หลังขยับ $= 8 \times 0.0050 = 0.040 > 0.02$ → lr ÷ 1.5 ตามสมการ (37) — ขยับ 0.05 "ทุกข้อต่อพร้อมกัน"
+> ไกลกว่าขยับข้อต่อเดียว (0.005 ในโน้ต 07 §5.7) แปดเท่า
 
 ### 3.5.6 แผนที่การส่งค่า — ตารางเดียวจบ
 
-| จาก | ผ่าน | ไปเป็น | shape เปลี่ยนยังไง | โค้ด |
-| --- | --- | --- | --- | --- |
-| $h$ | E1 | $z$ | `(B,360)` → `(B,3)` | `ppo.py:136` |
-| $z,o,c$ | E2 | $s$ | → `(B,42)` | `ppo.py:138` |
-| $s$ | E3 | $\mu$ | `(B,42)` → `(B,8)` | `actor_critic.py:156` |
-| $\ell$ | E4 | $\sigma$ | `(8,)` → `(8,)` | `actor_critic.py:157` |
-| $\mu,\sigma$ | E5 | $\pi$ | tensor → **object** | `actor_critic.py:157` |
-| $\pi$ | E6 | $a$ | object → `(B,8)` | `actor_critic.py:161` |
-| $\pi, a$ | E7 E8 | $\log\mathcal{N}$ | → `(B,8)` | `normal.py:88-92` |
-| $\log\mathcal{N}$ | E9 | $\log\pi$ | `(B,8)` → **`(B,)`** | `actor_critic.py:164` |
-| $\log\pi$ | E10 | buffer | เก็บไว้ | `ppo.py:147` |
-| $s$ (เดิม) | E11 | $\pi_{\text{new}}$ | ทำ E3 E5 ซ้ำ | `ppo.py:205` |
-| $\pi_{\text{new}}, a$ | E12 | $\log\pi_{\text{new}}$ | → `(MB,)` | `ppo.py:212` |
-| สอง $\log\pi$ | E13 | $\rho$ | → `(MB,)` | `ppo.py:252` |
-| $\rho, \hat{A}$ | E14 | $L$ | `(MB,)` → **scalar** | `ppo.py:260` |
-| $L$ | E15 | $\nabla_\theta$ | scalar → 187,272 ตัว | `.backward()` |
+| จาก | ผ่าน | ไปเป็น | shape เปลี่ยนยังไง | สมการ | โค้ด |
+| --- | --- | --- | --- | --- | --- |
+| $h$ | E1 | $\hat v$ | `(B,360)` → `(B,3)` | — (โน้ต 05 §4.4) | `ppo.py:136` |
+| $\hat v,o,c$ | E2 | $s$ | → `(B,42)` | — | `ppo.py:138` |
+| $s$ | E3 | $\mu$ | `(B,42)` → `(B,8)` | (10) (11) | `actor_critic.py:156` |
+| $\ell$ | E4 | $\sigma$ | `(8,)` → `(8,)` | (9) | `actor_critic.py:157` |
+| $\mu,\sigma$ | E5 | $\pi$ | tensor → **object** | (9) | `actor_critic.py:157` |
+| $\pi$ | E6 | $a$ | object → `(B,8)` | (16) | `actor_critic.py:161` |
+| $\pi, a$ | E7 E8 | $\log\mathcal{N}$ | → `(B,8)` | (13) (14) | `normal.py:88-92` |
+| $\log\mathcal{N}$ | E9 | $\log\pi$ | `(B,8)` → **`(B,)`** | (15) | `actor_critic.py:164` |
+| $\log\pi$ | E10 | buffer | เก็บไว้ | — | `ppo.py:147` |
+| $s$ (เดิม) | E11 | $\pi_{\text{new}}$ | ทำ E3 E5 ซ้ำ | (9) | `ppo.py:205` |
+| $\pi_{\text{new}}, a$ | E12 | $\log\pi_{\text{new}}$ | → `(MB,)` | (14) (15) | `ppo.py:212` |
+| สอง $\log\pi$ | E13 | $\rho$ | → `(MB,)` | (21) | `ppo.py:252` |
+| $\rho, \hat{A}$ | E14 | $L$ | `(MB,)` → **scalar** | (29) → (33) | `ppo.py:260` |
+| $L$ | E15 | $\nabla_\theta$ | scalar → 469,905 ตัว ($\theta$, $\phi$, $\ell$) | (24) (35) · โน้ต 07 (G) | `.backward()` |
 
 **กฎอ่านที่สรุปได้จากตารางนี้**
 
@@ -2438,7 +2434,7 @@ $\partial L/\partial\mu_i$ ตรงข้ามกับ $a_i - \mu_i$ เส�
    ทั้งใน `act()` ตอนเก็บข้อมูล และซ้ำอีกใน `ppo.py:205` ตอนอัปเดต
 3. **มิติ 8 หายตรงไหน = ตรงนั้นมีการคูณความน่าจะเป็น** — `sum(dim=-1)` ที่
    `actor_critic.py:164` (log-prob) และ `:153` (entropy) คือ $\prod_{i=1}^{8}$ ในโลก log
-4. **มิติ $B$/$MB$ หายตรงไหน = ตรงนั้นคือ `.mean()` ของ loss** — `ppo.py:260` เท่านั้น
+4. **มิติ $B$/$MB$ หายตรงไหน = ตรงนั้นคือ `.mean()` ของ loss** — `ppo.py:260` สำหรับสาย E1–E15 (ส่วน `:269` และ `:273` ยุบ MB ของอีกสองพจน์ใน (33))
    หลังจากนั้นเหลือเลขตัวเดียวให้ `.backward()`
 
 **ตอน deploy ข้าม E4–E9 ทั้งหมด** — `act_inference` ทำแค่ `self.actor(obs)` แล้ว return
@@ -2447,32 +2443,33 @@ $\partial L/\partial\mu_i$ ตรงข้ามกับ $a_i - \mu_i$ เส�
 
 ### 3.5.7 สคริปต์ตรวจด้วยตัวเอง
 
-รันได้เลย ไม่ต้องมี torch — ตัวเลขทุกตัวใน §3.5.5 ออกมาจากสคริปต์นี้:
+รันได้เลย ไม่ต้องมี torch — ตัวเลขทุกตัวใน §3.5.5 ออกมาจากสคริปต์นี้ (เหมือนส่วนท้ายของ
+`scripts/toy_answer_key.py`):
 
 ```python
 import math
 
-MU    = [0.42, -0.31, 0.05, 0.88, -0.12, 0.20, -0.55, 0.33]
-EPS   = [0.38, -0.12, 0.91, -0.47, 0.05, 1.23, -0.66, 0.14]
+MU    = [0.20, -0.30, 0.10, 0.40, -0.10, 0.60, -0.50, 0.30]   # ข้อต่อ 1 = e0 t0
+EPS   = [0.40, -0.20, 0.60, 0.00, -0.60, 1.20, -0.80, 0.20]
 SIGMA = 0.5
-A_HAT = 1.10
+A_HAT = 0.7975                                                 # Â ของ e0 t0 (อภิธานศัพท์ 8.4)
 C     = math.log(math.sqrt(2 * math.pi))          # 0.9189 — พจน์ที่ 3 ของ E8
 
-def pdf(x, mu, sigma):                            # E7
+def pdf(x, mu, sigma):                            # E7 — สมการ (13)
     return math.exp(-((x - mu) ** 2) / (2 * sigma ** 2)) / (sigma * math.sqrt(2 * math.pi))
 
-def log_pdf(x, mu, sigma):                        # E8 — ตรงกับ normal.py:88-92
+def log_pdf(x, mu, sigma):                        # E8 — สมการ (14), ตรงกับ normal.py:88-92
     return -((x - mu) ** 2) / (2 * sigma ** 2) - math.log(sigma) - C
 
-a       = [m + SIGMA * e for m, e in zip(MU, EPS)]            # E6
-log_old = sum(log_pdf(ai, mi, SIGMA) for ai, mi in zip(a, MU))  # E9  → -3.3955
+a       = [m + SIGMA * e for m, e in zip(MU, EPS)]            # E6  — สมการ (16)
+log_old = sum(log_pdf(ai, mi, SIGMA) for ai, mi in zip(a, MU))  # E9  — สมการ (15) → -3.3263
 
-MU_NEW  = [0.45, -0.33, 0.06, 0.92, -0.12, 0.22, -0.58, 0.34]
-log_new = sum(log_pdf(ai, mi, SIGMA) for ai, mi in zip(a, MU_NEW))  # E12 → -3.3045
+MU_NEW  = [m + 0.05 for m in MU]                              # E11 — ทุกข้อต่อขยับ +0.05
+log_new = sum(log_pdf(ai, mi, SIGMA) for ai, mi in zip(a, MU_NEW))  # E12 → -3.2863
 
-rho  = math.exp(log_new - log_old)                            # E13 → 1.0953
-loss = max(-A_HAT * rho, -A_HAT * min(max(rho, 0.8), 1.2))    # E14 → -1.2048
-grad = [-A_HAT * rho * (ai - mi) / SIGMA ** 2                 # E15
+rho  = math.exp(log_new - log_old)                            # E13 — สมการ (21) → 1.0408
+loss = max(-A_HAT * rho, -A_HAT * min(max(rho, 0.8), 1.2))    # E14 — สมการ (29) → -0.8300
+grad = [-A_HAT * rho * (ai - mi) / SIGMA ** 2                 # E15 — (24) ผ่าน ρ
         for ai, mi in zip(a, MU_NEW)]
 
 print(f"a        = {[round(x, 3) for x in a]}")
@@ -2483,66 +2480,70 @@ print(f"L_CLIP   = {loss:.4f}")
 print(f"dL/dmu   = {[round(g, 4) for g in grad]}")
 ```
 
-เปลี่ยน `A_HAT` เป็นค่าลบแล้วรันใหม่ — เครื่องหมายของ `dL/dmu` จะกลับทั้งแถว
-นั่นคือกลไก "ผลัก $\mu$ หนีจาก action ที่แย่" · เปลี่ยน `SIGMA` เป็น `0.25` แล้วขยับ
-`MU_NEW` ให้ห่างขึ้น จะเห็น `rho` ทะลุ 1.2 แล้ว clip เริ่มทำงาน (โน้ต 07 §5.3)
-
+เปลี่ยน `A_HAT` เป็นค่าลบ (เช่น $-0.9290$ ของ e1 t1) แล้วรันใหม่ — เครื่องหมายของ `dL/dmu`
+จะกลับทั้งแถว นั่นคือกลไก "ผลัก $\mu$ หนีจาก action ที่แย่" · เปลี่ยน `SIGMA` เป็น `0.25` แล้ว
+ขยับ `MU_NEW` ให้ห่างขึ้น จะเห็น `rho` ทะลุ 1.2 แล้ว clip เริ่มทำงาน (โน้ต 07 §5.3)
 
 ---
 
-## 4. จุดที่ walkthrough หลวมหรือผิด — fidelity notes
+## 4. errata ของเอกสารต้นทาง — `sources/training_numerical_walkthrough.md`
 
-walkthrough โดยรวม**ถูกต้อง**ในเชิงโครงสร้าง shape และสูตร (ตรวจกับโค้ดทุกข้อ
-ในตาราง §2) แต่มีจุดที่ต้องรู้ก่อนเชื่อตัวเลข:
+เอกสารต้นทาง (Gemini/antigravity, 2026-09-09) ถูกย้ายไป `sources/` พร้อมหัวข้อ errata
+ที่ระบุทุกจุดผิดพร้อมเลขบรรทัด · โดยรวมมัน**ถูกต้อง**ในเชิงโครงสร้าง shape และรูปสูตร แต่มี
+สี่เรื่องที่ต้องรู้ก่อนเปิดมัน:
 
 ### 4.1 ตัวเลข "ค่า" ทั้งหมดเป็นตัวอย่างสมมติ
 
 `μ = 0.42`, `log_prob = −2.41`, `V = 650.0`, `V_last = 682.3`, `δ = 28.15`,
-`ρ = 1.25` ฯลฯ **ไม่ได้มาจาก run จริง** — เป็นตัวเลขที่แต่งขึ้นให้ไล่คำนวณตามได้
-สิ่งที่เชื่อได้คือ **shape, hyperparameter, และรูปสูตร** ส่วนค่าจริงจะได้จากการรัน
-`exp_001` แล้วดู tensorboard
+`ρ = 1.25` ฯลฯ **ไม่ได้มาจาก run จริง** — เป็นตัวเลขที่แต่งขึ้นให้ไล่คำนวณตามได้ (และ
+`−2.41` ไม่ตรงกับ $\varepsilon$ ของมันเอง ซึ่งให้ $-2.47$) · โน้ตชุดนี้ใช้ตาราง 2 × 4 แทนทั้งหมด
+(โน้ต 07) และเก็บตัวเลขสเกล Tron1 ของเอกสารนั้น ($V \approx 650$, $\delta \approx 28$,
+$L_V \approx 781$) ไว้แค่เป็นภาพขนาดจริงในโน้ต 07 §6 · ค่าจริงจะได้จากการรัน `exp_001` แล้วดู
+tensorboard
 
 ### 4.2 จำนวน parameter คำนวณผิด
 
-walkthrough §3.5 และ §4 บอก actor ≈ 185,480 · critic ≈ 250,625 · รวม ≈ 436K
-คำนวณใหม่จากขนาดชั้นจริง (ทุก `Linear(in, out)` มี in×out weight + out bias):
+เอกสารบอก actor ≈ 185,480 · critic ≈ 250,625 · รวม ≈ 436K · คำนวณใหม่จากขนาดชั้นจริง
+(ทุก `Linear(in, out)` มี in×out weight + out bias) และยืนยันจาก checkpoint จริง:
 
-| network | ชั้น | คำนวณ | **จริง** | walkthrough |
+| network | ชั้น | คำนวณ | **จริง** | เอกสารต้นทาง |
 | --- | --- | --- | --- | --- |
 | actor | 42→512→256→128→8 | 43·512 + 513·256 + 257·128 + 129·8 | **187,272** | 185,480 ✗ |
 | critic | 230→512→256→128→1 | 231·512 + 513·256 + 257·128 + 129·1 | **282,625** | 250,625 ✗ |
 | encoder | 360→256→128→3 | 361·256 + 257·128 + 129·3 | **125,699** | ~129K (ใกล้) |
 | logstd | — | — | 8 | 8 ✓ |
-| **รวมที่ฝึก** | | | **595,604** | ~436K (ไม่รวม encoder) ✗ |
+| **optimizer หลัก** ($\theta + \phi$) | | 187,272 + 282,625 + 8 | **469,905** | ~436K ✗ |
+| **รวมที่ฝึก** | | + encoder | **595,604** | (ไม่รวม encoder) |
 
-ประเด็นเชิงหลักการที่ walkthrough ต้องการสื่อ ("gradient คือเวกเตอร์ยาวหลักแสน")
-ยังถูก — แค่ตัวเลขเป๊ะผิด
+ประเด็นเชิงหลักการที่เอกสารต้องการสื่อ ("gradient คือเวกเตอร์ยาวหลักแสน") ยังถูก —
+แค่ตัวเลขเป๊ะผิด
 
-### 4.3 สิ่งที่ walkthrough พูดถึงแต่โน้ต 05 ไม่ได้เน้น
+### 4.3 สิ่งที่เอกสารพูดถึงและตอนนี้โน้ต 05 มีครบแล้ว
 
-| เรื่อง | walkthrough | โน้ต 05 | หมายเหตุ |
-| --- | --- | --- | --- |
-| **advantage normalization** | §2.3 อธิบายชัด | 4.4 ไม่ได้พูดตรง ๆ | สำคัญ: ทำให้ scale ของ $A$ คงที่ไม่ว่า reward จะใหญ่แค่ไหน — ค่า `+1.10` ใน walkthrough คือหลัง normalize |
-| **value clipping** | §3.3 อธิบาย | 4.2 ไม่ได้พูด | `use_clipped_value_loss=True` ([cfg:95](../tron1-rl-isaaclab/exts/bipedal_locomotion/bipedal_locomotion/tasks/locomotion/agents/limx_rsl_rl_ppo_cfg.py#L95)) · ใช้ `clip_param` 0.2 ([cfg:96](../tron1-rl-isaaclab/exts/bipedal_locomotion/bipedal_locomotion/tasks/locomotion/agents/limx_rsl_rl_ppo_cfg.py#L96)) ตัวเดียวกับ policy — เป็นเทคนิคเสริมของ rsl_rl ไม่มีในเปเปอร์ PPO ต้นฉบับ (Schulman et al., *Proximal Policy Optimization Algorithms*, arXiv:1707.06347) |
-| **`clip_grad_norm_(1.0)`** | §3.5 กล่าวถึง | ไม่มี | `max_grad_norm=1.0` ใน config — กัน gradient ระเบิด |
-| **`not_done` mask ใน GAE** | §2.2 มีใน pseudo-code | 4.4 ไม่มี | ถ้า episode จบที่ step $t$ ห้ามให้ $V_{t+1}$ ไหลข้าม — โค้ด `next_is_not_terminal` ที่ [rollout_storage.py:194-197](../tron1-rl-isaaclab/rsl_rl/rsl_rl/storage/rollout_storage.py#L194-L197) |
-| **encoder loss แบบ MSE** | §1.2 TIP | 4.3 remark บอกแค่ "ฝึกแยก" | ยืนยันจากโค้ด: `(encode[:,0:3] − critic_obs[:,0:3]).pow(2).mean()` — เป้าคือ 3 มิติแรกของ privileged obs = `base_lin_vel` |
+| เรื่อง | อยู่ที่ |
+| --- | --- |
+| advantage normalization | โน้ต 05 §4.5 สมการ (28) |
+| value clipping (`use_clipped_value_loss = True`, ใช้ `clip_param` 0.2 ตัวเดียวกับ policy — เทคนิคเสริมของ rsl_rl ไม่มีในเปเปอร์ PPO) | โน้ต 05 §4.6 (ง) สมการ (32) |
+| `clip_grad_norm_(1.0)` | โน้ต 05 §2.2 Remark · §3.4 ของโน้ตนี้ |
+| mask $(1 - \text{done})$ ใน GAE | โน้ต 05 §3.2 สมการ (19), §4.5 สมการ (26) |
+| encoder loss แบบ MSE กับ `base_lin_vel` | โน้ต 05 §4.4 |
 
 ### 4.4 การเขียน shape ของ $\sigma$
 
-walkthrough §1.8 เขียน `sigma shape = (24, 2048, 8)` ในตาราง buffer แต่ §5 cheat
-sheet เขียน `(8,) broadcast → (B, 8)` — **ทั้งคู่ถูก** ตัวจริงคือพารามิเตอร์ 8 ตัว
-(ไม่ขึ้นกับ state — โน้ต 05 หัวข้อ 2.1 remark) แต่ตอนเก็บลง buffer มันถูก
-broadcast เป็น `(B,8)` ต่อ step แล้ว
+เอกสาร §1.8 เขียน `sigma shape = (24, 2048, 8)` ในตาราง buffer แต่ §5 cheat sheet เขียน
+`(8,) broadcast → (B, 8)` — **ทั้งคู่ถูก** ตัวจริงคือพารามิเตอร์ 8 ตัว (ไม่ขึ้นกับ state — โน้ต 05
+หัวข้อ 2.1 remark) แต่ตอนเก็บลง buffer มันถูก broadcast เป็น `(B,8)` ต่อ step แล้ว
+(`rollout_storage.py:146`) · และเอกสารเขียน $\mathcal{N}(\mu, \sigma^2)$ ตามตำรา ส่วนโน้ตชุดนี้
+เขียน $\mathcal{N}(\mu, \sigma)$ ตาม `scale` ของ torch (อภิธานศัพท์หัวข้อ 7)
 
-### 4.5 เลขสมการอ้างเลขเก่า
+### 4.5 เลขสมการอ้างระบบของตัวเอง
 
-walkthrough อ้าง "สมการ (3), (5), (6), (1b)" ตามการเรียงเลขของโน้ต 05 *ก่อน*จัดใหม่
-ตารางเทียบอยู่ท้าย §2
+เอกสารอ้าง "สมการ (3), (5), (6), (1b)" ตามการเรียงเลขของมันเอง · ตารางแปลงไปเป็นเลขเดียว
+ทั้งชุด: (1b)→(12), (3)→(4), (5)→(26), (6)→(29) — อภิธานศัพท์หัวข้อ 9
 
 ---
 
-## 5. อ่านไดอะแกรมห้าชิ้นยังไง
+## 5. อ่านไดอะแกรมหกชิ้นยังไง
 
 ### A — Actor-Critic บน Tron1 (`diagrams/tron1-actor-critic.html`)
 
@@ -2550,10 +2551,10 @@ walkthrough อ้าง "สมการ (3), (5), (6), (1b)" ตามกา�
 | --- | --- | --- |
 | **เค้าโครง** agent บน · environment ล่าง · $s_t, r_t$ ขึ้นซ้าย · $a_t$ ลงขวา | รูป agent–environment มาตรฐานของ Sutton & Barto (Fig. 3.1) ที่ทุกตำรา RL ใช้ | 1.1, 1.2 |
 | **ลูกศรทึบ** | ข้อมูลไหลไปข้างหน้า (forward pass) — เกิดทุก step ทั้งตอนเทรนและ deploy | 2.5 |
-| **ลูกศรประ** $\nabla\theta, \nabla\phi$ | สัญญาณการเรียนรู้ — เกิดเฉพาะช่วง C ของ iteration · **นี่คือ 2 เส้นเดียวที่ทำให้ระบบ "เรียนรู้"** | 2.2 สมการ (6) |
+| **ลูกศรประ** $\nabla\theta, \nabla\phi$ | สัญญาณการเรียนรู้ — เกิดเฉพาะช่วง C ของ iteration · **นี่คือ 2 เส้นเดียวที่ทำให้ระบบ "เรียนรู้"** | 2.2 สมการ (12) |
 | **กล่องประ** (Critic, PPO) | มีชีวิตแค่ตอนเทรน · ถูกทิ้งตอน export ONNX | 2.6 |
-| **กล่องส้ม** Advantage | จุดที่ critic "สอน" actor — ถ้าตัดกล่องนี้ออก จะเหลือแค่ policy gradient ธรรมดาที่ **ความแปรปรวน** (variance) สูง คือ gradient เหวี่ยงไปมาจนเรียนช้า | 4.1, 4.4 |
-| encoder ไม่มีกล่องแยก | ยุบเป็น sublabel ใน Actor เพราะ budget ของไดอะแกรม — โครงสร้างเต็มอยู่ใน walkthrough §1.2 และโน้ต 05 §4.3 | 4.3 |
+| **กล่องส้ม** Advantage | จุดที่ critic "สอน" actor — ถ้าตัดกล่องนี้ออก จะเหลือแค่ policy gradient ธรรมดาที่ **ความแปรปรวน** (variance) สูง คือ gradient เหวี่ยงไปมาจนเรียนช้า | 4.1, 4.2, 4.5 |
+| encoder ไม่มีกล่องแยก | ยุบเป็น sublabel ใน Actor เพราะ budget ของไดอะแกรม — โครงสร้างเต็มอยู่ในโน้ต 05 §4.4 | 4.4 |
 
 **คำถามที่ควรถามตัวเองตอนดูรูป A:** "ถ้าลบลูกศรประสองเส้นออก ระบบนี้จะเป็นอะไร?"
 — คำตอบ: เป็นหุ่นที่เดินด้วย policy คงที่ ไม่เรียนรู้ = สิ่งที่รันบนหุ่นจริง
@@ -2562,11 +2563,11 @@ walkthrough อ้าง "สมการ (3), (5), (6), (1b)" ตามกา�
 
 | สิ่งที่เห็น | หมายถึง | โน้ต 05 |
 | --- | --- | --- |
-| **ลำดับ A → B → C → D** | สี่ช่วงของกายวิภาค iteration | 4.6 |
-| **กล่องส้ม C** | ที่เดียวที่ weight เปลี่ยน — A, B, D ไม่แตะ $\theta$ เลย | 4.6, 2.2 |
-| **ลูกศรส้มวนกลับ** | ความหมายของคำว่า iteration · ป้าย $\theta_{old} \leftarrow \theta$ = policy ที่เพิ่งอัปเดตกลายเป็น "ตัวเก็บข้อมูล" รอบถัดไป | 4.5 ρ, 4.6 |
+| **ลำดับ A → B → C → D** | สี่ช่วงของกายวิภาค iteration | 4.7 |
+| **กล่องส้ม C** | ที่เดียวที่ weight เปลี่ยน — A, B, D ไม่แตะ $\theta$ เลย | 4.7, 2.2 |
+| **ลูกศรส้มวนกลับ** | ความหมายของคำว่า iteration · ป้าย $\theta_{old} \leftarrow \theta$ = policy ที่เพิ่งอัปเดตกลายเป็น "ตัวเก็บข้อมูล" รอบถัดไป | 3.3 ρ, 4.7 |
 | **จุดรวม** ก่อน A | จุดที่รอบแรก (จาก Start) และรอบต่อ ๆ ไป (จาก loop) มาบรรจบ — ไวยากรณ์มาตรฐานของ flowchart | — |
-| **ข้าวหลามตัด** it = 15 000? | `max_iterations` · ทางออก NO คือ "ทางปกติ" — 14,999 ครั้งจาก 15,000 | 4.6 |
+| **ข้าวหลามตัด** it = 15 000? | `max_iterations` · ทางออก NO คือ "ทางปกติ" — 14,999 ครั้งจาก 15,000 | 4.7 |
 
 **ความสัมพันธ์ระหว่าง A กับ B:** รูป A คือ *สิ่งที่มีอยู่* รูป B คือ *ลำดับที่มันถูกใช้*
 — ช่วง A ของ B ใช้ลูกศรทึบทั้งหมดในรูป A · ช่วง B ของ B คือกล่อง GAE ในรูป A ·
@@ -2578,9 +2579,9 @@ walkthrough อ้าง "สมการ (3), (5), (6), (1b)" ตามกา�
 | --- | --- | --- |
 | **โซ่แนวตั้ง 15 กล่อง** | หนึ่งกล่อง = หนึ่งสมการ · บรรทัดล่างของกล่องคือบรรทัดโค้ดที่ทำสมการนั้น | §3.5.4 |
 | **ป้ายข้าง ลูกศร** | shape ที่ไหลผ่านจริง — ไล่ตามได้ว่ามิติหายตรงไหน | §3.5.6 |
-| **กล่องส้ม E5** | tensor กลายเป็น distribution object — ทิศ ① | §3.5.3 |
+| **กล่องส้ม E5** | tensor กลายเป็น distribution object — ทิศ ก | §3.5.3 |
 | **กล่องส้ม E9** | 8 มิติยุบเหลือเลขเดียว (`sum(dim=-1)`) — จุดที่ vector กลายเป็น scalar | §3.5.4 ช่วง C |
-| **กล่องซ้าย 2 ใบ** | ทางแยกออกจากโซ่หลัก: อ่าน $\mu,\sigma$ กลับ (ทิศ ②) และ action ที่ออกไปคุมหุ่น | §3.5.3 |
+| **กล่องซ้าย 2 ใบ** | ทางแยกออกจากโซ่หลัก: อ่าน $\mu,\sigma$ กลับ (ทิศ ข) และ action ที่ออกไปคุมหุ่น | §3.5.3 |
 | **เส้นประวนกลับ E15 → E3** | $\theta$ เปลี่ยน → $\mu$ ใหม่ → เริ่ม E3 อีกครั้ง · 20 รอบต่อ iteration | §3.5.4 E11 |
 
 > รูปนี้จงใจเกินเพดาน 9 กล่องที่ skill `diagram-design` แนะนำ (เพดานความหนาแน่นของ
@@ -2592,7 +2593,7 @@ walkthrough อ้าง "สมการ (3), (5), (6), (1b)" ตามกา�
 | สิ่งที่เห็น | หมายถึง | โน้ต 05 |
 | --- | --- | --- |
 | **แถบบนที่จางทั้งแถบ** | critic, GAE, PPO ไม่ได้ถูก export — ไม่มีอยู่บนหุ่นจริง | 2.6 |
-| **ลูกศรส้มเส้นประชี้ลง** | คำตอบของคำถาม "advantage ไปไหนตอน deploy" — มันถูกใช้หมดไปแล้ว เหลือเป็นตัวเลขใน $\theta$ | 4.4, 4.5 |
+| **ลูกศรส้มเส้นประชี้ลง** | คำตอบของคำถาม "advantage ไปไหนตอน deploy" — มันถูกใช้หมดไปแล้ว เหลือเป็นตัวเลขใน $\theta$ | 4.5, 4.6 |
 | **`encoder.onnx` + `policy.onnx` แยกกัน** | export เป็นสองไฟล์ โค้ดฝั่งหุ่นเป็นคน `cat` เอง ([play.py:111-121](../tron1-rl-isaaclab/scripts/rsl_rl/play.py#L111-L121)) | 2.6 |
 | **ไม่มี $\sigma$ ไม่มีการสุ่ม** | `act_inference` คืน $\mu$ ตรง ๆ ([actor_critic.py:166-168](../tron1-rl-isaaclab/rsl_rl/rsl_rl/modules/actor_critic.py#L166-L168)) — ข้าม E4–E9 ทั้งหมด | 2.4, 2.6 |
 
@@ -2608,13 +2609,25 @@ walkthrough อ้าง "สมการ (3), (5), (6), (1b)" ตามกา�
 | **กล่อง = วัตถุ · ลูกศร = สิ่งที่เกิดขึ้นระหว่างกล่อง** | ไวยากรณ์ของรูปทั้งรูป · ป้ายบนลูกศรบอก**ทั้งสองอย่าง** — ค่าที่ไหลผ่าน (`s (42,)`, `a`) และบรรทัดโค้ดที่ทำให้เกิด (`:156`, `:157`, `:161`, `:164`) | §3.5.0 |
 | **shape ในรูปเป็น "ต่อ 1 env"** | ของจริงมี $B$ นำหน้าทุกก้อน · `self.distribution` ถือระฆัง $B\times8$ ใบพร้อมกัน ไม่ใช่ใบเดียว · `.log_prob(a).sum(-1)` คืน `(B,)` ไม่ใช่ scalar เดี่ยว | §3.5.0 กรอบ "shape" |
 | **กล่องส้ม** $\pi_\theta(\cdot\mid s)$ | จุดที่คนสับสนที่สุด — ขั้นที่ 1 คืน *ระฆัง* ไม่ได้คืน *action* | §3.5.0, §3.5.2 |
-| **สองทางแยกขวาสุด** | `.sample()` ได้เวกเตอร์ · `.log_prob()` ได้เลขตัวเดียว | §3.5.3 **ทิศ ③** (ทางล่าง) · การสุ่มไม่ได้อยู่ในสามทิศนั้น — ดู E6 |
+| **สองทางแยกขวาสุด** | `.sample()` ได้เวกเตอร์ · `.log_prob()` ได้เลขตัวเดียว | §3.5.3 **ทิศ ค** (ทางล่าง) · การสุ่มไม่ได้อยู่ในสามทิศนั้น — ดู E6 |
 | **ลูกศรสั้นจากกล่องบนลงกล่องล่าง** | `.log_prob()` ไม่ผลิต $a$ เอง — ตอนเก็บข้อมูล $a$ คือตัวที่เพิ่งสุ่มจากกล่องบน (ตอนอัปเดตมาจาก buffer แทน) | §3.5.0 ตาราง "`a` มาจากไหน" |
 | **วงเล็บสองอันล่างสุด** | ขอบเขตของคำว่า policy — ตอนเทรนกิน ①+②+③ · ตอน deploy เหลือ ① · **นี่คือเหตุผลที่ "เรียก NN ว่า policy" ถูกบ้างผิดบ้าง** | §3.5.0 ตาราง "ตอนไหน" |
 | **③ อยู่บนลูกศร ไม่ใช่ในกล่อง** | สูตร $\mathcal{N}$ มี 0 weight — มันเป็นบรรทัดโค้ด ([:157](../tron1-rl-isaaclab/rsl_rl/rsl_rl/modules/actor_critic.py#L157)) ไม่ใช่วัตถุ | §3.5.0 "สามชิ้น" |
 
 **เทียบ E กับ C:** รูป E ตอบว่า *แต่ละก้อนเป็นของชนิดอะไร* · รูป C ตอบว่า
 *ค่าไหลผ่านก้อนพวกนั้นเป็นลำดับอย่างไร* — E คือหน้าตัดขวาง C คือเส้นทางยาว
+
+### F — ห้าหน่วยนับ หนึ่งตาราง (`diagrams/tron1-five-units.html`)
+
+| สิ่งที่เห็น | หมายถึง | โน้ต 05 / 07 |
+| --- | --- | --- |
+| **ตาราง 24 × 2048** | rollout หนึ่งใบ = ข้อมูลของหนึ่ง iteration (49,152 ช่อง) · ตาราง 2 × 4 ของโน้ตชุดนี้คือมันฉบับย่อ | 05 §4.7, 07 §0 |
+| **หนึ่งช่อง / คอลัมน์จนถึงแถบ done / ทั้งใบ** | step / episode / iteration — สามหน่วยที่ซ้อนกันคนละแบบ | 05 §1.4, §4.7 |
+| **ฝั่งขวา: GAE ครั้งเดียว → 20 gradient step (5 epoch × 4 mb) → clear** | สิ่งที่เกิดกับตารางหนึ่งใบ: epoch = เดินครบทุกช่อง · mini-batch = 1/4 ของตาราง = หนึ่ง gradient step · การสับและการหั่นเห็นได้จากช่องสีเทาในตารางฝั่งซ้าย ไม่มีกล่องแยก | 05 §4.5, §4.7 · 07 §4–5 |
+| **แถบ done ในคอลัมน์ 11** | episode จบกลางตาราง แล้ว episode ใหม่เริ่มในคอลัมน์เดิม — เหมือน env 1 ของตาราง 2 × 4 | 05 §3.2 (mask), 07 §3 |
+
+**เทียบ F กับ B:** รูป B คือ*ลำดับเวลา*ของหนึ่ง iteration · รูป F คือ*ก้อนข้อมูล*ที่ลำดับนั้น
+ทำงานด้วย — ช่วง A ของ B เติมตาราง F · ช่วง B–C ของ B คือฝั่งขวาของ F
 
 ---
 
@@ -2623,25 +2636,28 @@ walkthrough อ้าง "สมการ (3), (5), (6), (1b)" ตามกา�
 สำหรับคนที่อ่านโน้ต 05 จบแล้วและอยากเห็นภาพรวมทั้งหมด:
 
 1. เปิดรูป **A** ดู 2 นาที — ไล่ชื่อลูกศรทุกเส้นให้ได้ว่าแต่ละตัวคืออะไรโดยไม่ดูโน้ต
-   ถ้าติดตัวไหน → §3 ตารางสัญลักษณ์
+   ถ้าติดตัวไหน → อภิธานศัพท์ (ชนิดก่อน ค่าทีหลัง)
    - ถ้าสงสัยว่า "ตกลงแต่ละก้อนในรูปเป็นของชนิดอะไรกันแน่" → เปิดรูป **E**
      (`diagrams/tron1-policy-objects.html`) คู่กับ §3.5.0 ก่อนไปต่อ
-2. อ่าน walkthrough **§1** (ช่วง A) โดยเปิดตาราง §2 ของโน้ตนี้คู่กัน — ทุก step
+2. อ่านโน้ต 07 **§1–2** (ตั้งค่า toy · ระดับ step) โดยเปิดตาราง §2 ของโน้ตนี้คู่กัน — ทุกขั้น
    ชี้กลับไปโน้ต 05 และโค้ด
-3. เปิดรูป **B** — ตอนนี้ควรอ่านกล่อง A ได้ครบทุกบรรทัด
-4. อ่าน walkthrough **§2–3** ไล่ตัวเลข GAE และ ρ ด้วยมือ (ใช้ python เช็ก)
+3. เปิดรูป **B** และ **F** — ตอนนี้ควรอ่านกล่อง A ได้ครบทุกบรรทัด และบอกได้ว่าห้าหน่วยนับคือ
+   ห้าวิธีหั่นตารางเดียวกัน
+4. อ่านโน้ต 07 **§4–5** ไล่ตัวเลข GAE และ $\rho$ ด้วยมือ (`scripts/toy_answer_key.py` เช็ก)
    - ถ้ายังไม่แน่ใจว่า "ค่าไหนไปเข้าบรรทัดไหน" → **§3.5** ไล่ E1–E15 ทีละสมการ
      (มีคำอธิบาย *หมายถึงอะไร / ทำไปทำไม* ทุกข้อ) พร้อมรันสคริปต์ §3.5.7 แล้วเทียบ
      กับรูป **C** (`diagrams/tron1-value-flow.html`)
+   - ถ้าสงสัยว่า $\ell$ ถูกเขียนทับได้ยังไง หรือ lr เปลี่ยนเพราะอะไร → **§3.4**
 5. กลับมารูป **A** อีกครั้ง — คราวนี้มองลูกศรประ $\nabla\theta$ แล้วนึกถึง 20 gradient
    steps ที่เพิ่งไล่มา
 6. รัน `exp_001` แล้วเปิด tensorboard — เทียบ `Policy/mean_noise_std` กับ $\sigma$
-   ในตาราง §3 และ `Policy/mean_kl` กับ `desired_kl` — **ตัวเลขจริงชุดแรกของคุณ**
-   จะเข้ามาแทนตัวเลขสมมติของ walkthrough
+   ในอภิธานศัพท์ และ `Policy/mean_kl` กับ `desired_kl` — **ตัวเลขจริงชุดแรกของคุณ**
+   จะเข้ามาแทนตัวเลขของ toy
 
 ---
 
-*ตรวจกับโค้ดจริง 2026-09-10: `ppo.py`, `actor_critic.py`, `rollout_storage.py`,
+*ตรวจกับโค้ดจริง 2026-09-11: `ppo.py`, `actor_critic.py`, `rollout_storage.py`,
 `on_policy_runner.py`, `limx_base_env_cfg.py`, `limx_rsl_rl_ppo_cfg.py`
 ใน `tron1-rl-isaaclab/` และ `joint_actions.py` ใน `IsaacLab/` — ลิงก์เป็น relative
-path ใช้ได้ในเครื่องที่ clone ทั้งสอง repo ไว้*
+path ใช้ได้ในเครื่องที่ clone ทั้งสอง repo ไว้ · ตัวเลขของตาราง 2 × 4 และเวกเตอร์ 8 มิติ
+คำนวณด้วย `scripts/toy_answer_key.py`*
