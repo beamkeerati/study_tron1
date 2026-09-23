@@ -134,7 +134,8 @@ $$\text{ฟังก์ชัน} \;\longrightarrow\; \text{การแจก�
 | $\gamma$ **discount** | ค่าคงที่ | อนาคตหนึ่งก้าวถัดไปมีค่ากี่เปอร์เซ็นต์ของตอนนี้ | `gamma = 0.99` `cfg:102` (ค่าปริยายของคลาส `ppo.py:51` คือ 0.998 — ถูก cfg ทับ) | **0.9** · 0.99 | 05 §1.2 | $\gamma^t$ · horizon ของ $\gamma$ เอง $1/(1-\gamma)$ = 10 · 100 step; horizon ที่ GAE ใช้จริงคือ $1/(1-\gamma\lambda)$ สมการ (34) — แถว $\lambda$ หัวข้อ 5 |
 | **Markov property** | แนวคิด | อนาคตขึ้นกับสถานะปัจจุบันอย่างเดียว ไม่ต้องดูประวัติ | ที่ขาด: `base_lin_vel` มีใน critic (`:183`) ไม่มีใน policy obs | toy ถือว่า Markov | 05 §1.3 | สมการ (1) |
 | $\pi$ **policy** (ทั่วไป) · $\pi^*$ policy ที่ดีที่สุด | ฟังก์ชัน | กฎเลือก action จากสถานะ — "คำตอบ" ไม่ใช่ "โจทย์" · ดาวหมายถึงตัวที่ทำให้ (2) สูงสุด | | | 05 §1.2 | คำนี้มีสามความหมาย — หัวข้อ 7 |
-| $G_t$ **return** | scalar | ผลรวมรางวัลถ่วง $\gamma$ ตั้งแต่ $t$ จนจบ episode — **ข้อเท็จจริง** รู้ได้ต่อเมื่อ episode จบ | **ไม่มีใน repo** — `Mean reward` (`on_policy_runner.py:200-206, :326`) คือผลรวมต่อ episode **ไม่ถ่วง** $\gamma$ จึงไม่ใช่ $G_t$ · GAE ให้ $R_t$ ไม่ใช่ $G_t$ | env 1 episode แรก: $0.5 + 0.9(1.0) + 0.81(-2.0) = -0.22$ | 05 §1.5 | $G_t = \sum_{k\ge 0}\gamma^k r_{t+k}$ — นิยาม ไม่มีเลขของตัวเอง · ใช้ใน (3), (7) |
+| **objective** · $J(\pi)$, $J(\theta)$ | ฟังก์ชัน (policy $\to\mathbb{R}$) | ผลตอบแทนคาดหวังทั้ง episode $\mathbb{E}\big[\sum_t\gamma^t r_t\big]$ มองเป็นฟังก์ชันของ policy ($J(\pi)$) หรือของ weight ($J(\theta)$) — ตัวเลขที่ (2) สั่งให้ทำให้สูงสุด · "สิ่งที่อยากให้สูงขึ้น" ตรงข้ามกับ loss | ไม่มีบรรทัดที่คำนวณ $J$ ตรง ๆ — ลูป 15,000 iteration `on_policy_runner.py:170` คือการไต่เข้าหา | — | 05 §1.5 | สมการ (2) = "หา $\pi$ ที่ทำให้ $J$ สูงสุด" (ปัญหาการหาค่าเหมาะที่สุด ไม่ใช่ตัว objective) · S&B เรียก $J(\theta)$ ว่า performance measure (บทที่ 13, §13.2) · คำนี้ซ้ำกับ surrogate ของ PPO — หัวข้อ 7 |
+| $G_t$ **return** | scalar | ผลรวมรางวัลถ่วง $\gamma$ ตั้งแต่ $t$ จนจบ episode — **ข้อเท็จจริง** รู้ได้ต่อเมื่อ episode จบ | **ไม่มีใน repo** — `Mean reward` (`on_policy_runner.py:200-206, :326`) คือผลรวมต่อ episode **ไม่ถ่วง** $\gamma$ จึงไม่ใช่ $G_t$ · GAE ให้ $R_t$ ไม่ใช่ $G_t$ | env 1 episode แรก: $0.5 + 0.9(1.0) + 0.81(-2.0) = -0.22$ | 05 §1.7 | $G_t = \sum_{k\ge 0}\gamma^k r_{t+k}$ — นิยาม ไม่มีเลขของตัวเอง · ใช้ใน (3), (7) |
 | $V^\pi(s)$ **value function** | ฟังก์ชัน $\mathcal{S}\to\mathbb{R}$ | คำ**ทำนาย**ของ $G_t$ ถ้าเริ่มจาก $s$ แล้วเดินตาม $\pi$ | `self.critic(...)` `actor_critic.py:170-172` คืน `(B,1)` | $V(s_0) = 5.0$ (env 0) | 05 §1.6 | สมการ (3), (7) · ตัวยก $\pi$ = "ภายใต้ policy นี้" |
 | $Q^\pi(s, a)$ **action-value** | ฟังก์ชัน $\mathcal{S}\times\mathcal{A}\to\mathbb{R}$ | เหมือน $V$ แต่ล็อก action แรกไว้ก่อน | **ไม่มีใน repo** — Tron1 ไม่เคยคำนวณ $Q$ · นิยามไว้เพราะ advantage ต้องใช้ | ประมาณหนึ่งก้าว: $1.0 + 0.9(4.5) = 5.05$ | 05 §1.6 | สมการ (5), (6) |
 | **Bellman equation** | สมการ | $V$ ของวันนี้ = รางวัลก้าวเดียว + $\gamma$ × $V$ ของพรุ่งนี้ | ใช้เป็นเป้าใน `compute_returns` `rollout_storage.py:195-199` | $5.0 \approx 1.0 + 0.9(4.5) = 5.05$ | 05 §1.6 | สมการ (4) |
@@ -291,6 +292,7 @@ $$\text{ฟังก์ชัน} \;\longrightarrow\; \text{การแจก�
 | "clip" | ρ clip ที่ $[0.8, 1.2]$ | value clip ที่ ±0.2 · `clip_grad_norm_` ที่ 1.0 | สองอันแรกใช้ `clip_param` ตัวเดียวกัน อันที่สามคนละเลข |
 | "mean" | $\mu$ จุดกลาง | `.mean()` เฉลี่ยทั้ง minibatch · `Mean reward` ในล็อก | |
 | "policy" | ฟังก์ชัน $\mathcal{S}\to\Delta(\mathcal{A})$ (ตำรา) | NN ที่ deploy (โปรแกรมเมอร์) · ไฟล์ `policy.onnx` | สามความหมาย**ตรงกันตอน deploy** เท่านั้น — ตอนเทรน NN เดี่ยว ๆ ยังไม่ใช่ policy |
+| "objective" | $J$ — objective จริง: ผลตอบแทนคาดหวังทั้ง episode ที่สมการ (2) สั่งให้ทำให้สูงสุด | $L^{CLIP}$ สมการ (29) — *surrogate* objective: ฟังก์ชัน**ตัวแทน**ที่ PPO ไต่จริงในแต่ละ minibatch เพราะไต่ $J$ ตรง ๆ ไม่ได้ | ทั้งสองความหมายคือ "ตัวเลขที่อยากให้**สูงขึ้น**" (ตรงข้าม loss) จึงลบเครื่องหมายเป็น loss หรือบวกโบนัสเข้าไปได้ · เมื่อหมายถึง (29) โดยเฉพาะ เขียนเต็มว่า surrogate objective |
 | "KL" | ปริมาณ $D_{KL}(p\,\|\,q)$ | ตัวเลข `Policy/mean_kl` ในล็อก · "KL penalty" (พจน์ใน loss — **Tron1 ไม่มี**) | |
 | "การแจกแจง**บน**" vs "**ของ**" | บน $\mathcal{A}$ (พื้นที่ สุ่มไม่ได้) | ของ $a$ (ตัวแปรสุ่ม ทอยใหม่ได้) | ถามว่า "สิ่งนี้สุ่มได้ไหม" |
 | ตัวห้อย $t$ | step ในตาราง เริ่ม 0 ใหม่ทุก iteration | (ในตำรา: เวลาต่อเนื่องใน episode) | โน้ตชุดนี้ใช้ความหมายแรก |
@@ -399,7 +401,7 @@ $V = 650$, $\delta = 28.15$, $\rho = 1.25$, $L_V = 781.2$ (walkthrough ต้น
 | # | สมการ | อ่านว่า | derive ที่ |
 | --- | --- | --- | --- |
 | (1) | $P(s_{t+1}\mid s_t, a_t) = P(s_{t+1}\mid s_t, a_t, s_{t-1}, \ldots)$ | Markov: อดีตไม่เพิ่มข้อมูล | 05 §1.3 |
-| (2) | $\pi^* = \arg\max_\pi \mathbb{E}\big[\sum_{t=0}^{T}\gamma^t r_t\big]$ | เป้าหมายทั้งหมด | 05 §1.5 |
+| (2) | $\pi^* = \arg\max_\pi \mathbb{E}\big[\sum_{t=0}^{T}\gamma^t r_t\big]$ | โจทย์ทั้งหมด: หา $\pi$ ที่ทำให้ objective $J$ สูงสุด | 05 §1.5 |
 | (3) | $V^\pi(s) = \mathbb{E}_\pi\big[\sum_{k\ge0}\gamma^k r_{t+k} \mid s_t = s\big]$ | นิยาม value | 05 §1.6 |
 | (4) | $V^\pi(s) = \mathbb{E}\big[r_t + \gamma V^\pi(s_{t+1}) \mid s_t = s\big]$ | Bellman | 05 §1.6 |
 | (5) | $Q^\pi(s,a) = \mathbb{E}_\pi\big[\sum_{k\ge0}\gamma^k r_{t+k} \mid s_t = s, a_t = a\big]$ | นิยาม action-value | 05 §1.6 |
