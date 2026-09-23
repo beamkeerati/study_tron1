@@ -316,7 +316,9 @@ study_tron1/
 │   └── exp_001_baseline_sf.md
 ├── patches/                   <- diffs against the upstream clones
 ├── scripts/                   <- my own helpers
-│   └── compare_runs.py
+│   ├── compare_runs.py
+│   ├── toy_answer_key.py      <- every number quoted in notes 00/05/06/07
+│   └── notes_to_pdf.py        <- notes/*.md -> notes/pdf/*.pdf (Noto Sans Thai + MathJax)
 ├── IsaacLab/                  <- clone, tag v2.1.0        (ignored)
 └── tron1-rl-isaaclab/         <- clone, LimX upstream     (ignored)
 ```
