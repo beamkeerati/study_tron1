@@ -1,12 +1,16 @@
 # 01 — LimX Dynamics repo map
 
-`github.com/limxdynamics` has ~42 repos across four robot families (TRON1, TRON2,
-Oli humanoid, VLA) plus shared tools. This note covers the 12 TRON1 ones and how
-they stack.
+`github.com/limxdynamics` listed 57 public repos on 2026-11-25 (about 42 when this
+note was first written, 2026-09-04) across several robot families (TRON1, TRON2, the
+Oli and Luna humanoids) plus shared tools. This note covers the 12 whose name starts
+with `tron1-` and how they stack.
 
 ## Variant codes
 
-Every repo selects a model through the `ROBOT_TYPE` environment variable.
+The simulate and deploy repos, and the Isaac Gym trainer, select a model through the
+`ROBOT_TYPE` environment variable. `tron1-rl-isaaclab` does **not**: it selects by
+task ID (`Isaac-Limx-SF-Blind-Flat-v0`, registered at `robots/__init__.py:74`).
+`limx_rsl_rl_ppo_cfg.py:6` reads `ROBOT_TYPE`, but no line uses the value.
 
 | Code | Meaning |
 |---|---|
@@ -53,10 +57,10 @@ shared tools: robot-visualization, robot-joystick,
 
 | | isaacgym | isaaclab |
 |---|---|---|
-| Engine | Isaac Gym Preview 3 (discontinued) | Isaac Sim / PhysX |
+| Engine | Isaac Gym Preview 4 (deprecated by NVIDIA) | Isaac Sim 4.5.0 / PhysX |
 | Python | 3.8 | 3.10 |
 | Base | fork of `leggedrobotics/legged_gym` | Isaac Lab manager-based API |
-| Variants | PF + wheel-legged | PF, SF, WF |
+| Variants | PF, SF, WF (its README, 2026-11-25) | PF, SF, WF (six task IDs in `robots/__init__.py`) |
 | Status | legacy | current — use this |
 
 ## Notes for me

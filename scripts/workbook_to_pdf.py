@@ -13,7 +13,9 @@ What Chrome lacks, and how this script supplies it:
                                  finds each marker's page, pass 2 prints the numbers
 
 Content conventions (see notes/workbook/_STYLE.md):
-  `# ...`  part title page      `## บทที่ N · ชื่อ — คำขยาย`  chapter (new page, running head)
+  `# ...`  part title page (its own file NN-0-part.md, NN = first chapter of the part)
+  `## บทที่ N · ชื่อ — คำขยาย`  chapter (new page, running head); a `## ` without บทที่ N is an unnumbered
+  chapter (00-preface.md): no section numbers, no INTRO/SUMMARY check
   `### ...` numbered section N.k (a heading starting with แบบฝึกหัด is not numbered)
   > [!INTRO] > [!SUMMARY] > [!NOTE] > [!WARNING] > [!REMARK] > [!KEY] ชื่อสมการ
   > [!EXAMPLE] โจทย์   (body = วิธีทำ; the closing # is added)
@@ -249,7 +251,7 @@ MEASURE = """<script>(function(){var last=-1,same=0,t=setInterval(function(){
     if(el.getBoundingClientRect().right>lim){k++;el.setAttribute('data-overflow','1');}});
   document.body.setAttribute('data-overflow-count',k);},100);})();</script>"""
 
-SOURCE_TAG = re.compile(r'\[((?:0[0-7]|อภิธานศัพท์) §[^\]\n]{1,40}|[a-z_]+\.py:\d+(?:-\d+)?)\](?!\()')
+SOURCE_TAG = re.compile(r'\[((?:0[0-7]|อภิธานศัพท์)(?: §[^\]\n]{1,40})?|[a-z_/]+\.py:\d+(?:-\d+)?)\](?!\()')
 
 
 def plain(s):
@@ -271,7 +273,7 @@ def load():
     cover, body, answers = '', [], []
     for f in files:
         text = f.read_text(encoding='utf-8')
-        if f.name.startswith('00-'):
+        if f.name == '00-cover.md':
             cover = text
             continue
         main, _, ans = text.partition(ANSWER_MARK)
@@ -280,7 +282,7 @@ def load():
         if ans.strip() and m:
             answers.append((m.group(1).split('—')[0].strip(), ans.strip()))
         for kind in ('INTRO', 'SUMMARY'):
-            if m and f'[!{kind}]' not in main:
+            if m and m.group(1).startswith('บทที่') and f'[!{kind}]' not in main:
                 print(f'  style: {f.name} has no [!{kind}] box')
     return cover, '\n\n'.join(body), answers
 
@@ -328,7 +330,7 @@ def structure(h):
             nonlocal k
             if plain(mm.group(1)).startswith('แบบฝึกหัด'):
                 return f'<h3 class="exh">{mm.group(1)}</h3>'
-            if is_answers:
+            if is_answers or not num:
                 return mm.group(0)
             k += 1
             return f'<h3><span class="secno">{num + "." if num else ""}{k}</span>{mm.group(1)}</h3>'

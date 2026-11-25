@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 236" width="700" font-family="inherit" font-size="14">
+  <!-- lines: limx_base_env_cfg.py:426 · reward_manager.py:148 · rewards.py:49-54 (scripts/workbook_answer_key.py ch02()) -->
+  <defs>
+    <marker id="f02c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#37474f"/>
+    </marker>
+  </defs>
+
+  <!-- config -->
+  <rect x="10" y="62" width="196" height="118" rx="8" fill="#ffffff" stroke="#37474f" stroke-width="1.4"/>
+  <text x="108" y="86" text-anchor="middle" font-weight="bold">config</text>
+  <text x="108" y="106" text-anchor="middle" font-size="12.5" fill="#6e7781">เก็บค่า ไม่คำนวณ</text>
+  <g font-family="'Noto Sans Mono', monospace" font-size="10.5">
+    <text x="22" y="132">func = mdp.joint_powers_l1</text>
+    <text x="22" y="148">weight = -2e-5</text>
+  </g>
+  <text x="108" y="170" text-anchor="middle" font-size="12.5" fill="#6e7781">limx_base_env_cfg.py:426</text>
+
+  <!-- manager -->
+  <rect x="252" y="62" width="196" height="118" rx="8" fill="#f1f8f8" stroke="#0f6e6e" stroke-width="1.8"/>
+  <text x="350" y="86" text-anchor="middle" font-weight="bold" fill="#0f6e6e">manager</text>
+  <text x="350" y="106" text-anchor="middle" font-size="12.5" fill="#6e7781">ของ Isaac Lab · เราไม่แก้</text>
+  <g font-family="'Noto Sans Mono', monospace" font-size="10.5">
+    <text x="264" y="132">func(env) * weight * dt</text>
+  </g>
+  <text x="350" y="170" text-anchor="middle" font-size="12.5" fill="#6e7781">reward_manager.py:148</text>
+
+  <!-- implementation -->
+  <rect x="494" y="62" width="196" height="118" rx="8" fill="#ffffff" stroke="#37474f" stroke-width="1.4"/>
+  <text x="592" y="86" text-anchor="middle" font-weight="bold">implementation</text>
+  <text x="592" y="106" text-anchor="middle" font-size="12.5" fill="#6e7781">คำนวณ ไม่รู้ค่าน้ำหนัก</text>
+  <g font-family="'Noto Sans Mono', monospace" font-size="10.5">
+    <text x="506" y="132">def joint_powers_l1(env)</text>
+    <text x="506" y="148">    return tensor</text>
+  </g>
+  <text x="592" y="170" text-anchor="middle" font-size="12.5" fill="#6e7781">rewards.py:49-54</text>
+
+  <!-- arrows -->
+  <path d="M 208 121 L 250 121" fill="none" stroke="#37474f" stroke-width="1.6" marker-end="url(#f02c)"/>
+  <text x="229" y="34" text-anchor="middle" font-size="12.5">เตรียมรายการ</text>
+  <text x="229" y="52" text-anchor="middle" font-size="12.5">ตอนเริ่ม</text>
+
+  <path d="M 450 108 L 492 108" fill="none" stroke="#37474f" stroke-width="1.6" marker-end="url(#f02c)"/>
+  <path d="M 492 134 L 450 134" fill="none" stroke="#37474f" stroke-width="1.6" marker-end="url(#f02c)"/>
+  <text x="471" y="34" text-anchor="middle" font-size="12.5">เรียกทุกรอบ</text>
+  <text x="471" y="52" text-anchor="middle" font-size="12.5">ที่ตัวควบคุมสั่ง</text>
+  <text x="471" y="204" text-anchor="middle" font-size="12.5">คืนค่าหนึ่งค่า</text>
+  <text x="471" y="222" text-anchor="middle" font-size="12.5">ต่อหุ่นหนึ่งตัว</text>
+</svg>

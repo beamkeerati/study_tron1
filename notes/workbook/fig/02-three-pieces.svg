@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 318" width="700" font-family="inherit" font-size="14">
+  <!-- package names and folders: scripts/workbook_answer_key.py ch02() (editable installs) -->
+  <defs>
+    <marker id="f02a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#37474f"/>
+    </marker>
+    <marker id="f02b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#0f6e6e"/>
+    </marker>
+  </defs>
+
+  <!-- the conda env -->
+  <rect x="14" y="24" width="312" height="282" rx="10" fill="#f6f8fa" stroke="#37474f" stroke-width="1.2" stroke-dasharray="6 5"/>
+  <text x="30" y="49" font-weight="bold">conda env ชื่อ tron1 · Python 3.10</text>
+
+  <!-- Isaac Sim: really installed here -->
+  <rect x="30" y="64" width="280" height="56" rx="6" fill="#ffffff" stroke="#37474f" stroke-width="1.4"/>
+  <text x="44" y="87" font-weight="bold">Isaac Sim 4.5.0</text>
+  <text x="44" y="108" font-size="12.5" fill="#6e7781">ติดตั้งด้วย pip · ไฟล์อยู่ใน env นี้จริง</text>
+
+  <!-- editable entries -->
+  <text x="30" y="150" font-size="12.5" fill="#6e7781">รายการจด (editable install) · ไม่มีไฟล์โค้ดอยู่ที่นี่</text>
+  <rect x="30" y="160" width="280" height="50" rx="6" fill="#ffffff" stroke="#0f6e6e" stroke-width="1.4"/>
+  <text x="44" y="181" font-size="12.5">isaaclab · isaaclab_tasks · isaaclab_rl</text>
+  <text x="44" y="200" font-size="12.5">isaaclab_assets · isaaclab_mimic</text>
+  <rect x="30" y="240" width="280" height="50" rx="6" fill="#ffffff" stroke="#0f6e6e" stroke-width="1.4"/>
+  <text x="44" y="270" font-size="12.5">bipedal_locomotion · rsl_rl</text>
+
+  <!-- pointers out of the env -->
+  <path d="M 312 185 L 432 185" fill="none" stroke="#0f6e6e" stroke-width="1.6" marker-end="url(#f02b)"/>
+  <path d="M 312 265 L 432 265" fill="none" stroke="#0f6e6e" stroke-width="1.6" marker-end="url(#f02b)"/>
+  <text x="372" y="177" text-anchor="middle" font-size="12.5" fill="#0f6e6e">ชี้ไปที่</text>
+  <text x="372" y="257" text-anchor="middle" font-size="12.5" fill="#0f6e6e">ชี้ไปที่</text>
+
+  <!-- the two clones -->
+  <rect x="434" y="160" width="254" height="50" rx="6" fill="#ffffff" stroke="#37474f" stroke-width="1.4"/>
+  <text x="448" y="181" font-weight="bold">Isaac Lab · tag v2.1.0</text>
+  <text x="448" y="200" font-size="12.5" fill="#6e7781">study_tron1/IsaacLab/</text>
+  <rect x="434" y="240" width="254" height="50" rx="6" fill="#f1f8f8" stroke="#0f6e6e" stroke-width="1.8"/>
+  <text x="448" y="261" font-weight="bold">โปรเจกต์</text>
+  <text x="448" y="280" font-size="12.5" fill="#6e7781">study_tron1/tron1-rl-isaaclab/</text>
+
+  <!-- import direction -->
+  <path d="M 600 240 L 600 213" fill="none" stroke="#37474f" stroke-width="1.6" marker-end="url(#f02a)"/>
+  <text x="610" y="231" font-size="12.5" fill="#37474f">import</text>
+  <path d="M 600 160 L 600 92 L 313 92" fill="none" stroke="#37474f" stroke-width="1.6" marker-end="url(#f02a)"/>
+  <text x="610" y="130" font-size="12.5" fill="#37474f">import</text>
+</svg>

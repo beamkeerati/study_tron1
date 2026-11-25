@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 290" width="700" font-family="inherit" font-size="14">
+  <defs>
+    <marker id="f01a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#37474f"/>
+    </marker>
+  </defs>
+
+  <!-- train -->
+  <rect x="14" y="30" width="230" height="192" rx="8" fill="#f1f8f8" stroke="#0f6e6e" stroke-width="1.8"/>
+  <text x="129" y="56" text-anchor="middle" font-weight="bold" fill="#0f6e6e">ชั้น train</text>
+  <!-- two different things live in this layer: LimX's repo, and NVIDIA's simulator (not a LimX repo) -->
+  <rect x="30" y="66" width="198" height="34" rx="6" fill="#ffffff" stroke="#37474f" stroke-width="1.2"/>
+  <text x="129" y="88" text-anchor="middle" font-size="12.5">repo: tron1-rl-isaaclab</text>
+  <rect x="30" y="108" width="198" height="62" rx="6" fill="#ffffff" stroke="#37474f" stroke-width="1.2" stroke-dasharray="5 4"/>
+  <text x="129" y="131" text-anchor="middle" font-size="12.5">ตัวจำลองตอนเทรน: Isaac Sim</text>
+  <text x="129" y="154" text-anchor="middle" font-size="12.5" fill="#6e7781">หุ่นจำลองหลายพันตัวพร้อมกัน</text>
+  <text x="129" y="202" text-anchor="middle" font-size="12.5">ตัวควบคุมถูกปรับอยู่ตลอด</text>
+
+  <!-- train -> deploy -->
+  <path d="M 246 126 L 332 126" fill="none" stroke="#37474f" stroke-width="1.6" marker-end="url(#f01a)"/>
+  <text x="289" y="96" text-anchor="middle" font-size="12.5">ไฟล์ตัวควบคุม</text>
+  <text x="289" y="116" text-anchor="middle" font-size="12.5" font-weight="bold">.onnx</text>
+
+  <!-- deploy -->
+  <rect x="334" y="30" width="142" height="192" rx="8" fill="#ffffff" stroke="#37474f" stroke-width="1.4"/>
+  <text x="405" y="56" text-anchor="middle" font-weight="bold">ชั้น deploy</text>
+  <text x="405" y="80" text-anchor="middle" font-size="12.5">tron1-rl-deploy-…</text>
+  <text x="405" y="122" text-anchor="middle" font-size="12.5">รันตัวควบคุม</text>
+  <text x="405" y="144" text-anchor="middle" font-size="12.5">ที่เทรนเสร็จแล้ว</text>
+  <text x="405" y="198" text-anchor="middle" font-size="12.5" fill="#6e7781">ตัวควบคุมคงที่</text>
+
+  <!-- deploy <-> simulate -->
+  <path d="M 478 60 L 562 60" fill="none" stroke="#37474f" stroke-width="1.4" marker-end="url(#f01a)"/>
+  <path d="M 562 82 L 478 82" fill="none" stroke="#37474f" stroke-width="1.4" marker-end="url(#f01a)"/>
+  <text x="520" y="51" text-anchor="middle" font-size="12.5">คำสั่งข้อต่อ</text>
+  <text x="520" y="100" text-anchor="middle" font-size="12.5">สถานะหุ่น</text>
+
+  <!-- both links go through the SDK -->
+  <text x="520" y="131" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#0f6e6e">ผ่าน SDK</text>
+
+  <!-- deploy <-> robot -->
+  <path d="M 478 172 L 562 172" fill="none" stroke="#37474f" stroke-width="1.4" marker-end="url(#f01a)"/>
+  <path d="M 562 194 L 478 194" fill="none" stroke="#37474f" stroke-width="1.4" marker-end="url(#f01a)"/>
+  <text x="520" y="163" text-anchor="middle" font-size="12.5">คำสั่งข้อต่อ</text>
+  <text x="520" y="212" text-anchor="middle" font-size="12.5">สถานะหุ่น</text>
+
+  <!-- simulate -->
+  <rect x="564" y="30" width="124" height="82" rx="8" fill="#ffffff" stroke="#37474f" stroke-width="1.4"/>
+  <text x="626" y="54" text-anchor="middle" font-weight="bold">ชั้น simulate</text>
+  <text x="626" y="77" text-anchor="middle" font-size="12.5">MuJoCo · Gazebo</text>
+  <text x="626" y="99" text-anchor="middle" font-size="12.5" fill="#6e7781">ทำตัวเป็นหุ่นจริง</text>
+
+  <!-- real robot -->
+  <rect x="564" y="146" width="124" height="76" rx="8" fill="#eceff1" stroke="#37474f" stroke-width="1.4"/>
+  <text x="626" y="179" text-anchor="middle" font-weight="bold">หุ่นจริง</text>
+  <text x="626" y="203" text-anchor="middle" font-size="12.5" fill="#6e7781">Tron1 หนึ่งตัว</text>
+
+  <!-- where the book is -->
+  <path d="M 14 238 L 14 248 L 244 248 L 244 238" fill="none" stroke="#0f6e6e" stroke-width="1.4"/>
+  <text x="129" y="272" text-anchor="middle" fill="#0f6e6e" font-weight="bold">เล่มนี้ บทที่ 2–29</text>
+  <path d="M 334 238 L 334 248 L 688 248 L 688 238" fill="none" stroke="#8c959f" stroke-width="1.4"/>
+  <text x="511" y="272" text-anchor="middle" fill="#6e7781">บทที่ 30</text>
+</svg>

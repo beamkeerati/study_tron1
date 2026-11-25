@@ -116,12 +116,19 @@ Isaac Lab splits every MDP piece in two:
   / `EventTerm` naming that function plus its weight and parameters
 
 ```python
-# mdp/rewards.py  — implementation
-def pen_joint_power_l1(env, asset_cfg): ...
+# mdp/rewards.py:49  — implementation
+def joint_powers_l1(env, asset_cfg): ...
 
-# cfg/SF/limx_base_env_cfg.py — wiring
-pen_joint_power_l1 = RewTerm(func=mdp.pen_joint_power_l1, weight=-2e-5)
+# cfg/SF/limx_base_env_cfg.py:426 — wiring
+pen_joint_power_l1 = RewTerm(func=mdp.joint_powers_l1, weight=-2e-5)
 ```
+
+The name on the left (`pen_joint_power_l1`) is the config entry; the name after
+`func=mdp.` (`joint_powers_l1`) is the function. They are never the same in
+`RewardsCfg` (0 of 20 entries), so search for the function by the second name. And
+`mdp` is not one file: `mdp/__init__.py:1` star-imports Isaac Lab's ready-made
+functions before the project's own (`:3-7`), so 11 of those 20 functions live in
+`IsaacLab/source/isaaclab/isaaclab/envs/mdp/rewards.py`, not in the project.
 
 The managers (`RewardManager`, `ObservationManager`, ...) walk the config at
 startup, resolve each `func`, and vectorise the calls. That is why `train.py`
@@ -182,8 +189,10 @@ Two rules for myself:
 
 ## Runtime gotchas that come from this layout
 
-- `import isaaclab` in a bare `python` fails with `No module named 'omni.kit'`.
-  Isaac Lab is only importable **after** the Kit app boots. Use
+- `import isaaclab.envs` (and `import bipedal_locomotion`) in a bare `python` fails
+  with `No module named 'omni.kit'`; plain `import isaaclab` and `isaaclab.app`
+  succeed (tested 2026-11-25). Everything past the launcher is only importable
+  **after** the Kit app boots. Use
   `./isaaclab.sh -p script.py`, or a script whose first act is `AppLauncher(...)`.
   `train.py` / `play.py` do this, so plain `python` works for them.
 - Never `source /opt/ros/jazzy/setup.bash` in a shell running Isaac — it puts

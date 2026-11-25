@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 282" width="700" font-family="inherit" font-size="14">
+  <!-- joint names and counts: scripts/workbook_answer_key.py ch01() (assets/config/*_cfg.py) -->
+  <defs>
+    <g id="f01leg">
+      <!-- body, abad, hip, thigh, knee, shank: the part all three variants share -->
+      <rect x="-62" y="0" width="84" height="22" rx="5" fill="#eceff1" stroke="#37474f" stroke-width="1.2"/>
+      <path d="M -20 22 L -20 62 L 26 118 L -18 172" fill="none" stroke="#37474f" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="-20" cy="36" r="8" fill="#cfe9e9" stroke="#0f6e6e" stroke-width="1.6"/>
+      <circle cx="-20" cy="62" r="8" fill="#cfe9e9" stroke="#0f6e6e" stroke-width="1.6"/>
+      <circle cx="26" cy="118" r="8" fill="#cfe9e9" stroke="#0f6e6e" stroke-width="1.6"/>
+      <g font-size="12.5" fill="#37474f">
+        <text x="-4" y="40">abad</text>
+        <text x="-4" y="66">hip</text>
+        <text x="42" y="122">knee</text>
+      </g>
+    </g>
+  </defs>
+
+  <!-- PF -->
+  <g transform="translate(125 44)">
+    <text x="-20" y="-16" text-anchor="middle" font-weight="bold">PF · PointFoot</text>
+    <use href="#f01leg"/>
+    <circle cx="-18" cy="176" r="6" fill="#37474f"/>
+    <text x="-2" y="176" font-size="12.5" fill="#6e7781">ปลายเป็นจุด</text>
+    <line x1="-90" y1="183" x2="70" y2="183" stroke="#8c959f" stroke-width="1.2"/>
+    <text x="-20" y="208" text-anchor="middle" fill="#0f6e6e" font-weight="bold">ขาละ 3 ข้อ · รวม 6 ข้อ</text>
+  </g>
+
+  <!-- SF -->
+  <g transform="translate(355 44)">
+    <text x="-20" y="-16" text-anchor="middle" font-weight="bold">SF · SoleFoot</text>
+    <use href="#f01leg"/>
+    <rect x="-50" y="175" width="68" height="8" rx="2" fill="#37474f"/>
+    <circle cx="-18" cy="168" r="8" fill="#cfe9e9" stroke="#0f6e6e" stroke-width="1.6"/>
+    <text x="24" y="172" font-size="12.5" fill="#37474f">ankle</text>
+    <line x1="-90" y1="183" x2="70" y2="183" stroke="#8c959f" stroke-width="1.2"/>
+    <text x="-20" y="208" text-anchor="middle" fill="#0f6e6e" font-weight="bold">ขาละ 4 ข้อ · รวม 8 ข้อ</text>
+  </g>
+
+  <!-- WF -->
+  <g transform="translate(585 44)">
+    <text x="-20" y="-16" text-anchor="middle" font-weight="bold">WF · WheelFoot</text>
+    <use href="#f01leg"/>
+    <circle cx="-18" cy="164" r="19" fill="#ffffff" stroke="#37474f" stroke-width="4"/>
+    <circle cx="-18" cy="164" r="8" fill="#cfe9e9" stroke="#0f6e6e" stroke-width="1.6"/>
+    <text x="8" y="160" font-size="12.5" fill="#37474f">wheel</text>
+    <line x1="-90" y1="183" x2="70" y2="183" stroke="#8c959f" stroke-width="1.2"/>
+    <text x="-20" y="208" text-anchor="middle" fill="#0f6e6e" font-weight="bold">ขาละ 4 ข้อ · รวม 8 ข้อ</text>
+  </g>
+
+  <!-- legend -->
+  <circle cx="248" cy="268" r="7" fill="#cfe9e9" stroke="#0f6e6e" stroke-width="1.6"/>
+  <text x="262" y="273" font-size="12.5" fill="#6e7781">ข้อต่อที่ขับได้ (มีตัวขับในไฟล์ config ของรุ่นนั้น)</text>
+</svg>
