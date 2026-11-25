@@ -326,6 +326,7 @@ config ของงานที่เราใช้ไม่ได้จบใ�
 | `tasks/locomotion/mdp/rewards.py` | 534 | implementation ของการให้คะแนน |
 | `tasks/locomotion/mdp/observations.py` | 182 | implementation ของสิ่งที่ตัวควบคุมรับเข้ามา |
 | `tasks/locomotion/mdp/events.py` | 220 | implementation ของเหตุการณ์ |
+| `tasks/locomotion/mdp/commands/gait_command.py` | 87 | implementation ของคำสั่งเรื่องจังหวะก้าว |
 | `utils/wrappers/rsl_rl/rl_mlp_cfg.py` | 62 | config เพิ่มเติมของวิธีเทรน และฟังก์ชันที่แปลงตัวควบคุมเป็นไฟล์ `.onnx` |
 
 ไฟล์ของ Isaac Lab ที่เล่มนี้อ้าง อยู่ใต้ `IsaacLab/source/` ทั้งหมด
@@ -336,7 +337,10 @@ config ของงานที่เราใช้ไม่ได้จบใ�
 | `isaaclab/isaaclab/envs/manager_based_rl_env.py` | คลาส `ManagerBasedRLEnv` ซึ่งเป็น `entry_point` ของ task ID ทั้ง 6 ตัว |
 | `isaaclab/isaaclab/managers/manager_base.py` | ส่วนที่ manager ทุกหมวดใช้ร่วมกัน |
 | `isaaclab/isaaclab/managers/reward_manager.py` | manager ของหมวดการให้คะแนน |
+| `isaaclab/isaaclab/managers/observation_manager.py` | manager ของหมวดสิ่งที่ตัวควบคุมรับเข้ามา |
 | `isaaclab/isaaclab/envs/mdp/rewards.py` | implementation สำเร็จรูปของการให้คะแนน |
+| `isaaclab/isaaclab/envs/mdp/terminations.py` | implementation สำเร็จรูปของเงื่อนไขที่ทำให้หยุดแล้วเริ่มใหม่ |
+| `isaaclab/isaaclab/envs/mdp/commands/velocity_command.py` | implementation สำเร็จรูปของคำสั่งความเร็ว |
 | `isaaclab/isaaclab/envs/mdp/actions/joint_actions.py` | การแปลงคำสั่งของตัวควบคุมเป็นเป้าหมายของข้อต่อ |
 | `isaaclab_tasks/isaaclab_tasks/utils/parse_cfg.py` | การอ่าน config ออกจาก registry |
 | `isaaclab_rl/isaaclab_rl/rsl_rl/vecenv_wrapper.py` | ตัวเชื่อมระหว่างงานกับ `rsl_rl` |

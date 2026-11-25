@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 232" width="700" font-family="inherit" font-size="14">
+  <text x="62" y="26" font-weight="bold">observation  o  ของ policy : 36 ค่า</text>
+  <rect x="62" y="40" width="48" height="38" fill="#eef4f7" stroke="#37474f" stroke-width="1.2"/>
+  <text x="86.0" y="65" text-anchor="middle" font-weight="bold">3</text>
+  <text x="86.0" y="98" text-anchor="middle" font-size="12.5">base_ang_vel</text>
+  <rect x="110" y="40" width="48" height="38" fill="#eef4f7" stroke="#37474f" stroke-width="1.2"/>
+  <text x="134.0" y="65" text-anchor="middle" font-weight="bold">3</text>
+  <line x1="134.0" y1="80" x2="134.0" y2="108" stroke="#8c959f" stroke-width="1"/>
+  <text x="134.0" y="124" text-anchor="middle" font-size="12.5">proj_gravity</text>
+  <rect x="158" y="40" width="128" height="38" fill="#ffffff" stroke="#37474f" stroke-width="1.2"/>
+  <text x="222.0" y="65" text-anchor="middle" font-weight="bold">8</text>
+  <text x="222.0" y="98" text-anchor="middle" font-size="12.5">joint_pos</text>
+  <rect x="286" y="40" width="128" height="38" fill="#ffffff" stroke="#37474f" stroke-width="1.2"/>
+  <text x="350.0" y="65" text-anchor="middle" font-weight="bold">8</text>
+  <text x="350.0" y="98" text-anchor="middle" font-size="12.5">joint_vel</text>
+  <rect x="414" y="40" width="128" height="38" fill="#f6f8fa" stroke="#37474f" stroke-width="1.2"/>
+  <text x="478.0" y="65" text-anchor="middle" font-weight="bold">8</text>
+  <text x="478.0" y="98" text-anchor="middle" font-size="12.5">last_action</text>
+  <rect x="542" y="40" width="32" height="38" fill="#fdf3d8" stroke="#37474f" stroke-width="1.2"/>
+  <text x="558.0" y="65" text-anchor="middle" font-weight="bold">2</text>
+  <text x="558.0" y="98" text-anchor="middle" font-size="12.5">gait_phase</text>
+  <rect x="574" y="40" width="64" height="38" fill="#fdf3d8" stroke="#37474f" stroke-width="1.2"/>
+  <text x="606.0" y="65" text-anchor="middle" font-weight="bold">4</text>
+  <line x1="606.0" y1="80" x2="606.0" y2="108" stroke="#8c959f" stroke-width="1"/>
+  <text x="606.0" y="124" text-anchor="middle" font-size="12.5">gait_command</text>
+  <text x="62" y="166" font-weight="bold">command  c : 3 ค่า</text>
+  <rect x="62" y="178" width="48" height="38" fill="#fdecea" stroke="#37474f" stroke-width="1.2"/>
+  <text x="86" y="203" text-anchor="middle" font-weight="bold">3</text>
+  <text x="124" y="203" font-size="13">ความเร็วไปข้างหน้า · ความเร็วไปด้านข้าง · ความเร็วในการหมุนตัว</text>
+</svg>

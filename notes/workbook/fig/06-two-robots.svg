@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 236" width="700" font-family="inherit" font-size="14">
+  <text x="180" y="26" text-anchor="middle" font-weight="bold">หุ่น A</text>
+  <text x="180" y="46" text-anchor="middle" fill="#b42318" font-size="13">ลำตัวไปข้างหน้า 1.0 m/s</text>
+  <rect x="48" y="62" width="84" height="116" rx="6" fill="#f6f8fa" stroke="#d0d7de" stroke-width="1"/>
+  <line x1="56" y1="168" x2="124" y2="168" stroke="#8c959f" stroke-width="1.4"/>
+  <g opacity="0.45" stroke="#37474f" stroke-width="2.2" fill="none" stroke-linejoin="round"><circle cx="90" cy="100" r="11" fill="#ffffff"/><path d="M 90 111 L 104 137 L 106 168"/></g>
+  <text x="90" y="198" text-anchor="middle" font-size="12.5" fill="#6e7781">2 รอบก่อน</text>
+  <rect x="139" y="62" width="84" height="116" rx="6" fill="#f6f8fa" stroke="#d0d7de" stroke-width="1"/>
+  <line x1="147" y1="168" x2="215" y2="168" stroke="#8c959f" stroke-width="1.4"/>
+  <g opacity="0.7" stroke="#37474f" stroke-width="2.2" fill="none" stroke-linejoin="round"><circle cx="181" cy="100" r="11" fill="#ffffff"/><path d="M 181 111 L 179 139 L 161 168"/></g>
+  <text x="181" y="198" text-anchor="middle" font-size="12.5" fill="#6e7781">1 รอบก่อน</text>
+  <rect x="230" y="62" width="84" height="116" rx="6" fill="none" stroke="#0f6e6e" stroke-width="1.4" stroke-dasharray="5 4"/>
+  <line x1="238" y1="168" x2="306" y2="168" stroke="#8c959f" stroke-width="1.4"/>
+  <g opacity="1.0" stroke="#37474f" stroke-width="2.2" fill="none" stroke-linejoin="round"><circle cx="272" cy="96" r="11" fill="#ffffff"/><path d="M 272 107 L 282 127 L 272 147"/></g>
+  <text x="272" y="198" text-anchor="middle" font-size="12.5" fill="#6e7781">รอบปัจจุบัน</text>
+  <text x="520" y="26" text-anchor="middle" font-weight="bold">หุ่น B</text>
+  <text x="520" y="46" text-anchor="middle" fill="#b42318" font-size="13">ไม่มีความเร็วไปข้างหน้า</text>
+  <rect x="388" y="62" width="84" height="116" rx="6" fill="#f6f8fa" stroke="#d0d7de" stroke-width="1"/>
+  <line x1="396" y1="168" x2="464" y2="168" stroke="#8c959f" stroke-width="1.4"/>
+  <g opacity="0.45" stroke="#37474f" stroke-width="2.2" fill="none" stroke-linejoin="round"><circle cx="430" cy="112" r="11" fill="#ffffff"/><path d="M 430 123 L 443 143 L 430 168"/></g>
+  <text x="430" y="198" text-anchor="middle" font-size="12.5" fill="#6e7781">2 รอบก่อน</text>
+  <rect x="479" y="62" width="84" height="116" rx="6" fill="#f6f8fa" stroke="#d0d7de" stroke-width="1"/>
+  <line x1="487" y1="168" x2="555" y2="168" stroke="#8c959f" stroke-width="1.4"/>
+  <g opacity="0.7" stroke="#37474f" stroke-width="2.2" fill="none" stroke-linejoin="round"><circle cx="521" cy="96" r="11" fill="#ffffff"/><path d="M 521 107 L 525 137 L 521 168"/></g>
+  <text x="521" y="198" text-anchor="middle" font-size="12.5" fill="#6e7781">1 รอบก่อน</text>
+  <rect x="570" y="62" width="84" height="116" rx="6" fill="none" stroke="#0f6e6e" stroke-width="1.4" stroke-dasharray="5 4"/>
+  <line x1="578" y1="168" x2="646" y2="168" stroke="#8c959f" stroke-width="1.4"/>
+  <g opacity="1.0" stroke="#37474f" stroke-width="2.2" fill="none" stroke-linejoin="round"><circle cx="612" cy="96" r="11" fill="#ffffff"/><path d="M 612 107 L 622 127 L 612 147"/></g>
+  <text x="612" y="198" text-anchor="middle" font-size="12.5" fill="#6e7781">รอบปัจจุบัน</text>
+  <text x="350" y="222" text-anchor="middle" fill="#0f6e6e" font-size="13">ในกรอบเส้นประ ท่าของสองตัวเหมือนกัน และเท้าไม่ได้ยันพื้น</text>
+</svg>

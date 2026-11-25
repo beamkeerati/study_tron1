@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 232" width="700" font-family="inherit" font-size="14">
+  <defs><marker id="f03a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#37474f"/></marker><marker id="f03b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#0f6e6e"/></marker></defs>
+  <g text-anchor="middle">
+    <rect x="40" y="56" width="200" height="124" rx="8" fill="#ffffff" stroke="#37474f" stroke-width="1.4"/>
+    <text x="140" y="84" font-weight="bold" font-size="16">agent</text>
+    <text x="140" y="116" font-size="13">policy</text>
+    <text x="140" y="140" font-size="13">อัลกอริทึมที่ปรับ policy</text>
+    <rect x="460" y="56" width="200" height="124" rx="8" fill="#f6f8fa" stroke="#37474f" stroke-width="1.4"/>
+    <text x="560" y="84" font-weight="bold" font-size="16">environment</text>
+    <text x="560" y="112" font-size="13">ตัวหุ่น · ตัวคุม PD</text>
+    <text x="560" y="134" font-size="13">ฟิสิกส์ · เซนเซอร์</text>
+    <text x="560" y="156" font-size="13">กติกาการให้คะแนน</text>
+    <text x="350" y="78" fill="#37474f">action 8 ค่า</text>
+    <text x="350" y="124" fill="#0f6e6e">สถานะ</text>
+    <text x="350" y="162" fill="#0f6e6e">reward 1 ค่า</text>
+    <text x="350" y="214" fill="#6e7781" font-size="13">หนึ่งรอบของวงจร = 0.02 วินาที</text>
+  </g>
+  <path d="M 242 86 L 456 86" fill="none" stroke="#37474f" stroke-width="1.6" marker-end="url(#f03a)"/>
+  <path d="M 458 132 L 244 132" fill="none" stroke="#0f6e6e" stroke-width="1.6" marker-end="url(#f03b)"/>
+  <path d="M 458 170 L 244 170" fill="none" stroke="#0f6e6e" stroke-width="1.6" marker-end="url(#f03b)"/>
+</svg>

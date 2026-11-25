@@ -7,6 +7,8 @@ the "what if" variants the exercises ask about. It defines no new example data.
 
 Chapters 1-2 have no toy numbers: ch01()/ch02() read their facts from the real code under tron1-rl-isaaclab/
 and IsaacLab/, plus one dated snapshot of the GitHub repo list (limxdynamics_repos_2026-11-25.json).
+Chapters 3-6 come before the table is introduced (chapter 7): ch03/ch05/ch06 read the code the same way, and
+chapter 4's bag of eight cards is the r row of the toy table (box K = env index), not new data.
 
 Run from the repo root:  python3 scripts/workbook_answer_key.py [chapter ...]
 """
@@ -326,7 +328,7 @@ def ch02():
         print(f"  {len((T / rel).read_text().splitlines()):>4}  {rel}")
     for rel in ("assets/config/solefoot_cfg.py", "tasks/locomotion/robots/__init__.py", "tasks/locomotion/robots/limx_solefoot_env_cfg.py",
                 "tasks/locomotion/cfg/SF/limx_base_env_cfg.py", "tasks/locomotion/agents/limx_rsl_rl_ppo_cfg.py",
-                "tasks/locomotion/mdp/rewards.py", "tasks/locomotion/mdp/observations.py", "tasks/locomotion/mdp/events.py",
+                "tasks/locomotion/mdp/rewards.py", "tasks/locomotion/mdp/observations.py", "tasks/locomotion/mdp/events.py", "tasks/locomotion/mdp/commands/gait_command.py",
                 "utils/wrappers/rsl_rl/rl_mlp_cfg.py"):
         print(f"  {len((EXT / rel).read_text().splitlines()):>4}  {rel}")
     print("  basenames that exist both in the project and in IsaacLab:",
@@ -377,7 +379,427 @@ def ch02():
     show(ISAAC / "isaaclab/isaaclab/actuators/actuator_cfg.py", 172)
 
 
-CHAPTERS = {"01": ch01, "02": ch02, "22": ch22}
+# ---------------------------------------------------------------- chapters 3-9 (part B: the problem)
+RSL = T / "rsl_rl/rsl_rl"
+BASE = LOCO / "cfg/SF/limx_base_env_cfg.py"
+PPO_CFG = LOCO / "agents/limx_rsl_rl_ppo_cfg.py"
+RL_ENV = ISAAC / "isaaclab/isaaclab/envs/manager_based_rl_env.py"
+WRAP = ISAAC / "isaaclab_rl/isaaclab_rl/rsl_rl/vecenv_wrapper.py"
+
+
+def cfg_class(*names):
+    """The (possibly nested) config class `names[0].names[1]...` of cfg/SF/limx_base_env_cfg.py."""
+    body = ast.parse(BASE.read_text()).body
+    node = None
+    for nm in names:
+        node = next(n for n in body if isinstance(n, ast.ClassDef) and n.name == nm)
+        body = node.body
+    return node
+
+
+def cfg_terms(*names):
+    """[(entry name, line, call node)] for every `x = Something(...)` in that config class."""
+    return [(a.targets[0].id, a.lineno, a.value) for a in cfg_class(*names).body
+            if isinstance(a, ast.Assign) and isinstance(a.value, ast.Call)]
+
+
+def timing():
+    src_ = BASE.read_text()
+    dec = int(re.search(r"self\.decimation = (\d+)", src_).group(1))
+    dt = float(re.search(r"self\.sim\.dt = ([\d.]+)", src_).group(1))
+    ep = float(re.search(r"self\.episode_length_s = ([\d.]+)", src_).group(1))
+    return dec, dt, dec * dt, ep
+
+
+def sf_ppo():
+    """Keyword values of the block that actually runs: SF_TRON1AFlatPPORunnerCfg."""
+    cls = next(n for n in ast.parse(PPO_CFG.read_text()).body if isinstance(n, ast.ClassDef) and n.name == "SF_TRON1AFlatPPORunnerCfg")
+    out = {}
+    for a in cls.body:
+        if isinstance(a, ast.Assign):
+            if isinstance(a.value, ast.Call):
+                for k in a.value.keywords:
+                    with contextlib.suppress(Exception):
+                        out[k.arg] = (ast.literal_eval(k.value), k.value.lineno)
+            else:
+                with contextlib.suppress(Exception):
+                    out[a.targets[0].id] = (ast.literal_eval(a.value), a.lineno)
+    return out
+
+
+def n_joints():
+    return sum(len(g["names"]) for g in variants()["SF"]["groups"])
+
+
+def obs_dims(*group):
+    """Width of every term of an observation group. Joint-sized terms use the SF joint count; the two gait terms are
+    read from the project code; 3 is the size of a base-frame vector (angular velocity, projected gravity)."""
+    nj = n_joints()
+    gait_cmd = int(re.search(r"self\.gait_command = torch\.zeros\(self\.num_envs, (\d+)", (LOCO / "mdp/commands/gait_command.py").read_text()).group(1))
+    obs_src = (LOCO / "mdp/observations.py").read_text()
+    gait_phase = int(re.search(r"def get_gait_phase.*?Shape: \(num_envs, (\d+)\)", obs_src, re.S).group(1))
+    width = {"base_ang_vel": 3, "projected_gravity": 3, "base_lin_vel": 3, "joint_pos_rel": nj, "joint_vel_rel": nj,
+             "last_action": nj, "get_gait_phase": gait_phase, "get_gait_command": gait_cmd}
+    return [(name, ln, _kw(call, "func").attr, width.get(_kw(call, "func").attr)) for name, ln, call in cfg_terms(*group)]
+
+
+def reward_terms():
+    return [(name, ln, _kw(call, "func").attr, _num(_kw(call, "weight"))) for name, ln, call in cfg_terms("RewardsCfg")]
+
+
+def find_line(path, pattern, start=1):
+    for i, line in enumerate(pathlib.Path(path).read_text().splitlines(), 1):
+        if i >= start and re.search(pattern, line):
+            return i
+    raise LookupError(pattern)
+
+
+def ch03():
+    print("=== chapter 3 — what RL is solving ===")
+    dec, dt, step_dt, _ = timing()
+    print(f"decimation {dec} x sim.dt {dt} = {step_dt:.3f} s per decision = {1/step_dt:.0f} decisions per second")
+    nj, nrew = n_joints(), len(reward_terms())
+    scene = next(n for n in ast.walk(cfg_class("SFEnvCfg")) if isinstance(n, ast.Call) and getattr(n.func, "id", "") == "SFSceneCfg")
+    nenv = _num(_kw(scene, "num_envs"))
+    print(f"actuated joints (SF) = {nj}   reward entries = {nrew}   default num_envs = {nenv} (line {scene.lineno})")
+    print(f"numbers the controller must produce per second: {nj} x {1/step_dt:.0f} = {nj/step_dt:.0f}")
+    print(f"decisions per simulated second across the default {nenv} robots = {nenv/step_dt:,.0f}")
+    print(f"exercise: with 2048 robots = {2048/step_dt:,.0f} decisions per second, {2048/step_dt*60:,.0f} per minute")
+    print(f"PD loop (every physics step) = {1/dt:.0f} Hz")
+    print("-- the loop in the runner")
+    run = RSL / "runner/on_policy_runner.py"
+    show(run, 170); show(run, 174, 177); show(run, 192)
+    print("-- inside one env.step (IsaacLab)")
+    for a, b in ((173, 173), (182, 189), (207, 207), (239, 239), (242, 242)):
+        show(RL_ENV, a, b)
+    print("-- who computes the reward: the environment's reward manager")
+    show(ISAAC / "isaaclab/isaaclab/managers/reward_manager.py", 148, 150)
+    show(RSL / "algorithm/ppo.py", 133); show(RSL / "algorithm/ppo.py", 159, 160)
+    show(BASE, 116, 121); show(BASE, 368); show(BASE, 497); show(BASE, 501); show(BASE, 484)
+    show(T / "scripts/rsl_rl/train.py", 98)
+
+
+def bag():
+    """Chapter 4's bag of cards: the eight r values of the toy table, box K = env index."""
+    cards = [(k, x) for k in (0, 1) for x in env[k]["r"]]
+    return cards
+
+
+def dist(values):
+    out = {}
+    for v in values:
+        out[v] = out.get(v, 0) + 1
+    n = len(values)
+    return {v: c / n for v, c in sorted(out.items(), reverse=True)}, n
+
+
+def ch04():
+    import random
+    from fractions import Fraction as F
+    print("=== chapter 4 — random variables, expectation, the bar ===")
+    cards = bag()
+    xs = [x for _, x in cards]
+    print("box 0:", env[0]["r"], "  box 1:", env[1]["r"])
+    p, n = dist(xs)
+    print("-- distribution of X (whole bag, 8 cards)")
+    for v, q in p.items():
+        print(f"  P(X={v:+.1f}) = {F(q).limit_denominator(8)} = {q:.4f}   x*p = {v*q:+.4f}")
+    EX = sum(v * q for v, q in p.items())
+    print(f"  sum p = {sum(p.values()):.4f}   E[X] = {EX:+.4f}   (= {sum(xs)}/8)")
+    cond = {}
+    for k in (0, 1):
+        pk, nk = dist(env[k]["r"])
+        cond[k] = sum(v * q for v, q in pk.items())
+        print(f"-- given K={k}: " + "  ".join(f"P(X={v:+.1f}|K={k})={F(q).limit_denominator(4)}" for v, q in pk.items()) + f"   E[X|K={k}] = {cond[k]:+.4f}")
+    print(f"  two-level average: 0.5*{cond[0]:+.4f} + 0.5*{cond[1]:+.4f} = {0.5*cond[0] + 0.5*cond[1]:+.4f}")
+    p0, _ = dist(env[0]["r"]); p1, _ = dist(env[1]["r"])
+    for v in (1.0, 0.5):
+        print(f"  P(X={v}|K=0) + P(X={v}|K=1) = {p0.get(v,0):.2f} + {p1.get(v,0):.2f} = {p0.get(v,0)+p1.get(v,0):.2f}  (not 1: summing over the RIGHT side)")
+    # the bar turned round: P(K | X)
+    for v in (1.0, 0.5, -2.0):
+        ks = [k for k, x in cards if x == v]
+        print(f"  P(K=0|X={v:+.1f}) = {ks.count(0)}/{len(ks)}   P(K=1|X={v:+.1f}) = {ks.count(1)}/{len(ks)}")
+    print(f"  P(X>=0.5) = {sum(x >= 0.5 for x in xs)}/8   P(X>=0.5|K=1) = {sum(x >= 0.5 for x in env[1]['r'])}/4   P(X<0) = {sum(x < 0 for x in xs)}/8")
+    print("-- linearity")
+    print(f"  E[2X+1] = {sum((2*v+1)*q for v, q in p.items()):+.4f}  = 2*E[X]+1 = {2*EX+1:+.4f}")
+    print(f"  E[0.9X] = {sum(0.9*v*q for v, q in p.items()):+.5f}   E[X^2] = {sum(v*v*q for v, q in p.items()):.4f}   (E[X])^2 = {EX*EX:.4f}")
+    print(f"  E[X|K=0] + 0.9*E[X|K=1] = {cond[0] + 0.9*cond[1]:+.4f}")
+    print("-- sample mean of n draws with replacement (random.Random(7)); E[X] = %+.4f" % EX)
+    rng = random.Random(7)
+    draws = [rng.choice(xs) for _ in range(8000)]
+    print("  first 8 draws:", draws[:8])
+    print(f"  the value 1.0 appears {draws[:8].count(1.0)} times in the first 8")
+    for m in (1, 8, 80, 800, 8000):
+        print(f"  n={m:<5} mean = {sum(draws[:m])/m:+.4f}   |mean - E[X]| = {abs(sum(draws[:m])/m - EX):.4f}")
+    print("-- two draws with replacement: E[X1 + 0.9*X2]")
+    pairs = [a + 0.9 * b for a in xs for b in xs]
+    print(f"  by linearity {EX + 0.9*EX:.5f};  by enumerating {len(pairs)} pairs {sum(pairs)/len(pairs):.5f}")
+    print(f"-- biased coin P(K=0)=3/4: 0.75*{cond[0]:+.4f} + 0.25*{cond[1]:+.4f} = {0.75*cond[0] + 0.25*cond[1]:+.5f}")
+    print("-- one card removed: bag without the -2.0 card")
+    ys = [x for x in xs if x != -2.0]
+    print(f"  E = {sum(ys)}/{len(ys)} = {sum(ys)/len(ys):+.4f}")
+
+
+def ch05():
+    print("=== chapter 5 — the MDP form, and Tron1's MDP ===")
+    dec, dt, step_dt, _ = timing()
+    print("-- action")
+    show(BASE, 116, 121)
+    print(f"  joint_names ['.*'] -> every actuated joint of SF = {n_joints()}")
+    print("-- policy observation group (ObservarionsCfg.PolicyCfg)")
+    c = cfg_class("ObservarionsCfg", "PolicyCfg")
+    print(f"  class lines {c.lineno}-{c.end_lineno}")
+    rows = obs_dims("ObservarionsCfg", "PolicyCfg")
+    for name, ln, func, w in rows:
+        print(f"  :{ln}  {name:<14} func=mdp.{func:<20} width {w}")
+    print(f"  total = {' + '.join(str(w) for *_, w in rows)} = {sum(w for *_, w in rows)}")
+    print(f"  without last_action: {sum(w for n, _, _, w in rows if n != 'last_action')}")
+    show(LOCO / "mdp/commands/gait_command.py", 34); show(LOCO / "mdp/commands/gait_command.py", 63, 69)
+    obs_py = LOCO / "mdp/observations.py"
+    a = find_line(obs_py, r"def get_gait_phase"); show(obs_py, a); show(obs_py, find_line(obs_py, r"gait_indices = torch.remainder", a)); show(obs_py, find_line(obs_py, r"sin_phase =", a), find_line(obs_py, r"cos_phase =", a))
+    print("-- commands (CommandsCfg)")
+    for name, ln, call in cfg_terms("CommandsCfg"):
+        rng_ = _kw(call, "ranges")
+        print(f"  :{ln}  {name:<14} {ast.unparse(call.func)}  resampling {ast.unparse(_kw(call, 'resampling_time_range'))}")
+        for k in rng_.keywords:
+            print(f"        {k.arg} = {ast.unparse(k.value)}  (line {k.value.lineno})")
+    show(BASE, 226, 227)
+    show(BASE, 100, 107)
+    vc = ISAAC / "isaaclab/isaaclab/envs/mdp/commands/velocity_command.py"
+    a = find_line(vc, r"def command\(self\)"); show(vc, a, a + 2)
+    show(vc, 127, 138); show(vc, 147, 160)
+    print("  -> heading_command=True and rel_heading_envs=1.0: ang_vel_z is recomputed from the heading error every step, clipped to its range")
+    show(RSL / "algorithm/ppo.py", 137, 139)
+    show(RSL / "runner/on_policy_runner.py", 59)
+    print("-- transition P: physics")
+    show(RL_ENV, 182, 189); show(BASE, 105); show(BASE, 134)
+    print(f"  {dec} physics steps of {dt} s inside one decision of {step_dt:.2f} s")
+    print("-- reward: 20 entries")
+    rt = reward_terms()
+    pos = [r for r in rt if r[3] > 0]; neg = [r for r in rt if r[3] < 0]
+    for name, ln, func, w in rt:
+        places = defined_in(func)
+        pth, fl, kind = places[-1]
+        owner = "project" if T in pth.parents else "IsaacLab"
+        print(f"  :{ln:<4} {name:<34} weight {w!s:<8} mdp.{func:<28} {owner} {pth.name}:{fl}")
+    print(f"  entries {len(rt)}: positive weight {len(pos)} (sum {sum(r[3] for r in pos)}), negative weight {len(neg)}")
+    print(f"  largest |weight|: {max(rt, key=lambda r: abs(r[3]))[0]}   smallest |weight|: {min(rt, key=lambda r: abs(r[3]))[0]}")
+    print(f"  ratio rew_lin_vel_xy / |pen_joint_power_l1| = {2.5/2e-5:,.0f}")
+    print("  test_gait_reward: weight +1.0 but both inner scales are negative, so the function is <= 0:")
+    show(BASE, 434, 435); show(LOCO / "mdp/rewards.py", 466); show(LOCO / "mdp/rewards.py", 478); show(LOCO / "mdp/rewards.py", 413, 418)
+    show(BASE, 372, 375)
+    print("-- one step of reward, by hand (func x weight x dt, dt = %.2f)" % step_dt)
+    print(f"  keep_balance: 1 x 1.0 x {step_dt} = {1*1.0*step_dt:.4f} per step; over 1 s ({1/step_dt:.0f} steps) = {1.0:.2f}")
+    std2 = 0.25
+    for err in (0.0, 0.5, 1.0):
+        f = math.exp(-err**2 / std2)
+        print(f"  rew_lin_vel_xy, speed error {err} m/s: exp(-{err**2:.2f}/{std2}) = {f:.4f}; x 2.5 x {step_dt} = {f*2.5*step_dt:.4f}")
+    f05 = math.exp(-0.25 / std2)
+    print(f"  example r_t with only these two entries non-zero, error 0.5: {1*1.0*step_dt:.4f} + {f05*2.5*step_dt:.4f} = {step_dt + f05*2.5*step_dt:.4f}")
+    print(f"  exercise: error 0 -> {step_dt:.4f} + {2.5*step_dt:.4f} = {step_dt + 2.5*step_dt:.4f};   error 1.0 -> {step_dt + math.exp(-4)*2.5*step_dt:.4f}")
+    print(f"  pen_action_rate with one joint changing by 0.2 between steps: 0.2^2 x -0.5 x {step_dt} = {0.04*-0.5*step_dt:.5f}")
+    iso = ISAAC / "isaaclab/isaaclab/envs/mdp/rewards.py"
+    for fn in ("track_lin_vel_xy_exp", "action_rate_l2", "joint_torques_l2"):
+        a = find_line(iso, rf"^def {fn}\b"); b = find_line(iso, r"^    return ", a)
+        print(f"  IsaacLab rewards.py: def {fn} at :{a}, return at :{b}")
+        show(iso, b - (4 if fn == "track_lin_vel_xy_exp" else 0), b)
+    tr = LOCO / "mdp/rewards.py"
+    show(tr, 23, 25); show(tr, find_line(tr, r"penalty = torch.sum\(torch.square\(current_action - 2"))
+    show(BASE, 378, 380)
+    rm = ISAAC / "isaaclab/isaaclab/managers/reward_manager.py"
+    show(rm, 141); show(rm, 148, 150); show(rm, 157)
+    show(RL_ENV, 207); show(RL_ENV, 242); show(RSL / "runner/on_policy_runner.py", 177)
+    print("-- gamma")
+    show(PPO_CFG, 102)
+    print("-- where each slot lives")
+    for nm in ("CommandsCfg", "ActionsCfg", "ObservarionsCfg", "RewardsCfg"):
+        print(f"  class {nm} at :{cfg_class(nm).lineno}")
+
+
+def ch06():
+    print("=== chapter 6 — the Markov property ===")
+    dec, dt, step_dt, _ = timing()
+    pol = [n for n, *_ in cfg_terms("ObservarionsCfg", "PolicyCfg")]
+    cri = cfg_terms("ObservarionsCfg", "CriticCfg")
+    c = cfg_class("ObservarionsCfg", "CriticCfg")
+    print(f"policy group terms ({len(pol)}): {', '.join(pol)}")
+    print(f"critic group (lines {c.lineno}-{c.end_lineno}) terms ({len(cri)}); not in the policy group:")
+    only = [(n, ln) for n, ln, _ in cri if n not in pol]
+    for n, ln in only:
+        print(f"  :{ln}  {n}")
+    print(f"  {len(only)} terms the policy never sees;  shared: {len(cri) - len(only)}")
+    sfb = LOCO / "robots/limx_solefoot_env_cfg.py"
+    show(sfb, 76, 78)
+    print("  (the task SFBlindFlatEnvCfg removes `heights`, so the critic group actually used has one term fewer)")
+    h = cfg_class("ObservarionsCfg", "HistoryObsCfg")
+    hist = int(re.search(r"self\.history_length = (\d+)", ast.get_source_segment(BASE.read_text(), h)).group(1))
+    n_obs = sum(w for *_, w in obs_dims("ObservarionsCfg", "PolicyCfg"))
+    print(f"history group lines {h.lineno}-{h.end_lineno}: history_length = {hist};  {hist} x {n_obs} = {hist*n_obs} numbers")
+    print(f"  the buffer holds the CURRENT frame plus {hist-1} earlier ones (append, then read):")
+    show(ISAAC / "isaaclab/isaaclab/managers/observation_manager.py", 320, 327)
+    span = (hist - 1) * step_dt
+    print(f"  oldest frame is {hist-1} x {step_dt} = {span:.2f} s before the current one")
+    show(BASE, 176); show(PPO_CFG, 106); show(BASE, 217)
+    show(BASE, 175); show(BASE, 183)
+    show(RSL / "runner/on_policy_runner.py", 63)
+    print("-- two robots with the same observation")
+    for name, v in (("A", 1.0), ("B", 0.0)):
+        print(f"  robot {name}: base speed {v} m/s -> moves {v*step_dt:.3f} m in one step, {v*span:.2f} m over the history window")
+    print(f"-- exercises: history_length 25 -> {25*n_obs} numbers, oldest frame {24*step_dt:.2f} s back;   0.5 m/s over {span:.2f} s = {0.5*span:.2f} m")
+    print(f"   critic group used by SFBlindFlatEnvCfg: {len(cri) - 1} terms")
+
+
+def episodes(e):
+    """Split one env's four steps into episodes: [(first t, last t, finished?)]."""
+    out, start = [], 0
+    for t in range(4):
+        if env[e]["done"][t]:
+            out.append((start, t, True)); start = t + 1
+    if start <= 3:
+        out.append((start, 3, False))
+    return out
+
+
+def ch07():
+    print("=== chapter 7 — step, episode, done, one table ===")
+    dec, dt, step_dt, ep_s = timing()
+    cfg = sf_ppo()
+    Trows, iters = cfg["num_steps_per_env"][0], cfg["max_iterations"][0]
+    max_len = math.ceil(ep_s / step_dt)
+    print(f"step = {dec} x {dt} = {step_dt:.2f} s ({1/step_dt:.0f} Hz); physics {1/dt:.0f} Hz")
+    print(f"episode_length_s {ep_s} / {step_dt:.2f} = {max_len} steps max")
+    for B in (2048, 4096, 64):
+        print(f"  B={B}: T x B = {Trows} x {B} = {Trows*B:,} transitions per rollout")
+    print(f"  rollout spans {Trows} x {step_dt:.2f} = {Trows*step_dt:.2f} s of simulated time per env")
+    print(f"  exercise: num_steps_per_env 48 with B=2048 -> {48*2048:,} transitions, {48*step_dt:.2f} s per env")
+    print(f"  a full-length episode covers {max_len}/{Trows} = {max_len/Trows:.2f} tables")
+    print(f"  {iters:,} iterations x {Trows} = {iters*Trows:,} steps per env = {iters*Trows*step_dt:,.0f} s = {iters*Trows*step_dt/3600:.1f} h simulated")
+    print(f"  total transitions with B=2048: {iters*Trows*2048:,}")
+    print(f"  toy: T x B = 4 x 2 = 8;  toy rollout time if a step were {step_dt:.2f} s: {4*step_dt:.2f} s")
+    print("-- the toy table")
+    for e in (0, 1):
+        d = env[e]
+        print(f"  env {e}: mu={d['mu']} eps={d['eps']} r={d['r']} V={d['V']} done={d['done']} V_last={d['V_last']}")
+        for a, b, fin in episodes(e):
+            rs = d["r"][a:b + 1]
+            print(f"     episode t{a}..t{b}: {'finished (done=1 at t%d)' % b if fin else 'still running at the table edge'};"
+                  f" steps in table {len(rs)}; plain sum of r = {sum(rs):+.2f}")
+    print(f"  done cells: {sum(sum(env[e]['done']) for e in (0,1))} of 8;  episodes touching the table: {sum(len(episodes(e)) for e in (0,1))}")
+    print("  what the logger would record for env 1's finished episode: reward sum %+.2f, length %d" % (sum(env[1]['r'][:3]), 3))
+    print("-- what-if: done at e0 t1 as well")
+    print("  env 0 would hold episodes t0..t1 (finished, sum %+.2f, length 2) and t2..t3 (running, sum so far %+.2f)" % (sum(env[0]['r'][:2]), sum(env[0]['r'][2:])))
+    st = RSL / "storage/rollout_storage.py"
+    lines = st.read_text().splitlines()
+    a = find_line(st, r"def add_transitions"); b = find_line(st, r"self\.step \+= 1", a)
+    fields = [re.search(r"self\.(\w+)\[self\.step\]\.copy_", l).group(1) for l in lines[a:b] if ".copy_(" in l]
+    print(f"-- add_transitions (rollout_storage.py:{a}-{b}) copies {len(fields)} slots: {', '.join(fields)}")
+    print("-- lines cited")
+    run = RSL / "runner/on_policy_runner.py"
+    for x, y in ((170, 170), (174, 177), (192, 192), (200, 210), (221, 225), (326, 327)):
+        show(run, x, y)
+    show(RSL / "algorithm/ppo.py", 172); show(RSL / "algorithm/ppo.py", 331)
+    show(st, 141, 142)
+    for x, y in ((101, 103), (182, 189), (200, 200), (203, 207), (215, 220), (237, 239)):
+        show(RL_ENV, x, y)
+    term = ISAAC / "isaaclab/isaaclab/envs/mdp/terminations.py"
+    a = find_line(term, r"^def time_out"); show(term, a, a + 2)
+    a = find_line(term, r"^def illegal_contact"); show(term, a); show(term, find_line(term, r"return torch.any", a), find_line(term, r"return torch.any", a) + 2)
+    show(BASE, 450, 454); show(BASE, 497, 501); show(BASE, 484)
+    show(WRAP, 176, 178); show(WRAP, 184, 185)
+    show(PPO_CFG, 81, 82)
+    show(ROOT / "README.md", find_line(ROOT / "README.md", r"--num_envs 2048"))
+
+
+def G_of(rs, gamma=GAMMA):
+    """Return of a finished episode from each of its steps: G_t = r_t + gamma*G_{t+1}."""
+    out, g = [], 0.0
+    for r in reversed(rs):
+        g = r + gamma * g
+        out.append(g)
+    return out[::-1]
+
+
+def ch08():
+    print("=== chapter 8 — return and the objective ===")
+    ep1 = env[1]["r"][:3]
+    print(f"env 1, first episode r = {ep1}  (gamma = {GAMMA})")
+    for t, g in enumerate(G_of(ep1)):
+        print(f"  G_{t} = {g:+.4f}")
+    print(f"  expanded G_0 = {ep1[0]} + {GAMMA}*{ep1[1]} + {GAMMA**2:.2f}*{ep1[2]} = {ep1[0]:+.2f} {GAMMA*ep1[1]:+.2f} {GAMMA**2*ep1[2]:+.2f} = {G_of(ep1)[0]:+.4f}")
+    for g_ in (1.0, 0.5, 0.0, 0.99):
+        print(f"  gamma={g_}: G = " + "  ".join(f"{x:+.4f}" for x in G_of(ep1, g_)))
+    print(f"  plain sum = {sum(ep1):+.2f}; length 3")
+    rev = ep1[::-1]
+    print(f"  same rewards, reversed order {rev}: G_0 = {G_of(rev)[0]:+.4f}  (plain sum still {sum(rev):+.2f})")
+    worse = ep1[:2] + [-5.0]
+    print(f"  if r_2 were -5.0: G = " + "  ".join(f"{x:+.4f}" for x in G_of(worse)))
+    print("-- env 0: the episode is not finished inside the table")
+    r0 = env[0]["r"]
+    part = [GAMMA ** k * r0[k] for k in range(4)]
+    print(f"  visible part of G_0 = " + " + ".join(f"{x:.4f}" for x in part) + f" = {sum(part):.4f};  missing: {GAMMA**4:.4f} x G_4")
+    for t in range(4):
+        print(f"  visible part of G_{t} = {sum(GAMMA**k * r0[t+k] for k in range(4-t)):.4f}   weight on the missing tail = {GAMMA**(4-t):.4f}")
+    print(f"  env 1 second episode: visible part of G_3 = {env[1]['r'][3]:.1f}; missing {GAMMA} x G_4")
+    print("-- discount weights gamma^k")
+    for k in (1, 2, 5, 10, 22, 50, 100, 230, 1000):
+        print(f"  k={k:<5} 0.9^k = {0.9**k:.4f}   0.99^k = {0.99**k:.4f}")
+    for g_ in (0.9, 0.99):
+        print(f"  gamma={g_}: 1/(1-gamma) = {1/(1-g_):.0f} steps = {1/(1-g_)*0.02:.1f} s at 0.02 s per step; "
+              f"steps until weight < 0.5: {math.ceil(math.log(0.5)/math.log(g_))}; < 0.1: {math.ceil(math.log(0.1)/math.log(g_))}")
+    print(f"  sum of gamma^k for k=0..inf: 0.9 -> {1/(1-0.9):.0f}, 0.99 -> {1/(1-0.99):.0f};  first 1000 terms at 0.99: {(1-0.99**1000)/(1-0.99):.4f}")
+    print(f"  r = 1 every step forever, gamma 0.9: G = {1/(1-0.9):.1f};  r = 0.5 every step: {0.5/(1-0.9):.1f}")
+    print(f"  r = 1 for 1000 steps: gamma=1 -> 1000; gamma=0.99 -> {(1-0.99**1000)/(1-0.99):.2f}")
+    cfg = sf_ppo()
+    print(f"-- code: gamma = {cfg['gamma'][0]} (line {cfg['gamma'][1]}), max_iterations = {cfg['max_iterations'][0]} (line {cfg['max_iterations'][1]})")
+    run = RSL / "runner/on_policy_runner.py"
+    show(run, 170); show(run, 200, 205); show(run, 326)
+    show(PPO_CFG, 102)
+
+
+def ch09():
+    print("=== chapter 9 — value, Bellman, Q, advantage ===")
+    print("-- Bellman check: right side r + gamma*V(next) against the critic's V (inside one episode; at a done cell the right side is r alone)")
+    for e in (0, 1):
+        d = env[e]
+        for t in range(4):
+            Vn = d["V_last"] if t == 3 else d["V"][t + 1]
+            if d["done"][t]:
+                rhs, how = d["r"][t], f"{d['r'][t]:+.1f} (episode ends)"
+            else:
+                rhs, how = d["r"][t] + GAMMA * Vn, f"{d['r'][t]:+.1f} + {GAMMA}*{Vn}"
+            print(f"  e{e}t{t}: {how:<22} = {rhs:+.4f}   V = {d['V'][t]:.1f}   right - left = {rhs - d['V'][t]:+.4f}"
+                  + ("   (uses V_last)" if t == 3 else ""))
+    print("-- return against prediction, env 1 first episode")
+    for t, g in enumerate(G_of(env[1]["r"][:3])):
+        print(f"  t{t}: G = {g:+.4f}   V = {env[1]['V'][t]:.1f}   V - G = {env[1]['V'][t] - g:+.4f}")
+    print("-- one-step estimate of Q and the rough advantage Q - V")
+    for e, t in ((0, 0), (0, 1), (0, 2), (1, 0), (1, 1)):
+        d = env[e]
+        q = d["r"][t] + GAMMA * d["V"][t + 1]
+        print(f"  e{e}t{t}: Q ~ {q:.4f}   A ~ {q - d['V'][t]:+.4f}")
+    print("-- bootstrapping at the table edge (env 0): visible rewards + gamma^4 * V_last")
+    r0 = env[0]["r"]
+    for t in range(4):
+        vis = sum(GAMMA ** k * r0[t + k] for k in range(4 - t))
+        tail = GAMMA ** (4 - t) * env[0]["V_last"]
+        print(f"  from t{t}: {vis:.4f} + {GAMMA**(4-t):.4f}*{env[0]['V_last']} = {vis + tail:.4f}   critic said V = {env[0]['V'][t]}   difference {vis + tail - env[0]['V'][t]:+.4f}")
+    print(f"  env 1 from t3: {env[1]['r'][3]} + {GAMMA}*{env[1]['V_last']} = {env[1]['r'][3] + GAMMA*env[1]['V_last']:.4f}   V = {env[1]['V'][3]}")
+    print("-- two-step look-ahead from e0 t0: r0 + gamma*r1 + gamma^2*V(s2)")
+    print(f"  {r0[0]} + {GAMMA}*{r0[1]} + {GAMMA**2:.2f}*{env[0]['V'][2]} = {r0[0] + GAMMA*r0[1] + GAMMA**2*env[0]['V'][2]:.4f}")
+    print("-- if the critic were exact on env 1's first episode it would have said V = G:", "  ".join(f"{g:+.2f}" for g in G_of(env[1]['r'][:3])))
+    print("-- lines cited")
+    ac = RSL / "modules/actor_critic.py"
+    show(ac, 92, 94); show(ac, 98); show(ac, 111); show(ac, 170, 172)
+    show(RSL / "algorithm/ppo.py", 144); show(RSL / "algorithm/ppo.py", 176, 178)
+    st = RSL / "storage/rollout_storage.py"
+    show(st, 143); show(st, 190, 191); show(st, 195, 199)
+    hits = [f"{q.relative_to(T)}:{i}" for q in (T / "rsl_rl/rsl_rl").rglob("*.py") for i, l in enumerate(q.read_text().splitlines(), 1)
+            if re.search(r"\bq_value|\bQ\(|q_function|QFunction|q_net", l, re.I)]
+    print(f"  lines in rsl_rl/ that mention a Q-function: {len(hits)} {hits[:3]}")
+
+
+
+CHAPTERS = {"01": ch01, "02": ch02, "03": ch03, "04": ch04, "05": ch05, "06": ch06, "07": ch07, "08": ch08, "09": ch09, "22": ch22}
 
 if __name__ == "__main__":
     for key in sys.argv[1:] or CHAPTERS:
