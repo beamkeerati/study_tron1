@@ -12,10 +12,11 @@ Treat `notes/` as the primary artifact. Everything else is source material.
 | Path | What it is | Editable? |
 | --- | --- | --- |
 | `notes/` | Thai-language study notes 01–07 + `diagrams/` | **Yes — this is the work** |
+| `notes/workbook/` | The textbook rewrite of notes 00–07 → `notes/pdf/08-workbook.pdf` | **Yes** — read `_STYLE.md` and `_OUTLINE.md` there first |
 | `experiments/` | One markdown log per training run | Yes |
 | `tron1-rl-isaaclab/` | The real training code (`rsl_rl/`, `exts/`, `scripts/`) | **No — read-only reference** |
 | `IsaacLab/` | Upstream Isaac Lab | **No — read-only reference** |
-| `paper/`, `textbook/` | PDFs used as sources | No |
+| `paper/`, `textbook/` | PDFs used as sources (and, in `textbook/`, the two style references for the workbook) | No |
 | `patches/`, `scripts/` | Install fixes and helpers | Only when asked |
 
 `IsaacLab/` and `tron1-rl-isaaclab/` are separate git repos. Never commit
@@ -96,6 +97,15 @@ those first.
 
 Write in Thai, in one register. Do not switch to English mid-sentence except
 for code identifiers and established technical terms.
+
+### The workbook (`notes/workbook/`)
+
+One chapter per file, built with `python3 scripts/workbook_to_pdf.py` (Chrome + MathJax;
+it fails on a MathJax error, on anything wider than the text block, and on Thai inside
+math). Everything above applies — glossary wording, global equation numbers, verified
+citations, the reviewer — plus two things of its own: a chapter may use only terms
+taught by an earlier chapter (`_OUTLINE.md` lists them), and every exercise answer
+comes from `scripts/workbook_answer_key.py`.
 
 ### Diagrams
 

@@ -310,7 +310,9 @@ study_tron1/
 │   ├── 01-repo-map.md
 │   ├── 02-sdk-vs-sim.md
 │   ├── 03-sf-task-anatomy.md
-│   └── 04-file-structure-vs-ros2.md
+│   ├── 04-file-structure-vs-ros2.md
+│   ├── workbook/              <- the textbook rewrite of notes 00-07, one file per chapter
+│   └── pdf/08-workbook.pdf    <- the built book
 ├── experiments/               <- one file per experiment
 │   ├── TEMPLATE.md
 │   └── exp_001_baseline_sf.md
@@ -318,7 +320,10 @@ study_tron1/
 ├── scripts/                   <- my own helpers
 │   ├── compare_runs.py
 │   ├── toy_answer_key.py      <- every number quoted in notes 00/05/06/07
-│   └── notes_to_pdf.py        <- notes/*.md -> notes/pdf/*.pdf (Noto Sans Thai + MathJax)
+│   ├── notes_to_pdf.py        <- notes/*.md -> notes/pdf/*.pdf on demand (output not tracked any more)
+│   ├── workbook_to_pdf.py     <- notes/workbook/*.md -> notes/pdf/08-workbook.pdf (book layout)
+│   └── workbook_answer_key.py <- every exercise answer in the workbook, from the same toy data
+├── textbook/, paper/          <- source PDFs (tracked: the repo is private)
 ├── IsaacLab/                  <- clone, tag v2.1.0        (ignored)
 └── tron1-rl-isaaclab/         <- clone, LimX upstream     (ignored)
 ```
