@@ -799,7 +799,243 @@ def ch09():
 
 
 
-CHAPTERS = {"01": ch01, "02": ch02, "03": ch03, "04": ch04, "05": ch05, "06": ch06, "07": ch07, "08": ch08, "09": ch09, "22": ch22}
+# ---------------------------------------------------------------- part C (chapters 10-15): the policy
+SIG = toy.SIGMA
+TORCH_NORMAL = pathlib.Path.home() / "anaconda3/envs/tron1/lib/python3.10/site-packages/torch/distributions/normal.py"
+
+
+def pdf(a, mu, s=SIG):
+    return math.exp(-(a - mu) ** 2 / (2 * s * s)) / (s * math.sqrt(2 * math.pi))
+
+
+def a_of(e, t):
+    return cells[(e, t)]["a"]
+
+
+def ch10():
+    print("=== chapter 10 — the Gaussian bell and log ===")
+    print(f"-- peak height 1/(sigma*sqrt(2pi)); sqrt(2pi) = {math.sqrt(2*math.pi):.5f}")
+    for s in (1.0, 0.5, 0.3, 0.25, 0.1):
+        print(f"  sigma={s:<5} peak = {1/(s*math.sqrt(2*math.pi)):.4f}   log(peak) = {math.log(1/(s*math.sqrt(2*math.pi))):+.4f}")
+    print("-- attenuation exp(-z^2/2)")
+    for z in (0, 0.4, 1, 2, 3):
+        print(f"  z={z:<4} {math.exp(-z*z/2):.4f}")
+    print("-- area within k sigma (erf(k/sqrt2))")
+    for k in (1, 2, 3):
+        print(f"  |a-mu| < {k} sigma: {math.erf(k/math.sqrt(2)):.4f}")
+    print("-- the 8 steps at e0t0 (mu=0.20, sigma=0.5, a=0.40)")
+    mu, a = 0.20, 0.40
+    s1 = SIG * math.sqrt(2 * math.pi); s2 = 1 / s1; d = a - mu; e = -(d * d) / (2 * SIG * SIG)
+    print(f"  sigma*sqrt(2pi)={s1:.5f}  peak={s2:.5f}  a-mu={d:.2f}  (a-mu)^2={d*d:.2f}  2sigma^2={2*SIG*SIG}  exponent={e:.2f}  exp={math.exp(e):.5f}  p={s2*math.exp(e):.5f}")
+    print(f"  z = {d/SIG:.2f}")
+    print("-- the same bell at other points (06 §3.5.2 row)")
+    for x in (-1.0, 0.0, 0.20, 0.40, 1.5):
+        print(f"  p({x:+.2f}) = {pdf(x, 0.20):.4f}")
+    print("-- small interval around 0.40: density x width, against the exact area")
+    for w in (0.02, 0.2):
+        lo, hi = a - w / 2, a + w / 2
+        exact = 0.5 * (math.erf((hi - mu) / (SIG * math.sqrt(2))) - math.erf((lo - mu) / (SIG * math.sqrt(2))))
+        print(f"  width {w}: {pdf(a, mu):.4f} x {w} = {pdf(a, mu)*w:.5f}   exact = {exact:.5f}")
+    print(f"  P(a > mu) = 0.5;  P(a < 0.40) = {0.5*(1+math.erf((a-mu)/(SIG*math.sqrt(2)))):.4f}")
+    C = -0.5 * math.log(2 * math.pi) - math.log(SIG)
+    print(f"-- log form: -0.5 ln 2pi = {-0.5*math.log(2*math.pi):.4f}   -ln sigma = {-math.log(SIG):+.4f}   constant = {C:.4f}")
+    print("-- table: a = mu + sigma*eps (chapter 12 derives it); log p = C - (a-mu)^2/(2 sigma^2)")
+    for (e_, t), c in cells.items():
+        d = c["a"] - c["mu"]
+        print(f"  e{e_}t{t}: mu={c['mu']:+.2f} a={c['a']:+.2f} a-mu={d:+.2f} term={d*d/(2*SIG*SIG):.4f} log p={c['logpi_old']:+.4f}  p={math.exp(c['logpi_old']):.4f}  z={d/SIG:+.2f}  attenuation={math.exp(-d*d/(2*SIG*SIG)):.4f}")
+    print(f"  sigma=0.25 at the peak: log p = {math.log(1/(0.25*math.sqrt(2*math.pi))):+.4f}")
+    print(f"  sigma=0.25, a=0.40, mu=0.20: p = {pdf(0.40, 0.20, 0.25):.4f}  log = {math.log(pdf(0.40,0.20,0.25)):+.4f}")
+    print(f"  sigma=1.0, a=0.40, mu=0.20: p = {pdf(0.40, 0.20, 1.0):.4f}  log = {math.log(pdf(0.40,0.20,1.0)):+.4f}")
+    print("-- products vs sums: 8 densities of 0.7365 multiplied:", f"{0.73654**8:.5f}", " sum of logs:", f"{8*math.log(0.73654):.4f}")
+    print("-- lines cited"); show(TORCH_NORMAL, 80, 92); show(RSL / "modules/actor_critic.py", 157); show(RSL / "modules/actor_critic.py", 164)
+
+
+def ch11():
+    print("=== chapter 11 — what the policy is ===")
+    ac = RSL / "modules/actor_critic.py"
+    dims = [42, 512, 256, 128, 8]
+    net = sum(i * o + o for i, o in zip(dims, dims[1:]))
+    print(f"  actor numbers {net:,} + logstd 8 = theta {net + 8:,}")
+    for l in (0.0, math.log(0.5), -2.302585, 0.5, -100.0):
+        print(f"  ell={l:+.4f}  sigma=exp(ell)={math.exp(l):.4g}")
+    print("-- the bell at e0t0 is N(0.20, 0.5); the density at several a (type change: one function, many numbers)")
+    for x in (-1.0, 0.0, 0.20, 0.40, 1.5):
+        print(f"  pi(a={x:+.2f}|s) = {pdf(x, 0.20):.4f}")
+    print("-- the mu row and the bell of every cell (sigma fixed 0.5)")
+    for (e, t), c in cells.items():
+        print(f"  e{e}t{t}: N({c['mu']:+.2f}, 0.5)  peak at a={c['mu']:+.2f}  logpi(a={c['a']:+.2f}) = {c['logpi_old']:+.4f}")
+    print("-- (15) eight joints, glossary 8.6: joint 1 = e0t0")
+    mu8 = [0.20, -0.30, 0.10, 0.40, -0.10, 0.60, -0.50, 0.30]
+    eps8 = [0.40, -0.20, 0.60, 0.00, -0.60, 1.20, -0.80, 0.20]
+    a8 = [m + SIG * e for m, e in zip(mu8, eps8)]
+    lp = [toy.logpi(a, m) for a, m in zip(a8, mu8)]
+    print("  a =", [round(x, 2) for x in a8])
+    print("  log p_i =", [round(x, 4) for x in lp], " p_i =", [round(math.exp(x), 4) for x in lp])
+    print(f"  sum = {sum(lp):.4f}   product of p_i = {math.prod(math.exp(x) for x in lp):.5f}   exp(sum) = {math.exp(sum(lp)):.5f}")
+    print(f"  first four joints: sum = {sum(lp[:4]):.4f}  product = {math.exp(sum(lp[:4])):.5f};  last four: sum = {sum(lp[4:]):.4f}")
+    print(f"  if all 8 joints sat at their mean (eps=0): sum = {8*toy.C:.4f}  product = {math.exp(8*toy.C):.5f}")
+    print("-- deterministic (deploy) uses mu itself: e0 row", env[0]["mu"], " e1 row", env[1]["mu"])
+    print("-- lines cited")
+    show(ac, 117, 118); show(ac, 155, 168); show(PPO_CFG, 87)
+    show(RSL / "algorithm/ppo.py", 137, 139); show(RSL / "algorithm/ppo.py", 147, 149)
+
+
+def ch12():
+    print("=== chapter 12 — sampling the action, explore and exploit ===")
+    for (e, t), c in cells.items():
+        print(f"  e{e}t{t}: mu={c['mu']:+.2f} eps={c['eps']:+.2f} sigma*eps={SIG*c['eps']:+.2f} a={c['a']:+.2f}   z=(a-mu)/sigma={(c['a']-c['mu'])/SIG:+.2f}   log p = C - eps^2/2 = {toy.C - c['eps']**2/2:+.4f}")
+    print(f"  C = {toy.C:.4f}")
+    print("-- how often |eps| exceeds k (two-sided)")
+    for k in (0.5, 1, 2, 3):
+        print(f"  P(|eps| > {k}) = {1 - math.erf(k/math.sqrt(2)):.4f}")
+    print("-- deviation sigma*eps for one eps at several sigma (eps = +0.80, e0t2)")
+    for s in (1.0, 0.5, 0.25, 0.1):
+        print(f"  sigma={s}: a - mu = {s*0.80:+.3f}")
+    print("-- eight joints (glossary 8.6)")
+    mu8 = [0.20, -0.30, 0.10, 0.40, -0.10, 0.60, -0.50, 0.30]
+    eps8 = [0.40, -0.20, 0.60, 0.00, -0.60, 1.20, -0.80, 0.20]
+    print("  a =", [f"{m + SIG*e:+.2f}" for m, e in zip(mu8, eps8)])
+    print("  same eps, sigma = 1.0 (Tron1 at the start):", [f"{m + 1.0*e:+.2f}" for m, e in zip(mu8, eps8)])
+    print("-- numbers of draws per step in Tron1: 2048 env x 8 joints =", 2048 * 8)
+    print("-- lines cited")
+    ac = RSL / "modules/actor_critic.py"
+    show(ac, 155, 161); show(TORCH_NORMAL, 70, 78)
+    run = RSL / "runner/on_policy_runner.py"
+    show(run, 269); show(run, 284); show(run, 324)
+
+
+def ch13():
+    print("=== chapter 13 — inside the neural network ===")
+    cfg = sf_ppo()
+    hid = cfg["actor_hidden_dims"][0]
+    print(f"  actor_hidden_dims = {hid} (line {cfg['actor_hidden_dims'][1]})  critic_hidden_dims = {cfg['critic_hidden_dims'][0]}  activation = {cfg['activation'][0]}")
+    nj = n_joints()
+    pol = sum(w for *_, w in obs_dims("ObservarionsCfg", "PolicyCfg"))
+    print(f"  joints = {nj};  policy obs = {pol};  actor input = 3 + {pol} + 3 = {3 + pol + 3}")
+
+    def count(dims, show_layers=True):
+        tot = 0
+        for i, o in zip(dims, dims[1:]):
+            n = i * o + o
+            tot += n
+            if show_layers:
+                print(f"    Linear({i}, {o}): {i}x{o} = {i*o:,} weights + {o} biases = {n:,}")
+        return tot
+    a_dims = [3 + pol + 3] + list(hid) + [nj]
+    print("-- actor", a_dims)
+    A = count(a_dims)
+    wts = sum(i * o for i, o in zip(a_dims, a_dims[1:])); bs = sum(a_dims[1:])
+    print(f"  total {A:,} = weights {wts:,} + biases {bs:,};  theta = {A + nj:,}")
+    print("-- critic [230, 512, 256, 128, 1] (230 = 227 privileged + 3 commands, chapter 20)")
+    Cn = count([230] + list(hid) + [1])
+    print(f"  total {Cn:,};  actor + critic + logstd = {A + Cn + nj:,}")
+    print("-- if every ELU were removed: the stack collapses to one Linear(42, 8):", 42 * 8 + 8)
+    print("-- class default dims [256,256,256] (actor_critic.py:49):", f"{count([42,256,256,256,8], False):,}")
+    print("-- bigger [1024,512,256]:", f"{count([42,1024,512,256,8], False):,}", "   smaller [128,64]:", f"{count([42,128,64,8], False):,}")
+    print("-- share of actor numbers per layer")
+    for i, o in zip(a_dims, a_dims[1:]):
+        print(f"    {i}->{o}: {(i*o+o)/A*100:.1f}%")
+    print("-- ELU, tanh, ReLU at a few points (value / slope)")
+    elu = lambda x: x if x > 0 else math.exp(x) - 1
+    delu = lambda x: 1.0 if x > 0 else math.exp(x)
+    for x in (2.0, 0.5, 0.0, -0.5, -1.0, -2.0, -3.0):
+        print(f"  x={x:+.1f}: ELU={elu(x):+.4f} (slope {delu(x):.4f})   tanh={math.tanh(x):+.4f} (slope {1-math.tanh(x)**2:.4f})   ReLU={max(0.0,x):+.1f} (slope {1.0 if x > 0 else 0.0})")
+    for y in (0.9, 0.99, 0.999):
+        u = math.atanh(y)
+        print(f"  tanh(u) = {y}: u = {u:.3f}, slope = {1 - y*y:.4f}")
+    print("-- shapes for the toy B = 2:", " -> ".join(f"(2, {d})" for d in a_dims))
+    print("-- lines cited")
+    ac = RSL / "modules/actor_critic.py"
+    show(ac, 69, 77); show(ac, 88, 90); show(ac, 98); show(ac, 113); show(ac, 175, 177)
+    show(PPO_CFG, 88, 90); show(RSL / "algorithm/ppo.py", 137, 139)
+
+
+def ch14():
+    print("=== chapter 14 — loss, gradient, gradient descent ===")
+    a, mu0, l0 = 0.40, 0.20, math.log(SIG)
+    alpha = 0.1   # glossary §5: lr in the toy = 0.1 (SGD, to see the numbers)
+    def L(mu, l):  # -log density of a under N(mu, e^l)
+        return (a - mu) ** 2 / (2 * math.exp(2 * l)) + l + 0.5 * math.log(2 * math.pi)
+    def dmu(mu, l): return -(a - mu) / math.exp(2 * l)
+    def dl(mu, l): return 1 - ((a - mu) / math.exp(l)) ** 2
+    print(f"  L(0.20, ln0.5) = {L(mu0, l0):.4f}   dL/dmu = {dmu(mu0, l0):+.4f}   dL/dl = {dl(mu0, l0):+.4f}  (z^2 = {((a-mu0)/SIG)**2:.2f})")
+    print("-- 1-D: only the last-layer bias b moves (dmu/db = 1), sigma fixed 0.5")
+    for al in (0.1, 0.25, 0.5, 0.6):
+        mu, row = mu0, []
+        for k in range(6):
+            row.append(f"{mu:.5f}")
+            mu = mu - al * dmu(mu, l0)
+        print(f"  alpha={al}: factor 1-alpha/sigma^2 = {1 - al/SIG**2:+.2f}   mu_k = " + "  ".join(row))
+    mu = mu0
+    print("  alpha=0.1 table:")
+    for k in range(6):
+        print(f"    k={k}: mu={mu:.5f}  a-mu={a-mu:.5f}  L={L(mu, l0):.4f}  dL/db={dmu(mu, l0):+.4f}  step={-alpha*dmu(mu, l0):+.5f}")
+        mu = mu - alpha * dmu(mu, l0)
+    print(f"  minimum: mu = a = 0.40, L = {L(a, l0):.4f}")
+    print("-- numerical slope check at mu = 0.20 (central difference, h = 0.01)")
+    h = 0.01
+    print(f"  (L(0.21) - L(0.19)) / 0.02 = {(L(mu0+h, l0) - L(mu0-h, l0))/(2*h):+.4f}")
+    print("-- 2-D: both knobs b and ell, one SGD step alpha = 0.1")
+    g = (dmu(mu0, l0), dl(mu0, l0))
+    mu1, l1 = mu0 - alpha * g[0], l0 - alpha * g[1]
+    print(f"  grad = ({g[0]:+.4f}, {g[1]:+.4f})   |grad| = {math.hypot(*g):.4f}")
+    print(f"  new mu = {mu1:.4f}  new ell = {l1:.4f}  sigma = {math.exp(l1):.4f}   L: {L(mu0, l0):.4f} -> {L(mu1, l1):.4f}")
+    print(f"  only b moved: L = {L(mu1, l0):.4f};  only ell moved: L = {L(mu0, l1):.4f}")
+    print(f"  ell-only minimum: sigma = |a-mu| = 0.20, ell = {math.log(0.2):.4f}, L = {L(mu0, math.log(0.2)):.4f}")
+    print(f"-- keep descending both knobs at alpha = 0.1: mu factor 1 - alpha/sigma^2 leaves (-1, 1) below sigma = {math.sqrt(alpha/2):.4f}")
+    mu, l = mu0, l0
+    for k in range(1, 20):
+        mu, l = mu - alpha * dmu(mu, l), l - alpha * dl(mu, l)
+        if k in (5, 8, 9, 16, 17, 18, 19):
+            print(f"    step {k}: mu = {mu:+.4f}  sigma = {math.exp(l):.4g}")
+    print("-- the same loss at e0t2 (mu=0.10, a=0.50) and e0t3 (mu=0.40, a=0.40)")
+    for (e, t) in ((0, 1), (0, 2), (0, 3), (1, 0), (1, 1), (1, 2), (1, 3)):
+        c = cells[(e, t)]
+        d = c["a"] - c["mu"]; z = d / SIG
+        print(f"  e{e}t{t}: L={-c['logpi_old']:.4f}  dL/dmu = {-d/SIG**2:+.4f}  dL/dell = {1 - z*z:+.4f}  -> mu after one step {c['mu'] + alpha*d/SIG**2:+.4f}, ell after {l0 - alpha*(1-z*z):+.4f} (sigma {math.exp(l0 - alpha*(1-z*z)):.4f})")
+    print("-- tanh at the output would multiply the slope by 1 - tanh^2:")
+    for y in (0.5, 0.9, 0.99):
+        print(f"  mu = tanh(u) = {y}: dmu/du = {1-y*y:.4f}")
+    print("-- knob counts: actor 187,272 + critic 282,625 + logstd 8 =", f"{187272 + 282625 + 8:,}")
+    print(f"-- Tron1 lr = {sf_ppo()['learning_rate'][0]} (line {sf_ppo()['learning_rate'][1]});  toy alpha = 0.1")
+    print("-- lines cited")
+    ppo = RSL / "algorithm/ppo.py"
+    show(ppo, 85); show(ppo, 286, 290); show(PPO_CFG, 100)
+
+
+def ch15():
+    print("=== chapter 15 — from mu to the motor ===")
+    base = BASE.read_text().splitlines()
+    print("  ActionsCfg:"); show(BASE, 116, 121)
+    sole = EXT / "assets/config/solefoot_cfg.py"
+    show(sole, 32, 34); show(sole, 48, 51); show(sole, 59, 62)
+    jact = ISAAC / "isaaclab/isaaclab/envs/mdp/actions/joint_actions.py"
+    show(jact, 134); show(jact, 155, 156); show(jact, 160)
+    show(RL_ENV, 173); show(RL_ENV, 182, 189)
+    dec, dt, step_dt, _ = timing()
+    print(f"  decimation {dec} x {dt} s = {step_dt} s per policy step ({1/step_dt:.0f} Hz); PD every {dt} s ({1/dt:.0f} Hz)")
+    scale, kp, kd_leg, kd_ank, lim = 0.25, 45.0, 1.5, 0.8, 80.0
+    deg = 180 / math.pi
+    print("-- (17) q_target = 0.25 a + 0 for every cell; deploy would use mu instead of a")
+    for (e, t), c in cells.items():
+        q = scale * c["a"]; qd = scale * c["mu"]
+        print(f"  e{e}t{t}: a={c['a']:+.2f} -> q_target={q:+.4f} rad = {q*deg:+.2f} deg   (deploy: mu={c['mu']:+.2f} -> {qd:+.4f} rad = {qd*deg:+.2f} deg)")
+    print("-- the scale table")
+    for x in (0.40, 1.0, 2.0):
+        print(f"  a={x}: no scale {x:.2f} rad = {x*deg:.1f} deg;  scale 0.25: {scale*x:.2f} rad = {scale*x*deg:.1f} deg")
+    print("-- (18) PD torque at rest (qdot = 0) from the default pose q = 0")
+    for (e, t) in ((0, 0), (0, 1), (0, 2), (0, 3), (1, 0), (1, 1), (1, 2), (1, 3)):
+        q = scale * a_of(e, t)
+        print(f"  e{e}t{t}: tau = 45 x {q:+.4f} = {kp*q:+.4f} N m")
+    print(f"  saturation: |q_target - q| > {lim}/{kp} = {lim/kp:.4f} rad = {lim/kp*deg:.1f} deg (at rest)")
+    print(f"  that error needs |a| > {lim/kp/scale:.3f} from the default pose")
+    print(f"  example: q = 0.05, qdot = +1.0, q_target = 0.10: leg tau = 45x0.05 - 1.5x1.0 = {kp*0.05 - kd_leg*1.0:+.2f};  ankle = {kp*0.05 - kd_ank*1.0:+.2f}")
+    print(f"  q = 0.10 reached, qdot = +0.5: leg tau = {kp*0 - kd_leg*0.5:+.2f}")
+    print(f"  q = 0.12 overshoot, qdot = 0: tau = {kp*(0.10-0.12):+.2f}")
+    print(f"  if scale were 0.5, a that gives 0.10 rad: {0.10/0.5:.2f}")
+
+CHAPTERS = {"01": ch01, "02": ch02, "03": ch03, "04": ch04, "05": ch05, "06": ch06, "07": ch07, "08": ch08, "09": ch09,
+            "10": ch10, "11": ch11, "12": ch12, "13": ch13, "14": ch14, "15": ch15, "22": ch22}
 
 if __name__ == "__main__":
     for key in sys.argv[1:] or CHAPTERS:

@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 330" width="700" font-family="inherit" font-size="14">
+  <defs><marker id="f11a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#37474f"/></marker></defs>
+  <rect x="14" y="118" width="72" height="64" rx="6" fill="#ffffff" stroke="#37474f" stroke-width="1.2"/>
+  <text x="50" y="144" text-anchor="middle" font-size="15" fill="#37474f" font-weight="bold">s</text>
+  <text x="50" y="166" text-anchor="middle" font-size="12.5" fill="#6e7781">(42,)</text>
+  <path d="M 88 150 L 122 150" fill="none" stroke="#37474f" stroke-width="1.5" marker-end="url(#f11a)"/>
+  <rect x="124" y="72" width="150" height="156" rx="6" fill="#f1f8f8" stroke="#0f6e6e" stroke-width="1.2"/>
+  <rect x="136" y="86" width="126" height="58" rx="6" fill="#ffffff" stroke="#37474f" stroke-width="1.2"/>
+  <text x="199" y="108" text-anchor="middle" font-size="13" fill="#37474f" font-weight="bold">① โครงข่าย</text>
+  <text x="199" y="130" text-anchor="middle" font-size="13" fill="#37474f">→ μ  (8,)</text>
+  <rect x="136" y="156" width="126" height="58" rx="6" fill="#ffffff" stroke="#37474f" stroke-width="1.2"/>
+  <text x="199" y="178" text-anchor="middle" font-size="13" fill="#37474f" font-weight="bold">② ℓ  (8,)</text>
+  <text x="199" y="200" text-anchor="middle" font-size="13" fill="#37474f">σ = e<tspan dy="-6" font-size="10.5">ℓ</tspan></text>
+  <path d="M 276 150 L 354 150" fill="none" stroke="#37474f" stroke-width="1.5" marker-end="url(#f11a)"/>
+  <text x="315" y="140" text-anchor="middle" font-size="12.5" fill="#37474f">③ Normal</text>
+  <text x="315" y="168" text-anchor="middle" font-size="12.5" fill="#6e7781">:157</text>
+  <rect x="356" y="104" width="118" height="92" rx="6" fill="#ffffff" stroke="#37474f" stroke-width="1.2"/>
+  <path d="M 368.2 180.4 L 369.8 180.0 L 371.3 179.6 L 372.9 179.0 L 374.4 178.4 L 376.0 177.6 L 377.6 176.7 L 379.1 175.7 L 380.7 174.5 L 382.2 173.2 L 383.8 171.8 L 385.4 170.1 L 386.9 168.4 L 388.5 166.5 L 390.0 164.4 L 391.6 162.2 L 393.2 160.0 L 394.7 157.6 L 396.3 155.2 L 397.8 152.8 L 399.4 150.4 L 401.0 148.1 L 402.5 145.8 L 404.1 143.7 L 405.6 141.8 L 407.2 140.1 L 408.8 138.7 L 410.3 137.5 L 411.9 136.7 L 413.4 136.2 L 415.0 136.0 L 416.6 136.2 L 418.1 136.7 L 419.7 137.5 L 421.2 138.7 L 422.8 140.1 L 424.4 141.8 L 425.9 143.7 L 427.5 145.8 L 429.0 148.1 L 430.6 150.4 L 432.2 152.8 L 433.7 155.2 L 435.3 157.6 L 436.8 160.0 L 438.4 162.2 L 440.0 164.4 L 441.5 166.5 L 443.1 168.4 L 444.6 170.1 L 446.2 171.8 L 447.8 173.2 L 449.3 174.5 L 450.9 175.7 L 452.4 176.7 L 454.0 177.6 L 455.6 178.4 L 457.1 179.0 L 458.7 179.6 L 460.2 180.0 L 461.8 180.4" fill="none" stroke="#0f6e6e" stroke-width="2"/>
+  <text x="415" y="124" text-anchor="middle" font-size="13" fill="#37474f" font-weight="bold">π<tspan dy="4" font-size="10.5">θ</tspan><tspan dy="-4">(· | s)</tspan></text>
+  <path d="M 476 130 L 556 86" fill="none" stroke="#37474f" stroke-width="1.5" marker-end="url(#f11a)"/>
+  <text x="470" y="80" text-anchor="start" font-size="12.5" fill="#37474f">.sample()  :161</text>
+  <rect x="558" y="52" width="128" height="60" rx="6" fill="#ffffff" stroke="#37474f" stroke-width="1.2"/>
+  <text x="622" y="76" text-anchor="middle" font-size="13" fill="#37474f" font-weight="bold">a ~ π(· | s)</text>
+  <text x="622" y="98" text-anchor="middle" font-size="12.5" fill="#6e7781">(8,)</text>
+  <path d="M 476 172 L 556 214" fill="none" stroke="#37474f" stroke-width="1.5" marker-end="url(#f11a)"/>
+  <text x="548" y="250" text-anchor="end" font-size="12.5" fill="#37474f">.log_prob(a)  :164</text>
+  <rect x="558" y="188" width="128" height="60" rx="6" fill="#ffffff" stroke="#37474f" stroke-width="1.2"/>
+  <text x="622" y="212" text-anchor="middle" font-size="13" fill="#37474f" font-weight="bold">π(a | s)</text>
+  <text x="622" y="234" text-anchor="middle" font-size="12.5" fill="#6e7781">0.7365 ที่ e0 t0</text>
+  <path d="M 672 114 L 672 186" fill="none" stroke="#8c959f" stroke-width="1.3" stroke-dasharray="5 4" marker-end="url(#f11a)"/>
+  <text x="666" y="154" text-anchor="end" font-size="12.5" fill="#6e7781">a ตัวเดิม</text>
+  <text x="50" y="280" text-anchor="middle" font-size="13" fill="#0f6e6e" font-weight="bold">เวกเตอร์</text>
+  <text x="199" y="280" text-anchor="middle" font-size="13" fill="#0f6e6e" font-weight="bold">ฟังก์ชัน</text>
+  <text x="415" y="280" text-anchor="middle" font-size="13" fill="#0f6e6e" font-weight="bold">การแจกแจง</text>
+  <text x="622" y="280" text-anchor="middle" font-size="13" fill="#0f6e6e" font-weight="bold">เวกเตอร์ · scalar</text>
+  <text x="14" y="258" text-anchor="start" font-size="12.5" fill="#6e7781">ชนิด</text>
+  <path d="M 124 296 L 124 304 L 354 304 L 354 296" fill="none" stroke="#b42318" stroke-width="1.4"/>
+  <text x="239" y="322" text-anchor="middle" font-size="13" fill="#b42318">π<tspan dy="4" font-size="10.5">θ</tspan><tspan dy="-4"> ตอนเทรน = ① + ② + ③</tspan></text>
+</svg>
