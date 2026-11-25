@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 296" width="700" font-family="inherit" font-size="14">
+  <defs></defs>
+  <text x="84.0" y="30.0" text-anchor="middle" font-size="12.5" fill="#6e7781">ผลจริงกี่ step</text>
+  <text x="600.0" y="30.0" text-anchor="middle" font-size="12.5" fill="#6e7781">ค่าของ s₀ ที่ได้</text>
+  <text x="84.0" y="61.0" text-anchor="middle" font-size="14" fill="#37474f" font-weight="bold">0 step</text>
+  <text x="84.0" y="78.0" text-anchor="middle" font-size="12.5" fill="#6e7781">คำทำนายล้วน</text>
+  <rect x="160.0" y="46.0" width="118.0" height="34.0" rx="6" fill="#ffffff" stroke="#8c959f" stroke-width="1.2" stroke-dasharray="5 3"/>
+  <text x="219.0" y="68.0" text-anchor="middle" font-size="13" fill="#6e7781">3.0</text>
+  <text x="600.0" y="69.0" text-anchor="middle" font-size="16" fill="#37474f" font-weight="bold">3.00</text>
+  <text x="84.0" y="109.0" text-anchor="middle" font-size="14" fill="#37474f" font-weight="bold">1 step</text>
+  <text x="84.0" y="126.0" text-anchor="middle" font-size="12.5" fill="#0f6e6e">TD</text>
+  <rect x="160.0" y="94.0" width="118.0" height="34.0" rx="6" fill="#f1f8f8" stroke="#0f6e6e" stroke-width="1.2"/>
+  <text x="219.0" y="116.0" text-anchor="middle" font-size="13" fill="#0f6e6e">0.5</text>
+  <rect x="286.0" y="94.0" width="118.0" height="34.0" rx="6" fill="#ffffff" stroke="#8c959f" stroke-width="1.2" stroke-dasharray="5 3"/>
+  <text x="345.0" y="116.0" text-anchor="middle" font-size="13" fill="#6e7781">0.90 × 2.0</text>
+  <text x="600.0" y="117.0" text-anchor="middle" font-size="16" fill="#37474f" font-weight="bold">2.30</text>
+  <text x="84.0" y="164.0" text-anchor="middle" font-size="14" fill="#37474f" font-weight="bold">2 step</text>
+  <rect x="160.0" y="142.0" width="118.0" height="34.0" rx="6" fill="#f1f8f8" stroke="#0f6e6e" stroke-width="1.2"/>
+  <text x="219.0" y="164.0" text-anchor="middle" font-size="13" fill="#0f6e6e">0.5</text>
+  <rect x="286.0" y="142.0" width="118.0" height="34.0" rx="6" fill="#f1f8f8" stroke="#0f6e6e" stroke-width="1.2"/>
+  <text x="345.0" y="164.0" text-anchor="middle" font-size="13" fill="#0f6e6e">0.90 × 1.0</text>
+  <rect x="412.0" y="142.0" width="118.0" height="34.0" rx="6" fill="#ffffff" stroke="#8c959f" stroke-width="1.2" stroke-dasharray="5 3"/>
+  <text x="471.0" y="164.0" text-anchor="middle" font-size="13" fill="#6e7781">0.81 × 1.0</text>
+  <text x="600.0" y="165.0" text-anchor="middle" font-size="16" fill="#37474f" font-weight="bold">2.21</text>
+  <text x="84.0" y="205.0" text-anchor="middle" font-size="14" fill="#37474f" font-weight="bold">3 step</text>
+  <text x="84.0" y="222.0" text-anchor="middle" font-size="12.5" fill="#0f6e6e">Monte Carlo</text>
+  <rect x="160.0" y="190.0" width="118.0" height="34.0" rx="6" fill="#f1f8f8" stroke="#0f6e6e" stroke-width="1.2"/>
+  <text x="219.0" y="212.0" text-anchor="middle" font-size="13" fill="#0f6e6e">0.5</text>
+  <rect x="286.0" y="190.0" width="118.0" height="34.0" rx="6" fill="#f1f8f8" stroke="#0f6e6e" stroke-width="1.2"/>
+  <text x="345.0" y="212.0" text-anchor="middle" font-size="13" fill="#0f6e6e">0.90 × 1.0</text>
+  <rect x="412.0" y="190.0" width="118.0" height="34.0" rx="6" fill="#f1f8f8" stroke="#0f6e6e" stroke-width="1.2"/>
+  <text x="471.0" y="212.0" text-anchor="middle" font-size="13" fill="#0f6e6e">0.81 × (−2.0)</text>
+  <text x="542.0" y="212.0" text-anchor="start" font-size="12.5" fill="#b42318" font-weight="bold">ล้ม</text>
+  <text x="600.0" y="213.0" text-anchor="middle" font-size="16" fill="#b42318" font-weight="bold">−0.22</text>
+  <rect x="160.0" y="244.0" width="26.0" height="16.0" rx="6" fill="#f1f8f8" stroke="#0f6e6e" stroke-width="1.2"/>
+  <text x="194.0" y="257.0" text-anchor="start" font-size="12.5" fill="#0f6e6e">reward ที่เกิดจริง คูณ γ ตามจำนวน step ที่ผ่านไป</text>
+  <rect x="160.0" y="268.0" width="26.0" height="16.0" rx="6" fill="#ffffff" stroke="#8c959f" stroke-width="1.2" stroke-dasharray="5 3"/>
+  <text x="194.0" y="281.0" text-anchor="start" font-size="12.5" fill="#6e7781">คำทำนายของ critic ที่ใช้แทนส่วนที่เหลือ</text>
+</svg>

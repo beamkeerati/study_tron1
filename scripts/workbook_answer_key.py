@@ -1034,8 +1034,403 @@ def ch15():
     print(f"  q = 0.12 overshoot, qdot = 0: tau = {kp*(0.10-0.12):+.2f}")
     print(f"  if scale were 0.5, a that gives 0.10 rad: {0.10/0.5:.2f}")
 
+# ---------------------------------------------------------------- parts D-E (chapters 16-21): dead ends, then actor/critic/encoder
+import collections
+import pickle
+import zipfile
+
+PPO_PY = RSL / "algorithm/ppo.py"
+AC_PY = RSL / "modules/actor_critic.py"
+ENC_PY = RSL / "modules/mlp_encoder.py"
+STORE_PY = RSL / "storage/rollout_storage.py"
+RUN_PY = RSL / "runner/on_policy_runner.py"
+PLAY_PY = T / "scripts/rsl_rl/play.py"
+OBS_MGR = ISAAC / "isaaclab/isaaclab/managers/observation_manager.py"
+
+
+def G1(rs):
+    """Return of a finished episode from its first step."""
+    return G_of(rs)[0]
+
+
+def mlp_count(dims, label=None):
+    """Parameters of Linear(d0,d1) -> ... -> Linear(d_{n-1}, d_n); prints one line per layer when label is given."""
+    tot = 0
+    for i, o in zip(dims, dims[1:]):
+        n = i * o + o
+        tot += n
+        if label:
+            print(f"    {label} Linear({i}, {o}): {i}x{o} = {i*o:,} + {o} = {n:,}")
+    return tot
+
+
+def ckpt_shapes():
+    """Tensor shapes stored in the newest training checkpoint, read WITHOUT torch and without running any pickled
+    code: every class the pickle names is replaced by a stub, so only the shape tuples survive. None if no file."""
+    runs = sorted((T / "logs/rsl_rl/sf_tron_1a_flat").glob("*/model_*.pt"))
+    if not runs:
+        return None, None
+
+    class Stub:
+        def __init__(self, *a, **k):
+            pass
+
+    class U(pickle.Unpickler):
+        def find_class(self, mod, name):
+            if name == "_rebuild_tensor_v2":
+                return lambda storage, offset, size, *rest: tuple(size)
+            if name == "_rebuild_parameter":
+                return lambda data, *rest: data
+            if name == "OrderedDict":
+                return collections.OrderedDict
+            return Stub
+
+        def persistent_load(self, pid):
+            return None
+
+    with zipfile.ZipFile(runs[-1]) as z:
+        d = U(z.open(next(n for n in z.namelist() if n.endswith("data.pkl")))).load()
+    return runs[-1], {k: dict(d[k]) for k in ("model_state_dict", "encoder_state_dict")}
+
+
+def chain_dp(e, sweeps=5):
+    """Chapter 16's what-if: read ONE column of the toy table as a tiny world with 4 states visited in order, known
+    rewards and known successors (the DP assumption), the state after the table pinned at V_last, and a done cell
+    having no successor. Synchronous Bellman sweeps V <- r + mask*gamma*V(next), starting from the critic's row."""
+    d = env[e]
+    V = list(d["V"])
+    rows = [list(V)]
+    for _ in range(sweeps):
+        V = [d["r"][t] + (1 - d["done"][t]) * GAMMA * (d["V_last"] if t == 3 else V[t + 1]) for t in range(4)]
+        rows.append(list(V))
+    return rows
+
+
+def ch16():
+    print("=== chapter 16 — why a table cannot hold Tron1's values ===")
+    for e in (0, 1):
+        print(f"-- env {e} column read as a 4-state chain (model known, V after the table pinned at V_last = {env[e]['V_last']})")
+        for k, row in enumerate(chain_dp(e)):
+            print(f"  sweep {k}: " + "  ".join(f"{v:+.4f}" for v in row))
+    print("  env 0 check: 2.6245 + 0.9^4 x 3.0 =", f"{sum(GAMMA**k * env[0]['r'][k] for k in range(4)) + GAMMA**4 * 3.0:.4f}")
+    print("  env 1 check: G_0, G_1, G_2 =", [round(G1(env[1]['r'][t:3]), 4) for t in range(3)])
+    cfg = sf_ppo()
+    T_, iters = cfg["num_steps_per_env"][0], cfg["max_iterations"][0]
+    B_ = 2048
+    per_iter = T_ * B_
+    total = per_iter * iters
+    print(f"-- transitions: {T_} x {B_} = {per_iter:,} per iteration (lines {cfg['num_steps_per_env'][1]}, {cfg['max_iterations'][1]});  x {iters:,} iterations = {total:,} = {total:.3e}")
+    nj = n_joints()
+    pol = sum(w for *_, w in obs_dims("ObservarionsCfg", "PolicyCfg"))
+    n_in = 3 + pol + 3
+    for lv in (2, 10):
+        rows = lv ** n_in
+        print(f"  {lv} levels per number, {n_in} numbers: {lv}^{n_in} = {rows:.4e} rows;  rows / transitions of the whole run = {rows/total:.3e}")
+        print(f"     with the action too ({nj} more numbers): {lv}^{n_in + nj} = {lv ** (n_in + nj):.4e} cells for a Q table")
+    print(f"  2^42 exactly = {2**42:,}")
+    print(f"  one table row per transition ever seen = {total:,} rows  vs  policy network {mlp_count([n_in, 512, 256, 128, nj]):,} numbers, critic {mlp_count([230, 512, 256, 128, 1]):,}")
+    print(f"  rows of the 2-level table per number of the policy network: {2**42 / mlp_count([n_in, 512, 256, 128, nj]):.4e}")
+    print(f"  share of a 2-level table the whole run could touch at most: {total / 2**42 * 100:.4f} %")
+    print("-- toy: the table of the toy has 8 cells = transitions, not states")
+    print("-- exercises")
+    print(f"  3 levels: 3^{n_in} = {3**n_in:,} = {3**n_in:.4e};  / transitions = {3**n_in/total:.3e}")
+    t4096 = T_ * 4096 * iters
+    print(f"  4096 envs (cfg default): {T_} x 4096 x {iters:,} = {t4096:,};  share of 2^42 = {t4096/2**42*100:.4f} %")
+    print(f"  a table with as many rows as the critic has numbers: log2(282,625) = {math.log2(282625):.2f}  (2^18 = {2**18:,}, 2^19 = {2**19:,})")
+    print("  env 0 in ONE backward pass (last state first): ", end="")
+    V = [0.0] * 4
+    for t in (3, 2, 1, 0):
+        V[t] = env[0]["r"][t] + GAMMA * (env[0]["V_last"] if t == 3 else V[t + 1])
+    print("  ".join(f"s{t} = {V[t]:.4f}" for t in (3, 2, 1, 0)))
+    print("  env 0 with gamma = 0.5, one backward pass: ", end="")
+    for t in (3, 2, 1, 0):
+        V[t] = env[0]["r"][t] + 0.5 * (env[0]["V_last"] if t == 3 else V[t + 1])
+    print("  ".join(f"s{t} = {V[t]:.4f}" for t in (3, 2, 1, 0)))
+    print("-- lines cited")
+    show(PPO_PY, 331); show(STORE_PY, 184, 185); show(STORE_PY, 131, 133); show(STORE_PY, 143); show(AC_PY, 90); show(AC_PY, 111)
+    show(PPO_CFG, 81, 82); show(RUN_PY, 177); show(RUN_PY, 355, 365); show(BASE, 484)
+
+
+def nstep_value(e, t, k):
+    """Value estimate of s_t from k real rewards, then the critic's number (stops early at an episode end)."""
+    d = env[e]
+    tot = 0.0
+    for j in range(k):
+        tot += GAMMA ** j * d["r"][t + j]
+        if d["done"][t + j]:
+            return tot
+    nxt = t + k
+    return tot + GAMMA ** k * (d["V_last"] if nxt == 4 else d["V"][nxt])
+
+
+def ch17():
+    print("=== chapter 17 — Monte Carlo, TD, and the TD error ===")
+    print("-- three numbers for the first state of env 1")
+    d = env[1]
+    print(f"  critic V(s0) = {d['V'][0]}   one step: 0.5 + 0.9 x 2.0 = {nstep_value(1, 0, 1):.4f}   whole episode G_0 = {G1(d['r'][0:3]):+.4f}")
+    print("-- k real steps, then the critic (value estimates)")
+    for e, kmax in ((1, 3), (0, 4)):
+        for t in range(3 if e == 1 else 1):
+            print(f"  e{e} s{t}: " + "  ".join(f"k={k}: {nstep_value(e, t, k):+.4f}" for k in range(0, kmax - t + 1)))
+    print("-- env 1, first episode: critic / one-step / Monte Carlo, and the two 'errors'")
+    for t in range(3):
+        G = G1(d["r"][t:3])
+        print(f"  s{t}: V = {d['V'][t]:.1f}   one-step = {nstep_value(1, t, 1):+.4f}   G = {G:+.4f}   delta = {cells[(1,t)]['delta']:+.4f}   G - V = {G - d['V'][t]:+.4f}")
+    print("-- delta, all 8 cells, with the pieces")
+    for (e, t), c in cells.items():
+        dd = env[e]
+        Vn = dd["V_last"] if t == 3 else dd["V"][t + 1]
+        m = 1 - c["done"]
+        print(f"  e{e}t{t}: r={c['r']:+.1f}  mask={m}  gamma*V_next = 0.9 x {Vn} = {GAMMA*Vn:.2f}  V={c['V']:.1f}  ->  delta = {c['r']:+.1f} + {m} x {GAMMA*Vn:.2f} - {c['V']:.1f} = {c['delta']:+.4f}")
+    print(f"  without the mask at e1t2: {-2.0 + GAMMA*4.0 - 1.0:+.4f}")
+    print("-- what-ifs for the exercises")
+    print(f"  e0 t1 if the robot fell there (done = 1): delta = 0.5 + 0 - 4.5 = {0.5 - 4.5:+.4f}")
+    print(f"  e0 t0 with gamma = 0.99: {1.0 + 0.99*4.5 - 5.0:+.4f}")
+    print(f"  e1 t3 if V_last were 0: {0.0 + 0.9*0.0 - 4.0:+.4f};  if V_last were 4.0/0.9 = {4.0/0.9:.4f}: delta = 0")
+    print(f"  e0 t0 if the critic had said V(s0) = 5.05: delta = {1.0 + 0.9*4.5 - 5.05:+.4f}")
+    print(f"  sum of delta over env 0 = {sum(cells[(0,t)]['delta'] for t in range(4)):+.4f};  env 1 = {sum(cells[(1,t)]['delta'] for t in range(4)):+.4f}")
+    print(f"  cells with delta > 0: {[f'e{e}t{t}' for (e,t),c in cells.items() if c['delta'] > 0]}")
+    dec, dt, step_dt, ep = timing()
+    nj = n_joints()
+    print(f"-- how many random draws sit inside each estimate: episode {ep:.0f} s / {step_dt} s = {ep/step_dt:.0f} steps x {nj} joints = {ep/step_dt*nj:.0f} draws (MC);  one step = {nj} draws (TD)")
+    print(f"   table rows {sf_ppo()['num_steps_per_env'][0]} vs episode {ep/step_dt:.0f} steps")
+    print("-- lines cited")
+    show(STORE_PY, 187, 199); show(RUN_PY, 200, 205); show(RUN_PY, 225); show(PPO_PY, 176, 178)
+    show(BASE, find_line(BASE, r"class TerminationsCfg"), find_line(BASE, r"class TerminationsCfg") + 12)
+
+
+def rho_of(c, shift):
+    return math.exp(toy.logpi(c["a"], c["mu"] + shift) - c["logpi_old"])
+
+
+def integrate(f, lo=-8.0, hi=8.0, n=160001):
+    """Plain trapezoid rule; the Gaussians here are negligible beyond +-8."""
+    h = (hi - lo) / (n - 1)
+    s = 0.5 * (f(lo) + f(hi)) + sum(f(lo + i * h) for i in range(1, n - 1))
+    return s * h
+
+
+def ch18():
+    print("=== chapter 18 — on-policy, off-policy, importance sampling ===")
+    cards = bag()
+    print("-- the bag of chapter 4: samples drawn with a fair coin (q), average wanted under the weighted coin (p)")
+    q = {0: 0.5, 1: 0.5}
+    p = {0: 0.75, 1: 0.25}
+    w = {k: p[k] / q[k] for k in (0, 1)}
+    direct = sum(p[k] * sum(env[k]["r"]) / 4 for k in (0, 1))
+    plain = sum(x for _, x in cards) / 8
+    weighted = sum(w[k] * x for k, x in cards) / 8
+    print(f"  weights p/q: box 0 = {w[0]}, box 1 = {w[1]}")
+    print(f"  plain average of the 8 cards (fair coin) = {plain:.5f}")
+    print(f"  weighted: (1.5 x {sum(env[0]['r'])} + 0.5 x {sum(env[1]['r'])}) / 8 = {weighted:.5f};   direct E_p[X] = 0.75 x 0.75 + 0.25 x (-0.125) = {direct:.5f}")
+    print(f"  average weight = {sum(w[k] for k, _ in cards)/8}")
+    p2 = {0: 0.25, 1: 0.75}
+    print(f"  exercise: p = (1/4, 3/4): weights {p2[0]/0.5}, {p2[1]/0.5};  weighted = {sum(p2[k]/0.5 * x for k, x in cards)/8:.5f};  direct = {sum(p2[k]*sum(env[k]['r'])/4 for k in (0,1)):.5f}")
+    print("-- rho with mu_new = mu_old + 0.05 in every cell (the demo shift of glossary 8.1)")
+    for (e, t), c in cells.items():
+        lp_new = toy.logpi(c["a"], c["mu"] + 0.05)
+        print(f"  e{e}t{t}: a={c['a']:+.2f} mu_old={c['mu']:+.2f} mu_new={c['mu']+0.05:+.2f}  (a-mu_new)^2/0.5 = {(c['a']-c['mu']-0.05)**2/0.5:.4f}  "
+              f"logpi_new={lp_new:+.4f}  logpi_old={c['logpi_old']:+.4f}  diff={lp_new - c['logpi_old']:+.4f}  rho={math.exp(lp_new - c['logpi_old']):.4f}")
+    c = cells[(0, 0)]
+    print(f"  e0t0 densities: old {pdf(0.40, 0.20):.4f}  new {pdf(0.40, 0.25):.4f}  ratio {pdf(0.40, 0.25)/pdf(0.40, 0.20):.4f}")
+    print(f"  mean rho over the 8 cells = {sum(rho_of(c, 0.05) for c in cells.values())/8:.4f}")
+    print("-- how far rho goes as the bell moves (e0 t2: a = 0.50, mu_old = 0.10)")
+    c = cells[(0, 2)]
+    for s in (0.0, 0.05, 0.15, 0.40, 0.80, -0.15, -0.40):
+        print(f"  shift {s:+.2f}: mu_new = {c['mu']+s:+.2f}  rho = {rho_of(c, s):.4f}")
+    print(f"  1-D ceiling with sigma fixed (mu_new = a): exp(z^2/2), z = 0.8 -> {math.exp(0.8**2/2):.4f}")
+    print(f"  if all 8 joints had that ceiling: {math.exp(0.8**2/2):.4f}^8 = {math.exp(0.8**2/2)**8:.2f}")
+    c = cells[(0, 3)]
+    print("-- e0 t3 (a = mu_old): " + "  ".join(f"shift {s:+.2f} -> {rho_of(c, s):.4f}" for s in (0.05, -0.05, 0.15, 0.5)))
+    print("-- rho is a product over 8 joints: " + "  ".join(f"{x}^8 = {x**8:.4f}" for x in (1.2, 1.1, 1.0356, 0.9, 0.8)))
+    print(f"   8-D widening of glossary 8.6: exp(-3.2863 - (-3.3263)) = {math.exp(-3.2863 + 3.3263):.4f}")
+    print("-- (20) checked by numerical integration on e0 t0's two bells (old mu 0.20, new mu 0.25, sigma 0.5)")
+    po = lambda a: pdf(a, 0.20)
+    pn = lambda a: pdf(a, 0.25)
+    for name, f in (("f(a) = 1", lambda a: 1.0), ("f(a) = a", lambda a: a), ("f(a) = a^2", lambda a: a * a)):
+        left = integrate(lambda a: pn(a) * f(a))
+        right = integrate(lambda a: po(a) * (pn(a) / po(a)) * f(a))
+        naive = integrate(lambda a: po(a) * f(a))
+        print(f"  {name}: under new = {left:.6f}   under old with weights = {right:.6f}   under old, no weights = {naive:.6f}")
+    cfg = sf_ppo()
+    print(f"-- gradient steps on one table: {cfg['num_learning_epochs'][0]} x {cfg['num_mini_batches'][0]} = {cfg['num_learning_epochs'][0]*cfg['num_mini_batches'][0]} (lines {cfg['num_learning_epochs'][1]}, {cfg['num_mini_batches'][1]})")
+    print("-- lines cited")
+    show(RUN_PY, 46); show(PPO_PY, 331); show(PPO_PY, 147, 149); show(PPO_PY, 203, 214); show(PPO_PY, 252, 254)
+    show(STORE_PY, 144); show(STORE_PY, 140)
+
+
+def ch19():
+    print("=== chapter 19 — the policy gradient ===")
+    cards = bag()
+    print("-- the coin of chapter 4 as a one-knob policy: P(K=1) = p, P(K=0) = 1 - p")
+    m0, m1 = sum(env[0]["r"]) / 4, sum(env[1]["r"]) / 4
+    print(f"  E[X | K=0] = {m0}   E[X | K=1] = {m1}   J(p) = {m0}(1-p) + ({m1})p   dJ/dp = {m1 - m0}")
+    for pp in (0.5, 0.25):
+        J = m0 * (1 - pp) + m1 * pp
+        s0, s1 = -1 / (1 - pp), 1 / pp
+        print(f"  p = {pp}: J = {J:.5f}   score(K=0) = d log(1-p)/dp = {s0:+.4f}   score(K=1) = d log p/dp = {s1:+.4f}")
+        print(f"     E[score] = {(1-pp)*s0 + pp*s1:+.4f}   E[score x X] = {(1-pp)*s0*m0 + pp*s1*m1:+.5f}   E[score x (X - J)] = {(1-pp)*s0*(m0-J) + pp*s1*(m1-J):+.5f}")
+    sc = {0: -2.0, 1: 2.0}
+    J = 0.3125
+    print(f"  from the 8 equally likely cards (p = 1/2): mean(score x card) = ({sc[0]} x {sum(env[0]['r'])} + {sc[1]} x {sum(env[1]['r'])})/8 = {sum(sc[k]*x for k, x in cards)/8:+.5f}")
+    print(f"     per card score x card: " + " ".join(f"{sc[k]*x:+.2f}" for k, x in cards))
+    print(f"     per card score x (card - 0.3125): " + " ".join(f"{sc[k]*(x-J):+.3f}" for k, x in cards) + f"   mean = {sum(sc[k]*(x-J) for k, x in cards)/8:+.5f}")
+    print(f"     spread (max - min): raw {max(sc[k]*x for k,x in cards) - min(sc[k]*x for k,x in cards):.3f}   with baseline {max(sc[k]*(x-J) for k,x in cards) - min(sc[k]*(x-J) for k,x in cards):.3f}")
+    print("  the same cards with +10 written on every one (which box is better does not change):")
+    print("     per card score x (card + 10): " + " ".join(f"{sc[k]*(x+10):+.1f}" for k, x in cards) + f"   mean = {sum(sc[k]*(x+10) for k, x in cards)/8:+.5f}")
+    print(f"     per card score x (card + 10 - {J+10}): " + " ".join(f"{sc[k]*(x-J):+.3f}" for k, x in cards))
+    print(f"  one ascent step alpha = 0.1 from p = 0.5: p <- 0.5 + 0.1 x ({m1-m0}) = {0.5 + 0.1*(m1-m0):.4f};  J: {J:.5f} -> {m0*(1-(0.5+0.1*(m1-m0))) + m1*(0.5+0.1*(m1-m0)):.5f}")
+    print("-- (22) on e0 t0: d pi/d mu = pi x (a - mu)/sigma^2")
+    a, mu = 0.40, 0.20
+    print(f"  pi = {pdf(a, mu):.4f}   score = {(a-mu)/SIG**2:.4f}   product = {pdf(a, mu)*(a-mu)/SIG**2:.4f}   central difference = {(pdf(a, mu+0.01) - pdf(a, mu-0.01))/0.02:.4f}")
+    print(f"  d log pi / d mu by central difference = {(toy.logpi(a, mu+0.01) - toy.logpi(a, mu-0.01))/0.02:.4f}")
+    print("-- the mean of the score under its own bell is 0 (why a baseline costs nothing)")
+    print(f"  integral of pi(a) (a - mu)/sigma^2 da = {integrate(lambda x: pdf(x, 0.20) * (x - 0.20) / SIG**2):+.6f}")
+    print(f"  d/dmu of E[a] must be 1: integral of pi(a) (a-mu)/sigma^2 a da = {integrate(lambda x: pdf(x, 0.20) * (x - 0.20) / SIG**2 * x):.6f}")
+    print("-- (24) in every cell, and the rough advantage delta_t of chapter 17 (the real number is chapter 22's)")
+    alpha = 0.1
+    for (e, t), c in cells.items():
+        g = (c["a"] - c["mu"]) / SIG ** 2
+        z = (c["a"] - c["mu"]) / SIG
+        print(f"  e{e}t{t}: a={c['a']:+.2f} mu={c['mu']:+.2f}  (a-mu)/s^2 = {g:+.2f}  delta = {c['delta']:+.2f}  product = {c['delta']*g:+.4f}  "
+              f"mu after one step alpha 0.1 = {c['mu'] + alpha*c['delta']*g:+.4f}   z^2-1 = {z*z-1:+.2f}  delta(z^2-1) = {c['delta']*(z*z-1):+.4f}   "
+              f"[sign of chapter 22's number: {'+' if c['Ahat'] > 0 else '-'}]")
+    print("-- the loss whose slope is that product: L = -delta x log pi;  e0 t0 and e1 t1")
+    for (e, t) in ((0, 0), (1, 1)):
+        c = cells[(e, t)]
+        g = (c["a"] - c["mu"]) / SIG ** 2
+        print(f"  e{e}t{t}: L = {-c['delta']*c['logpi_old']:+.4f}   dL/dmu = {-c['delta']*g:+.4f}   mu: {c['mu']:+.2f} -> {c['mu'] + alpha*c['delta']*g:+.4f}")
+    print("-- chapter 14's loss -log pi is the same thing with the advantage replaced by 1: dL/dmu at e0 t0 =", f"{-(0.40-0.20)/SIG**2:+.2f}")
+    print("-- slope of rho itself (score-function identity applied to the ratio): d rho/d mu_new = rho (a - mu_new)/sigma^2")
+    c = cells[(0, 0)]
+    for s in (0.0, 0.05):
+        mu_n = c["mu"] + s
+        r_ = rho_of(c, s)
+        fd = (rho_of(c, s + 0.001) - rho_of(c, s - 0.001)) / 0.002
+        print(f"  e0t0 mu_new = {mu_n:.2f}: rho = {r_:.4f}   rho (a - mu_new)/s^2 = {r_*(c['a']-mu_n)/SIG**2:.4f}   central difference = {fd:.4f}")
+    c = cells[(0, 2)]
+    for sft in (0.0, 0.05):
+        mu_n = c["mu"] + sft
+        print(f"  e0t2 mu_new = {mu_n:.2f}: rho = {rho_of(c, sft):.4f}   (a - mu_new)/s^2 = {(c['a']-mu_n)/SIG**2:.2f}   product = {rho_of(c, sft)*(c['a']-mu_n)/SIG**2:.4f}")
+    print(f"  e0t0 with sigma = 0.25: (a - mu)/sigma^2 = 0.20/{0.25**2} = {0.20/0.25**2:.2f}   (sigma 0.5: {0.20/0.5**2:.2f},  sigma 1.0: {0.20/1.0:.2f})")
+    print(f"  coin p = 1/4: scores {-1/0.75:+.4f}, {1/0.25:+.4f};  E[score x X] = 0.75 x ({-1/0.75:+.4f}) x 0.75 + 0.25 x 4 x (-0.125) = {0.75*(-1/0.75)*0.75 + 0.25*4*(-0.125):+.4f}")
+    print(f"-- theta = actor {mlp_count([42,512,256,128,8]):,} + logstd 8 = {mlp_count([42,512,256,128,8]) + 8:,}")
+    print("-- lines cited")
+    show(TORCH_NORMAL, 70, 73); show(AC_PY, 159, 164); show(PPO_PY, 137, 139); show(PPO_PY, 252, 256); show(PPO_PY, 288)
+
+
+def ch20():
+    print("=== chapter 20 — actor-critic, and critic vs reward function ===")
+    a_n = mlp_count([42, 512, 256, 128, 8], "actor ")
+    c_n = mlp_count([230, 512, 256, 128, 1], "critic")
+    print(f"  actor {a_n:,}   critic {c_n:,}   logstd 8   theta = {a_n + 8:,}   one optimizer holds {a_n + c_n + 8:,}")
+    print(f"  critic - actor = {c_n - a_n:,};  first layers {230*512+512:,} vs {42*512+512:,};  last layers {128*1+1} vs {128*8+8:,}")
+    print(f"  a critic that saw only the actor's 42 numbers: {mlp_count([42, 512, 256, 128, 1]):,}  (difference {c_n - mlp_count([42, 512, 256, 128, 1]):,} = 188 x 512 = {188*512:,})")
+    path, sd = ckpt_shapes()
+    if sd:
+        m = sd["model_state_dict"]
+        print(f"-- checkpoint {path.relative_to(T)}")
+        for k in ("actor.0.weight", "actor.6.weight", "critic.0.weight", "critic.6.weight", "logstd"):
+            print(f"    {k}: {m[k]}")
+        tot = sum(math.prod(s) for s in m.values())
+        print(f"    model_state_dict total = {tot:,};  keys starting 'actor' = {sum(math.prod(s) for k, s in m.items() if k.startswith('actor')):,}, 'critic' = {sum(math.prod(s) for k, s in m.items() if k.startswith('critic')):,}")
+    else:
+        print("-- no checkpoint under tron1-rl-isaaclab/logs (shape check skipped)")
+    print("-- the critic observation group")
+    terms = obs_dims("ObservarionsCfg", "CriticCfg")
+    pol = {n for n, *_ in obs_dims("ObservarionsCfg", "PolicyCfg")}
+    nj = n_joints()
+    extra = {"robot_joint_torque": nj, "robot_joint_acc": nj, "robot_joint_pos": nj, "robot_joint_stiffness": nj,
+             "robot_joint_damping": nj, "robot_pos": 3, "robot_vel": 6, "feet_lin_vel": 2 * 3, "robot_contact_force": 2 * 3}
+    known = 0
+    unknown = []
+    for name, ln, func, w in terms:
+        if name == "heights":
+            print(f"    :{ln} {name:<28} removed by the task (limx_solefoot_env_cfg.py:78)")
+            continue
+        w = w if w is not None else extra.get(func)
+        tag = "also in the policy group" if name in pol else "critic only"
+        if w is None:
+            unknown.append(name)
+            print(f"    :{ln} {name:<28} {func:<28} width set by the robot asset   [{tag}]")
+        else:
+            known += w
+            print(f"    :{ln} {name:<28} {func:<28} {w:>3}   [{tag}]")
+    used = [t for t in terms if t[0] != "heights"]
+    shared_w = sum(w for n, _, _, w in terms if n in pol)
+    print(f"  terms used: {len(used)};  shared with the policy group: {len([t for t in used if t[0] in pol])} terms = {shared_w} numbers;  critic only: {len([t for t in used if t[0] not in pol])} terms")
+    print(f"  widths readable from the code add to {known};  230 - 3 = 227;  227 - {known} = {227 - known} left for {unknown}")
+    print("  (note 03 records 10 + 90 + 27 = 127 for those three, from the table train.py prints at start-up)")
+    print("  ankle bodies matched by 'ankle_.*': 2 (ankle_L, ankle_R);  root_vel_w is linear + angular = 6")
+    show(BASE, 149); show(BASE, 222); show(OBS_MGR, 409, 410); show(OBS_MGR, 333)
+    cfg = sf_ppo()
+    T_ = cfg["num_steps_per_env"][0]
+    print(f"-- how often the critic is asked in one iteration: {T_} x 2048 = {T_*2048:,} while collecting, + 2048 for V_last = {T_*2048 + 2048:,}")
+    print(f"-- why not 'try every action and keep the best': 10 levels on each of {nj} joints = 10^{nj} = {10**nj:,} candidates per decision;  x 2048 robots = {10**nj*2048:.3e} per step")
+    print(f"   exercises: 5 levels -> 5^{nj} = {5**nj:,};  with 4096 envs: {T_} x 4096 + 4096 = {T_*4096 + 4096:,}")
+    grp = {"same names as the policy group": shared_w, "base_lin_vel": 3,
+           "state the robot's sensors do not give (torque, acc, feet_lin_vel, robot_pos, robot_vel, contact force)": 8 + 8 + 6 + 3 + 6 + 6,
+           "settings of that robot readable from code (default joint pos, stiffness, damping)": 8 + 8 + 8,
+           "mass, inertia, material (width set by the asset)": 227 - known}
+    for k, v in grp.items():
+        print(f"     {v:>4}  {k}")
+    print(f"     {sum(grp.values()):>4}  total")
+    d = env[1]
+    print(f"-- toy e1 t0: reward (fact) = {d['r'][0]}   critic (prediction) = {d['V'][0]}   what actually followed G_0 = {G1(d['r'][0:3]):+.2f}")
+    print("-- who fills which row of the toy table: mu <- actor, V <- critic, eps <- the dice, r and done <- the environment")
+    print("-- lines cited")
+    show(AC_PY, 39); show(AC_PY, 69, 71); show(AC_PY, 90); show(AC_PY, 92, 94); show(AC_PY, 98); show(AC_PY, 111); show(AC_PY, 118)
+    show(AC_PY, 155, 157); show(AC_PY, 166, 172)
+    show(PPO_PY, 62); show(PPO_PY, 85); show(PPO_PY, 133, 144); show(PPO_PY, 177); show(PPO_PY, 216)
+    show(RUN_PY, 61); show(RUN_PY, 69, 77); show(PLAY_PY, 111, 122)
+    show(BASE, find_line(BASE, r"class RewardsCfg")); show(BASE, 179, 183)
+
+
+def ch21():
+    print("=== chapter 21 — the encoder and v-hat ===")
+    cfg = sf_ppo()
+    hid, out = cfg["hidden_dims"][0], cfg["num_output_dim"][0]
+    hist = cfg["obs_history_len"][0]
+    pol = sum(w for *_, w in obs_dims("ObservarionsCfg", "PolicyCfg"))
+    print(f"  obs_history_len = {hist} (line {cfg['obs_history_len'][1]}), policy obs = {pol}, encoder input = {hist} x {pol} = {hist*pol};  hidden {hid}, output {out} (lines {cfg['hidden_dims'][1]}, {cfg['num_output_dim'][1]}), output_detach = {cfg['output_detach'][0]} (line {cfg['output_detach'][1]})")
+    e_n = mlp_count([hist * pol] + list(hid) + [out], "encoder")
+    a_n, c_n = mlp_count([42, 512, 256, 128, 8]), mlp_count([230, 512, 256, 128, 1])
+    print(f"  encoder psi = {e_n:,};  actor {a_n:,} + critic {c_n:,} + logstd 8 = {a_n + c_n + 8:,};  everything = {a_n + c_n + 8 + e_n:,}")
+    print(f"  share of the first layer: {(hist*pol*hid[0] + hid[0])/e_n*100:.1f} %")
+    print(f"  actor input = {out} + {pol} + 3 = {out + pol + 3}")
+    path, sd = ckpt_shapes()
+    if sd:
+        en = sd["encoder_state_dict"]
+        print(f"-- checkpoint {path.relative_to(T)}: " + ", ".join(f"{k} {v}" for k, v in en.items()))
+        print(f"    encoder_state_dict total = {sum(math.prod(s) for s in en.values()):,};  both dicts = {sum(math.prod(s) for dct in sd.values() for s in dct.values()):,}")
+    print("-- what-ifs for the exercises")
+    print(f"  history of 5 steps: input {5*pol}, psi = {mlp_count([5*pol] + list(hid) + [out]):,}")
+    print(f"  history of 25 steps: input {25*pol}, psi = {mlp_count([25*pol] + list(hid) + [out]):,}")
+    print(f"  encoder output 6 instead of 3: psi = {mlp_count([hist*pol] + list(hid) + [6]):,};  actor input {6 + pol + 3}, actor = {mlp_count([6 + pol + 3, 512, 256, 128, 8]):,}  (+{mlp_count([6 + pol + 3, 512, 256, 128, 8]) - a_n:,})")
+    print(f"  feeding all 360 numbers straight into the actor: input {hist*pol + pol + 3}, actor = {mlp_count([hist*pol + pol + 3, 512, 256, 128, 8]):,};  encoder + actor today = {e_n + a_n:,}")
+    print("-- MSE on pairs the reader already has (prediction vs what happened)")
+    d = env[1]
+    errs = [d["V"][t] - G1(d["r"][t:3]) for t in range(3)]
+    print(f"  env 1 first episode, V - G: {[round(x, 2) for x in errs]}  squares {[round(x*x, 4) for x in errs]}  sum {sum(x*x for x in errs):.4f}  MSE = {sum(x*x for x in errs)/3:.4f}  (root {math.sqrt(sum(x*x for x in errs)/3):.4f})")
+    print(f"     mean of the plain errors = {sum(errs)/3:.4f};  mean of |errors| = {sum(abs(x) for x in errs)/3:.4f}")
+    print(f"     slope of the MSE w.r.t. each prediction = 2 x error / 3: {[round(2*x/3, 4) for x in errs]}")
+    for e in (0, 1):
+        ds = [cells[(e, t)]["delta"] for t in range(4)]
+        print(f"  env {e}, left vs right of (4) = delta: squares {[round(x*x, 4) for x in ds]}  sum {sum(x*x for x in ds):.4f}  MSE = {sum(x*x for x in ds)/4:.5f}")
+    print(f"  errors +1 and -1: mean error 0, MSE {(1+1)/2};  errors 0.1 x 3 and 3.0 once (4 numbers): MSE = {(3*0.01 + 9)/4:.4f}, the big one carries {9/(3*0.01+9)*100:.1f} %")
+    ep, mb = cfg["num_learning_epochs"][0], cfg["num_mini_batches"][0]
+    print(f"-- encoder gradient steps per iteration: {ep} x {mb} = {ep*mb}, each on {24*2048//mb:,} cells x 3 numbers = {24*2048//mb*3:,} squared differences")
+    print("-- lines cited")
+    show(ENC_PY, 39, 41); show(ENC_PY, 67, 69); show(ENC_PY, 75); show(ENC_PY, 85); show(ENC_PY, 95, 103)
+    show(PPO_PY, 61); show(PPO_PY, 85, 89); show(PPO_PY, 136, 139); show(PPO_PY, 154); show(PPO_PY, 203); show(PPO_PY, 289); show(PPO_PY, 299, 321)
+    show(STORE_PY, 289, 291); show(RUN_PY, 63); show(RUN_PY, 65, 67); show(RUN_PY, 173); show(RUN_PY, 180)
+    show(PPO_CFG, 106, 111); show(BASE, 175, 176); show(BASE, 183); show(PLAY_PY, 117, 122)
+    show(ISAAC / "isaaclab/isaaclab/envs/mdp/observations.py", 40, 44)
+
+
 CHAPTERS = {"01": ch01, "02": ch02, "03": ch03, "04": ch04, "05": ch05, "06": ch06, "07": ch07, "08": ch08, "09": ch09,
-            "10": ch10, "11": ch11, "12": ch12, "13": ch13, "14": ch14, "15": ch15, "22": ch22}
+            "10": ch10, "11": ch11, "12": ch12, "13": ch13, "14": ch14, "15": ch15, "16": ch16, "17": ch17, "18": ch18,
+            "19": ch19, "20": ch20, "21": ch21, "22": ch22}
 
 if __name__ == "__main__":
     for key in sys.argv[1:] or CHAPTERS:
