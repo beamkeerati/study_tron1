@@ -1428,9 +1428,223 @@ def ch21():
     show(ISAAC / "isaaclab/isaaclab/envs/mdp/observations.py", 40, 44)
 
 
+# ---------------------------------------------------------------- chapters 23-24: the PPO loss
+EPS = toy.EPS_CLIP
+SET1, SET2 = toy.mb0, toy.mb1          # the two groups of four cells one gradient step uses (glossary 8.3)
+
+
+def clipf(x, lo, hi):
+    return min(max(x, lo), hi)
+
+
+def surr_cell(c, shift, eps=EPS, sigma_new=SIG):
+    """One cell of ppo.py:252-260 with the new bell at mu_old + shift (and optionally a new sigma)."""
+    mu_n = c["mu"] + shift
+    lp_new = -0.5 * math.log(2 * math.pi) - math.log(sigma_new) - (c["a"] - mu_n) ** 2 / (2 * sigma_new ** 2)
+    rho = math.exp(lp_new - c["logpi_old"])
+    rc = clipf(rho, 1 - eps, 1 + eps)
+    raw, cl = -c["Ahat"] * rho, -c["Ahat"] * rc
+    picks_clip = cl > raw
+    g = 0.0 if picks_clip else -c["Ahat"] * rho * (c["a"] - mu_n) / sigma_new ** 2
+    return dict(mu_n=mu_n, rho=rho, rc=rc, raw=raw, cl=cl, L=max(raw, cl), clipped=picks_clip, g=g)
+
+
+def knob_walk(sched, use_clip, n, alpha=0.1):
+    """One shared knob b (the last-layer bias of chapter 14: every mu moves by b), SGD on the mean of the set.
+    Returns, for k = 0..n, the state BEFORE gradient step k+1: (b, force, rho of all 8 cells)."""
+    b, out = 0.0, []
+    for k in range(n + 1):
+        cs = [surr_cell(cells[key], b) for key in sched(k)]
+        gs = [(x["g"] if use_clip else -cells[key]["Ahat"] * x["rho"] * (cells[key]["a"] - x["mu_n"]) / SIG ** 2)
+              for key, x in zip(sched(k), cs)]
+        g = sum(gs) / len(gs)
+        out.append((b, g, [surr_cell(c, b)["rho"] for c in cells.values()]))
+        b -= alpha * g
+    return out
+
+
+def ch23():
+    print("=== chapter 23 — the clipped surrogate ===")
+    name = lambda k: f"e{k[0]}t{k[1]}"
+    print(f"  the two sets: set 1 = {[name(k) for k in SET1]}   set 2 = {[name(k) for k in SET2]}   epsilon = {EPS}  band [{1-EPS}, {1+EPS}]")
+    print("-- candidate 1 (-Ahat log pi) against the surrogate (-Ahat rho): slope w.r.t. mu, e0 t0")
+    c = cells[(0, 0)]
+    for s in (0.0, 0.05):
+        x = surr_cell(c, s)
+        print(f"  mu_new = {x['mu_n']:.2f}: -Ahat (a-mu)/s^2 = {-c['Ahat']*(c['a']-x['mu_n'])/SIG**2:+.4f}    -Ahat rho (a-mu)/s^2 = {-c['Ahat']*x['rho']*(c['a']-x['mu_n'])/SIG**2:+.4f}   (rho {x['rho']:.4f})")
+    print("-- the unclipped surrogate has no bottom: one cell, L_i = -Ahat rho")
+    c = cells[(1, 1)]
+    for s in (0.0, -0.15, -0.40, -1.00):
+        x = surr_cell(c, s)
+        print(f"  e1t1 (Ahat {c['Ahat']:+.4f}) mu_new = {x['mu_n']:+.2f}: rho = {x['rho']:.4f}   -Ahat rho = {x['raw']:+.4f}")
+    c = cells[(0, 2)]
+    for s, sg in ((0.0, 0.5), (0.15, 0.5), (0.40, 0.5), (0.40, 0.25), (0.40, 0.10)):
+        x = surr_cell(c, s, sigma_new=sg)
+        print(f"  e0t2 (Ahat {c['Ahat']:+.4f}) mu_new = {x['mu_n']:+.2f} sigma_new = {sg}: rho = {x['rho']:.4f}   -Ahat rho = {x['raw']:+.4f}")
+    print("-- clip(x, 0.8, 1.2): " + "  ".join(f"{v} -> {clipf(v, 0.8, 1.2)}" for v in (1.0356, 1.2153, 0.7520, 1.2, 0.8, 2.1815)))
+    print("-- (29) with mu_new = mu_old + 0.05 in every cell")
+    for label, keys in (("set 1", SET1), ("set 2", SET2), ("env 0", [(0, t) for t in range(4)]), ("env 1", [(1, t) for t in range(4)])):
+        xs = [surr_cell(cells[k], 0.05) for k in keys]
+        for k, x in zip(keys, xs):
+            print(f"  {name(k)}: rho {x['rho']:.4f} clip {x['rc']:.4f}  Ahat {cells[k]['Ahat']:+.4f}  -rho Ahat {x['raw']:+.4f}  -clip Ahat {x['cl']:+.4f}  L_i {x['L']:+.4f}  "
+                  f"{'CLIPPED' if x['clipped'] else 'raw'}  (a - mu_new) {cells[k]['a']-x['mu_n']:+.2f}  slope (G) {x['g']:+.4f}  alone, alpha 0.1: mu {x['mu_n']:+.2f} -> {x['mu_n'] - 0.1*x['g']:+.4f}")
+        print(f"     {label}: sum {sum(x['L'] for x in xs):+.4f}  mean L^CLIP = {sum(x['L'] for x in xs)/4:+.4f}   mean slope on a shared knob = {sum(x['g'] for x in xs)/4:+.4f}")
+    print(f"  all 8 cells: mean L^CLIP = {sum(surr_cell(c, 0.05)['L'] for c in cells.values())/8:+.4f}")
+    print("-- the paper's form: min(rho Ahat, clip Ahat) = -L_i  (to be maximised)")
+    for k in SET1:
+        x = surr_cell(cells[k], 0.05)
+        A = cells[k]["Ahat"]
+        print(f"  {name(k)}: min({x['rho']*A:+.4f}, {x['rc']*A:+.4f}) = {min(x['rho']*A, x['rc']*A):+.4f}   -L_i = {-x['L']:+.4f}")
+    print("-- the first gradient step (rho = 1 in every cell it uses): L_i = -Ahat, slope = -Ahat (a - mu)/sigma^2")
+    for label, keys in (("set 1", SET1), ("set 2", SET2)):
+        xs = [surr_cell(cells[k], 0.0) for k in keys]
+        print(f"  {label}: L_i " + " ".join(f"{x['L']:+.4f}" for x in xs) + f"  mean = {sum(x['L'] for x in xs)/4:+.4f};   slopes " + " ".join(f"{x['g']:+.4f}" for x in xs)
+              + f"  mean = {sum(x['g'] for x in xs)/4:+.4f}  -> shared knob b = {-0.1*sum(x['g'] for x in xs)/4:+.4f}")
+    print(f"  all 8: mean of -Ahat = {-sum(c['Ahat'] for c in cells.values())/8:+.6f} (the normalisation of (28) makes it zero)")
+    print("-- when the clip acts: the twins e0 t2 / e1 t1, moved 0.15 the right way and the wrong way")
+    for k in ((0, 2), (1, 1)):
+        c = cells[k]
+        right = 0.15 if c["Ahat"] > 0 else -0.15
+        for lab, s in (("right way", right), ("wrong way", -right)):
+            x = surr_cell(c, s)
+            print(f"  {name(k)} Ahat {c['Ahat']:+.4f} {lab} {s:+.2f}: mu_new {x['mu_n']:+.2f}  rho {x['rho']:.4f}  -rho Ahat {x['raw']:+.4f}  -clip Ahat {x['cl']:+.4f}  "
+                  f"L_i {x['L']:+.4f}  {'CLIPPED slope 0' if x['clipped'] else 'raw'}  slope {x['g']:+.4f}")
+    print("-- where the band edge is, sigma fixed at 0.5: rho = exp(((a-mu_old)^2 - (a-mu_new)^2)/(2 sigma^2))")
+    for z in (0.4, 0.6, 0.8):
+        d = z * SIG
+        top = math.exp(z * z / 2)
+        up = d - math.sqrt(d * d - 0.5 * math.log(1 + EPS)) if top >= 1 + EPS else None
+        dn = math.sqrt(d * d - 0.5 * math.log(1 - EPS)) - d
+        print(f"  |a - mu_old| = {d:.2f} (z {z}): ceiling exp(z^2/2) = {top:.4f};  rho = 1.2 at a shift of {('%.4f' % up) if up else 'never'} toward a;  rho = 0.8 at {dn:.4f} away")
+    print(f"  smallest |z| whose ceiling reaches 1.2: sqrt(2 ln 1.2) = {math.sqrt(2*math.log(1.2)):.4f}")
+    c = cells[(0, 2)]
+    print(f"  e0t2 moved +0.15 with sigma = 0.25 on both bells: rho = exp((0.40^2 - 0.25^2)/(2 x 0.0625)) = {math.exp((0.4**2 - 0.25**2)/(2*0.25**2)):.4f}")
+    print(f"-- eight joints share one band: 1.2^(1/8) = {1.2**(1/8):.4f}   0.8^(1/8) = {0.8**(1/8):.4f}")
+    print("-- exercise: e1 t0 moved 0.15 each way")
+    c = cells[(1, 0)]
+    for s in (+0.15, -0.15):
+        x = surr_cell(c, s)
+        print(f"  e1t0 Ahat {c['Ahat']:+.4f} a {c['a']:+.2f} shift {s:+.2f}: mu_new {x['mu_n']:+.2f} rho {x['rho']:.4f}  -rho Ahat {x['raw']:+.4f}  -clip Ahat {x['cl']:+.4f}  L_i {x['L']:+.4f}  {'CLIPPED' if x['clipped'] else 'raw'}  slope {x['g']:+.4f}")
+    print("-- exercise: a narrower band, set 1 at +0.05")
+    for eps in (0.1, 0.05):
+        xs = [surr_cell(cells[k], 0.05, eps=eps) for k in SET1]
+        print(f"  eps = {eps}: " + "  ".join(f"{name(k)} {x['L']:+.4f}{'*' if x['clipped'] else ''}" for k, x in zip(SET1, xs)) + f"   mean = {sum(x['L'] for x in xs)/4:+.4f}   (* = clipped term chosen, slope 0)")
+    print("-- one shared knob b, alpha 0.1, sets taken in turn (1, 2, 1, 2, ...): with and without the clip")
+    sched = lambda k: SET1 if k % 2 == 0 else SET2
+    for use_clip in (False, True):
+        w = knob_walk(sched, use_clip, 100)
+        print(f"  {'with clip' if use_clip else 'no clip  '}: " + "   ".join(f"after {k}: b {w[k][0]:+.4f} rho {min(w[k][2]):.4f}..{max(w[k][2]):.4f}" for k in (1, 4, 10, 20, 100)))
+        if use_clip:
+            tail = [x[0] for x in w[20:]]
+            print(f"     steps 20..100 with clip: b stays in [{min(tail):+.4f}, {max(tail):+.4f}];  largest rho seen {max(max(x[2]) for x in w):.4f}, smallest {min(min(x[2]) for x in w):.4f}")
+            first = next(k for k in range(100) if any(r > 1 + EPS or r < 1 - EPS for r in w[k][2]))
+            print(f"     first state with a cell outside the band: after {first} steps: " + ", ".join(f"{name(key)} {r:.4f}" for key, r in zip(cells, w[first][2]) if r > 1 + EPS or r < 1 - EPS))
+            used = sched(first)
+            xs = {key: surr_cell(cells[key], w[first][0]) for key in used}
+            print(f"     step {first + 1} uses set {1 if used is SET1 else 2}: " + "  ".join(f"{name(key)} slope {x['g']:+.4f}{' (clipped)' if x['clipped'] else ''}" for key, x in xs.items())
+                  + f"  mean {w[first][1]:+.4f}  ->  b {w[first][0]:+.4f} -> {w[first + 1][0]:+.4f}")
+        else:
+            print(f"     without clip, after 11: b {w[11][0]:+.4f}")
+    print("-- sign of Ahat (chapter 22) against sign of delta (chapter 19 used delta): " + "  ".join(
+        f"{name(k)} {'same' if (c['delta'] > 0) == (c['Ahat'] > 0) else 'DIFFERENT'}" for k, c in cells.items()))
+    print("-- lines cited")
+    show(PPO_PY, 50); show(PPO_PY, 96); show(PPO_PY, 197); show(PPO_PY, 252, 260); show(PPO_CFG, 96)
+    show(PPO_CFG, 99); show(STORE_PY, 103, 105); show(STORE_PY, 112, 114); show(AC_PY, 164)
+    show(STORE_PY, 204, 207); show(STORE_PY, 230); show(STORE_PY, 247); show(STORE_PY, 278, 279); show(PPO_PY, 288)
+
+
+def vloss_cell(V_old, R, V_new, eps=EPS):
+    """One cell of ppo.py:264-269."""
+    Vc = V_old + clipf(V_new - V_old, -eps, eps)
+    raw, cl = (V_new - R) ** 2, (Vc - R) ** 2
+    picks_clip = cl > raw
+    return dict(Vc=Vc, raw=raw, cl=cl, L=max(raw, cl), clipped=picks_clip, slope=0.0 if picks_clip else 2 * (V_new - R))
+
+
+def H_gauss(sigma):
+    return 0.5 + 0.5 * math.log(2 * math.pi) + math.log(sigma)
+
+
+def ch24():
+    print("=== chapter 24 — value loss, entropy, total loss ===")
+    name = lambda k: f"e{k[0]}t{k[1]}"
+    print("-- value loss at the first gradient step: V_new = V_old, so (V_new - R)^2 = A^2")
+    for label, keys in (("set 1", SET1), ("set 2", SET2), ("all 8", list(cells))):
+        sq = [(cells[k]["V"] - cells[k]["R"]) ** 2 for k in keys]
+        if len(keys) == 4:
+            for k, s in zip(keys, sq):
+                c = cells[k]
+                print(f"  {name(k)}: V {c['V']:.1f}  R {c['R']:+.4f}  V - R {c['V']-c['R']:+.4f} (= -A, A = {c['A']:+.4f})  square {s:.4f}  slope 2(V - R) = {2*(c['V']-c['R']):+.4f}")
+        print(f"     {label}: sum {sum(sq):.4f}  mean = {sum(sq)/len(sq):.4f}   largest share {max(sq)/sum(sq)*100:.1f} %")
+    c = cells[(0, 3)]
+    print(f"  the target holds later predictions, not its own: e0t3 R = r + gamma V_last = {c['r']} + {GAMMA} x {env[0]['V_last']} = {c['r'] + GAMMA*env[0]['V_last']:.4f} (table {c['R']:.4f});  e1t2 (done) R = r = {cells[(1,2)]['R']:.4f}")
+    print("-- the clipped form (32): V_clip = V_old + clip(V_new - V_old, -0.2, 0.2); the larger square is charged")
+    for k, vs in (((0, 0), (4.9, 4.8, 4.75, 4.5, 5.3)), ((1, 1), (1.9, 1.5, 2.5, -0.26)), ((0, 2), (3.934, 3.7))):
+        c = cells[k]
+        print(f"  {name(k)}: V_old {c['V']:.1f}  R {c['R']:+.4f}  |R - V_old| = {abs(c['A']):.4f}")
+        for v in vs:
+            x = vloss_cell(c["V"], c["R"], v)
+            print(f"     V_new {v:+.4f}: V_clip {x['Vc']:+.4f}  (V_new - R)^2 {x['raw']:.4f}  (V_clip - R)^2 {x['cl']:.4f}  charged {x['L']:.4f}  "
+                  f"{'CLIPPED slope 0' if x['clipped'] else 'raw'}  slope {x['slope']:+.4f}")
+    print("-- the stretch of V_new where the clipped term wins (slope 0): between V_clip and its mirror image about R")
+    for k, c in cells.items():
+        if abs(c["A"]) > EPS:
+            Vc = c["V"] + (EPS if c["R"] > c["V"] else -EPS)
+            lo, hi = sorted((Vc, 2 * c["R"] - Vc))
+            print(f"  {name(k)}: |A| = {abs(c['A']):.4f} > 0.2: V_clip {Vc:+.4f}, mirror {2*c['R']-Vc:+.4f}  ->  slope 0 for V_new in ({lo:+.4f}, {hi:+.4f})")
+        else:
+            print(f"  {name(k)}: |A| = {abs(c['A']):.4f} <= 0.2: R is inside the band, no such stretch")
+    print("-- entropy of the coin of chapter 4: H = -sum p log p")
+    for p in (0.5, 0.75, 0.9, 0.99, 1.0):
+        h = -sum(q * math.log(q) for q in (p, 1 - p) if q > 0)
+        print(f"  P(box 0) = {p}: H = {h:.4f}")
+    print("-- (31): H = 1/2 + 1/2 ln 2 pi + ln sigma, per joint")
+    print(f"  1/2 ln 2 pi = {0.5*math.log(2*math.pi):.4f};  1/2 + 1/2 ln 2 pi = {0.5 + 0.5*math.log(2*math.pi):.4f} (six digits {0.5 + 0.5*math.log(2*math.pi):.6f}; x 8 = {8*(0.5 + 0.5*math.log(2*math.pi)):.4f})")
+    for s in (2.0, 1.0, 0.5, 0.25, 0.1):
+        print(f"  sigma = {s}: ln sigma = {math.log(s):+.4f}  H = {H_gauss(s):+.4f}   x 8 joints = {8*H_gauss(s):+.4f}   -0.01 x 8H = {-0.01*8*H_gauss(s):+.4f}")
+    print(f"  H = 0 at sigma = exp(-(1/2 + 1/2 ln 2 pi)) = {math.exp(-(0.5 + 0.5*math.log(2*math.pi))):.4f};  halving sigma changes H by -ln 2 = {-math.log(2):.4f}")
+    print(f"  by numerical integration, sigma 0.5: -integral p log p = {integrate(lambda a: -pdf(a, 0.2) * math.log(pdf(a, 0.2))):.4f};  E[(a - mu)^2] = {integrate(lambda a: pdf(a, 0.2) * (a - 0.2) ** 2):.4f}")
+    print(f"  toy, one joint: H = {H_gauss(SIG):.4f}, -c_H H = {-0.01*H_gauss(SIG):+.6f}")
+    print("-- (35) at the first gradient step (rho = 1): slope of L_i w.r.t. ell = -Ahat (z^2 - 1); slope of -c_H H = -0.01")
+    f = {}
+    for k, c in cells.items():
+        z = (c["a"] - c["mu"]) / SIG
+        f[k] = -c["Ahat"] * (z * z - 1)
+        print(f"  {name(k)}: z {z:+.2f}  z^2 - 1 {z*z-1:+.2f}  Ahat {c['Ahat']:+.4f}  slope {f[k]:+.4f}  -> {'narrower' if f[k] > 0 else 'wider'}")
+    zs = [((c["a"] - c["mu"]) / SIG) ** 2 - 1 for c in cells.values()]
+    print(f"     mean of z^2 - 1 over the 8 cells = {sum(zs)/8:+.4f} (not 0: eight draws, all |z| < 1);  mean Ahat = {sum(c['Ahat'] for c in cells.values())/8:+.6f}")
+    for label, keys in (("set 1", SET1), ("set 2", SET2), ("all 8", list(cells))):
+        m = sum(f[k] for k in keys) / len(keys)
+        print(f"     {label}: mean surrogate slope {m:+.4f};  with entropy {m - 0.01:+.4f}")
+    c = cells[(0, 0)]
+    h = 1e-5
+    def Li(ell, c=c):
+        s = math.exp(ell)
+        lp = -0.5 * math.log(2 * math.pi) - ell - (c["a"] - c["mu"]) ** 2 / (2 * s * s)
+        return -c["Ahat"] * math.exp(lp - c["logpi_old"]) - 0.01 * (0.5 + 0.5 * math.log(2 * math.pi) + ell)
+    l0 = math.log(SIG)
+    print(f"  e0t0 by central difference (surrogate - 0.01 H): {(Li(l0 + h) - Li(l0 - h)) / (2*h):+.4f}   formula: {f[(0,0)]:+.4f} - 0.01 = {f[(0,0)] - 0.01:+.4f}")
+    g = f[(0, 0)] - 0.01
+    print(f"  e0t0 alone, alpha = 1e-3 (Tron1's starting value): ell {l0:.6f} -> {l0 - 1e-3*g:.6f}   sigma -> {math.exp(l0 - 1e-3*g):.6f}")
+    print("-- (33) at the first gradient step (rho = 1, V_new = V_old): L = L^CLIP + 1.0 L_V - 0.01 H")
+    for label, keys in (("set 1", SET1), ("set 2", SET2)):
+        Lc = sum(-cells[k]["Ahat"] for k in keys) / 4
+        Lv = sum((cells[k]["V"] - cells[k]["R"]) ** 2 for k in keys) / 4
+        print(f"  {label}: L^CLIP {Lc:+.4f}  L_V {Lv:.4f}  H {H_gauss(SIG):.4f}  ->  L = {Lc:+.4f} + {Lv:.4f} - {0.01*H_gauss(SIG):.4f} = {Lc + Lv - 0.01*H_gauss(SIG):+.4f}")
+    a_n, c_n = mlp_count([42, 512, 256, 128, 8]), mlp_count([230, 512, 256, 128, 1])
+    print(f"-- which knobs each term reaches: L^CLIP -> theta = actor {a_n:,} + logstd 8 = {a_n + 8:,};  L_V -> phi = {c_n:,};  H -> logstd 8;  optimizer holds {a_n + 8 + c_n:,}")
+    cfg = sf_ppo()
+    print("-- config: " + ", ".join(f"{k} = {cfg[k][0]} (line {cfg[k][1]})" for k in ("value_loss_coef", "use_clipped_value_loss", "clip_param", "entropy_coef")))
+    print("-- lines cited")
+    show(PPO_PY, 53, 54); show(PPO_PY, 57); show(PPO_PY, 99, 100); show(PPO_PY, 104); show(PPO_PY, 196, 198); show(PPO_PY, 216, 219); show(PPO_PY, 263, 278)
+    show(PPO_PY, 293, 294); show(AC_PY, 118); show(AC_PY, 151, 157); show(TORCH_NORMAL, 104, 105)
+    show(STORE_PY, 243, 244); show(STORE_PY, 269, 273); show(RUN_PY, 277); show(RUN_PY, 281); show(RUN_PY, 322, 323)
+    show(PPO_CFG, 94, 97); show(PPO_CFG, 100); show(STORE_PY, 201); show(PPO_PY, 221); show(PPO_PY, 244); show(PPO_PY, 287, 290); show(PPO_PY, 326, 329)
+
+
 CHAPTERS = {"01": ch01, "02": ch02, "03": ch03, "04": ch04, "05": ch05, "06": ch06, "07": ch07, "08": ch08, "09": ch09,
             "10": ch10, "11": ch11, "12": ch12, "13": ch13, "14": ch14, "15": ch15, "16": ch16, "17": ch17, "18": ch18,
-            "19": ch19, "20": ch20, "21": ch21, "22": ch22}
+            "19": ch19, "20": ch20, "21": ch21, "22": ch22, "23": ch23, "24": ch24}
 
 if __name__ == "__main__":
     for key in sys.argv[1:] or CHAPTERS:
