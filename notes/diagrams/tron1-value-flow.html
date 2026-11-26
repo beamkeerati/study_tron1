@@ -240,7 +240,7 @@
       <rect x="240" y="1324" width="520" height="64" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
       <rect x="250" y="1332" width="26" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
       <text x="263" y="1341" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">E14</text>
-      <foreignObject x="284" y="1330" width="432" height="40"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:12px;color:#2d3142;line-height:40px;">\(\displaystyle L = \frac{1}{MB}\sum \max\big(-\hat{A}\rho,\ -\hat{A}\,\mathrm{clip}(\rho,\,0.8,\,1.2)\big)\)</div></foreignObject>
+      <foreignObject x="284" y="1330" width="432" height="40"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:12px;color:#2d3142;line-height:40px;">\(\displaystyle L^{CLIP} = \frac{1}{MB}\sum \max\big(-\hat{A}\rho,\ -\hat{A}\,\mathrm{clip}(\rho,\,0.8,\,1.2)\big)\)</div></foreignObject>
       <foreignObject x="284" y="1372" width="432" height="14"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:8px;color:#7a8399;line-height:14px;"><span class="tx">ppo.py:260</span></div></foreignObject>
 
       <rect x="240" y="1420" width="520" height="64" rx="6" fill="#f5f5f5"/>
@@ -267,7 +267,7 @@
       <foreignObject x="48" y="598" width="160" height="14"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:9px;color:#7a8399;line-height:14px;"><span class="tx">→ PD 200 Hz → </span>\(\tau\)</div></foreignObject>
 
       <rect x="852" y="826.0" width="108" height="36" rx="2" fill="#f5f5f5"/>
-      <foreignObject x="852" y="826" width="108" height="18"><div xmlns="http://www.w3.org/1999/xhtml" class="fo left" style="font-size:9px;color:#4f5d75;line-height:18px;">\(\theta \leftarrow \theta - \alpha\nabla_\theta L\)</div></foreignObject>
+      <foreignObject x="852" y="826" width="108" height="18"><div xmlns="http://www.w3.org/1999/xhtml" class="fo left" style="font-size:9px;color:#4f5d75;line-height:18px;">\(\theta \leftarrow \mathrm{Adam}(\theta,\nabla_\theta L)\)</div></foreignObject>
       <foreignObject x="852" y="844" width="108" height="18"><div xmlns="http://www.w3.org/1999/xhtml" class="fo left" style="font-size:9px;color:#7a8399;line-height:18px;"><span class="th">แล้ววน E3 ใหม่ ×20</span></div></foreignObject>
 
       <line x1="40" y1="1528" x2="960" y2="1528" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>

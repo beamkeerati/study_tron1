@@ -1,6 +1,6 @@
 # 03 — Anatomy of `Isaac-Limx-SF-Blind-Flat-v0`
 
-Everything below comes from the tables `train.py` prints at startup, cross-checked
+Everything below comes from the tables the Isaac Lab managers print when `train.py` builds the environment, cross-checked
 against the source.
 
 ## Timing
@@ -21,8 +21,10 @@ One PPO iteration collects `num_envs × 24` transitions. With 2048 envs that is
 
 A single `joint_pos` term. The policy outputs joint position *offsets*; the
 implicit PD actuator turns them into torques inside PhysX. The policy never emits
-torque directly, which is what makes the ONNX portable to hardware where the PD
-runs on the motor driver.
+torque directly, which is what lets the same ONNX drive any receiver that evaluates
+PD from `q`, `Kp`, `Kd`. The MuJoCo simulator is one (`simulator.py:79-83` in
+`scripts/deploy_snapshot_2026-11-26/`); where the real robot evaluates it is not
+readable from these repos.
 
 SF has 8 joints: 2 legs × (hip roll, hip pitch, knee, ankle pitch).
 
@@ -30,7 +32,7 @@ SF has 8 joints: 2 legs × (hip roll, hip pitch, knee, ankle pitch).
 
 This is the part worth internalising.
 
-### `policy` — 36 dims (what ships to the robot)
+### `policy` — 36 dims (what the exported policy reads)
 
 | Term | Dims |
 |---|---|
@@ -43,10 +45,13 @@ This is the part worth internalising.
 | `gait_command` | 4 |
 
 Note what is **absent**: base linear velocity, terrain height, contact forces.
-An IMU plus joint encoders can produce every one of these on real hardware.
-"Blind" in the task name means exactly this.
+An IMU plus joint encoders can produce the 22 measured values on real hardware; the
+other 14 (`last_action`, `gait_phase`, `gait_command`) are the program's own.
+"Blind" in the task name refers to the missing terrain height only
+(`limx_solefoot_env_cfg.py:76-78` removes the height scanner from the scene and sets `heights` to `None` in both groups; only the critic group defines that term, `limx_base_env_cfg.py:201`); the
+missing velocity and contact terms are the actor/critic split.
 
-### `critic` — 227 dims (privileged, simulation only)
+### `critic` — 227 dims (privileged: not given to the actor, not exported)
 
 Adds `base_lin_vel`, joint torque/acceleration, foot linear velocity and contact
 force, and five terms named after the robot's physical parameters: `robot_mass`
@@ -75,8 +80,10 @@ gains. The critic is discarded at deployment.
 ### `obsHistory` — 10 × 36
 
 The last 10 policy observations, flattened to 360 and fed to an encoder MLP
-`360 → 256 → 128 → 3`. Its 3-dim latent is concatenated to the 36-dim
-observation, so the actor's real input is 42:
+`360 → 256 → 128 → 3`. Its 3-dim latent is concatenated with the 36-dim
+observation and the 3 values of the `commands` group (`velocity_commands`,
+`limx_base_env_cfg.py:226-232`), so the actor's real input is 3 + 36 + 3 = 42
+(`ppo.py:137-139`):
 
 ```
 actor : 42  -> 512 -> 256 -> 128 -> 8     (ELU)
@@ -84,10 +91,11 @@ critic: 230 -> 512 -> 256 -> 128 -> 1     (227 + 3 commands)
 ```
 
 The encoder is LimX's addition on top of stock rsl_rl (`modules/mlp_encoder.py`),
-and `EncoderCfg.output_detach=True` stops the policy gradient from flowing back
-into it. A 3-dim latent from a history of proprioception is almost certainly a
-**base linear velocity estimator** — the quantity the policy is not allowed to
-observe directly.
+and `EncoderCfg.output_detach=True` cuts the graph between the policy loss and the
+encoder (its parameters are not in the main optimizer either, `ppo.py:85`). The
+latent is a **base linear velocity estimator**: the encoder's only loss is the MSE
+against the first three critic values, `base_lin_vel` (`ppo.py:313-315`) — the
+quantity the policy is not allowed to observe directly.
 
 ## Rewards — 20 terms
 
@@ -110,8 +118,8 @@ its logged episode value is negative (−0.013 in the logger's unit, episode sum
 ÷ 20 s, mean of the last 20 iterations).
 
 The effort group is the natural hook for energy-efficiency work: `pen_joint_power_l1`
-is a mechanical-power L1 penalty, and its weight is three orders of magnitude
-below the tracking rewards.
+is a mechanical-power L1 penalty, and its weight is about five orders of magnitude
+below the tracking weights (2e-5 against 1.0 and 2.5).
 
 ## Commands — 2 terms
 
@@ -166,4 +174,4 @@ first iterations — it drops the LR until the measured KL approaches the target
 `limx_solefoot_env_cfg.py` also defines `SFBlindRoughEnvCfg`, `SFBlindStairEnvCfg`,
 `SFFlatEnvCfg`, `SFRoughEnvCfg`, `SFStairEnvCfg` (+ `_PLAY` variants). Only the
 Blind-Flat pair is passed to `gym.register` in `robots/__init__.py`.
-Registering rough/stair terrain is a two-line change — a good first modification.
+Registering rough/stair terrain takes one more `gym.register` block per task (9 lines each, `robots/__init__.py:73-81`) — a good first modification, not tried here.

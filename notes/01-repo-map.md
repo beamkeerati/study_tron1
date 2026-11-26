@@ -17,10 +17,10 @@ task ID (`Isaac-Limx-SF-Blind-Flat-v0`, registered at `robots/__init__.py:74`).
 | `PF` | Point foot — no ankle, the leg ends in a point |
 | `SF` | Sole foot — has a foot plate and an ankle pitch joint |
 | `WF` | Wheel foot — the leg ends in a driven wheel |
-| `WL` | Wheel-legged (older `P311D` / `P311E` platform) |
+| `WL` | Wheel-legged quadruped, 16 actuated joints (models `WL_P311D`, `WL_P311E`). It appears in `tron1-robot-description` (URDF + SRDF) and in `robot-visualization` (wheel-legged launch files) — READMEs read 2026-11-26 — and is not a `ROBOT_TYPE` value of the simulate, deploy or training repos |
 
 Model names: `PF_TRON1A`, `PF_TRON1B`, `SF_TRON1A`, `SF_TRON1B`, `WF_TRON1A`,
-`WF_TRON1B`, plus the older `PF_P441A/B/C/C2`.
+`WF_TRON1B`, plus `PF_P441A/B/C/C2`.
 
 ## The stack
 
@@ -45,7 +45,7 @@ Model names: `PF_TRON1A`, `PF_TRON1B`, `SF_TRON1A`, `SF_TRON1B`, `WF_TRON1A`,
 │  tron1-gazebo-ros2   Gazebo + Iron                       │
 └──────────────────────────────────────────────────────────┘
 ┌─ Foundation ─────────────────────────────────────────────┐
-│  limxsdk-lowlevel        network client library          │
+│  limxsdk-lowlevel        SDK both controller and sim use │
 │  tron1-robot-description URDF / xacro / MJCF / meshes    │
 └──────────────────────────────────────────────────────────┘
 

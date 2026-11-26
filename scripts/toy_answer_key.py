@@ -118,3 +118,16 @@ print("logN_i =", [round(x, 4) for x in lp8])
 print(f"sum log pi_old = {S_old:.4f}   pi = {math.exp(S_old):.5f}   sum log pi_new = {S_new:.4f}   rho = {rho8:.4f}")
 print(f"L^CLIP (Ahat {Ahat8:+.4f}) = {L8:+.4f}   dL/dmu_i = {[round(x, 3) for x in dL8]}")
 print(f"H x8 = {8*H:.4f}   KL (8 dims) = {KL8:.3f}")
+
+# --- first gradient step on ell at e0t0 (glossary §8.4, note 06 §3.4, equation (35)) ---
+# rho = 1 at the first step.  Equation (12) moves ell by alpha * gradient; the code steps with Adam, whose
+# first step is alpha long whatever the gradient, and rule (37) has already multiplied lr by 1.5 by then
+# (kl = log(1 + 1e-5) per joint > 0 and < 0.005 at the first mini-batch: ppo.py:224, :236-244, :290).
+print("\n--- first step on ell at e0t0: equation (12) vs what the code does ---")
+z00 = cells[(0, 0)]["eps"]
+g_ell = -cells[(0, 0)]["Ahat"] * (z00 ** 2 - 1) - 0.01
+ell0 = math.log(SIGMA)
+print(f"dL/d ell = surrogate {-cells[(0, 0)]['Ahat'] * (z00 ** 2 - 1):+.4f} + entropy -0.01 = {g_ell:+.4f}")
+print(f"equation (12), alpha 1e-3:      ell {ell0:.6f} -> {ell0 - 1e-3 * g_ell:.6f}   sigma {math.exp(ell0 - 1e-3 * g_ell):.6f}")
+print(f"Adam first step, alpha 1e-3:    ell -> {ell0 - 1e-3:.6f}   sigma {math.exp(ell0 - 1e-3):.6f}")
+print(f"Adam first step, alpha 1.5e-3:  ell -> {ell0 - 1.5e-3:.6f}   sigma {math.exp(ell0 - 1.5e-3):.6f}   (kl at the first mini-batch, 8 joints: {8 * math.log(1 + 1e-5):.2e})")

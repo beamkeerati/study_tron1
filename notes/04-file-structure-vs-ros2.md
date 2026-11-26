@@ -147,7 +147,7 @@ parameterises it. Change a weight → config. Change what is computed → `mdp/`
 | Domain randomisation, tune or disable `push_robot` (it is already on — see note 03) | `EventsCfg` |
 | Episode length, `sim.dt`, decimation | `SFEnvCfg.__post_init__` |
 | Terrain | `cfg/SF/terrains_cfg.py` + the env variant class |
-| Robot PD gains, joint limits, initial pose | `assets/config/solefoot_cfg.py` |
+| Robot PD gains (nominal — rescaled ×[0.5, 2] at every reset, see note 03), joint limits, default pose (the SF task sets `init_state.joint_pos` again at `limx_solefoot_env_cfg.py:32-39`) | `assets/config/solefoot_cfg.py` |
 | PPO hyper-parameters, network sizes, encoder | `agents/limx_rsl_rl_ppo_cfg.py` |
 | **The PPO algorithm itself** | `rsl_rl/rsl_rl/algorithm/ppo.py` |
 | The training loop / logging | `rsl_rl/rsl_rl/runner/on_policy_runner.py` |
@@ -164,18 +164,18 @@ rsl_rl/rsl_rl/
 ├── algorithm/ppo.py            333 lines
 │     .act()          sample action, store the transition
 │     .process_env_step()  reward/done bookkeeping
-│     .compute_returns()   GAE
+│     .compute_returns()   evaluates the last value, then calls the storage (:176-178)
 │     .update()        the surrogate loss, KL-adaptive LR, backward pass
 ├── runner/on_policy_runner.py  392 lines — the outer loop and tensorboard logging
 ├── modules/actor_critic.py     192 lines — networks, distribution, entropy
 ├── modules/mlp_encoder.py      127 lines — LimX's history encoder
-└── storage/rollout_storage.py  the buffer and minibatch generator
+└── storage/rollout_storage.py  the buffer, GAE + advantage normalisation (compute_returns, :187-207), minibatch generator
 ```
 
 Concrete places to start:
 
 - a new loss term (multi-objective, energy) → `PPO.update()` in `algorithm/ppo.py`
-- change how the advantage is formed → `compute_returns()`
+- change how the advantage is formed → `RolloutStorage.compute_returns()` in `storage/rollout_storage.py`
 - a different policy head (recurrent, mixture) → `modules/actor_critic.py`
 - extra scalars in tensorboard → `on_policy_runner.py`
 
