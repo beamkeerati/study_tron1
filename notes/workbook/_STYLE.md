@@ -91,6 +91,7 @@
 2. เปิดโค้ดทุกบรรทัดที่จะอ้าง
 3. เพิ่มตัวเลขของแบบฝึกหัดใน `scripts/workbook_answer_key.py` แล้วรัน
 4. เขียนบท
-5. `python3 scripts/workbook_backmatter.py` แล้ว `python3 scripts/workbook_to_pdf.py` ต้องได้ `mjx-merror 0`, `wider-than-page 0`, ไม่มี "Thai inside math"
+5. `python3 scripts/workbook_backmatter.py` แล้ว `python3 scripts/workbook_to_pdf.py` ต้องได้ `mjx-merror 0`, `wider-than-page 0`, `specks at the foot of a page: 0`, ไม่มี "Thai inside math"
 6. เปิดดูหน้าจริง (`pdftoppm -r 80 -png`)
 7. รวมหลายบทแล้วเรียก `notes-reviewer` หนึ่งครั้ง แก้ตามที่พบ แล้ว commit พร้อม PDF
+8. เมื่อแก้บทที่มีอยู่แล้ว รัน `python3 scripts/workbook_audit.py` ซึ่งตรวจสิ่งที่เห็นได้เฉพาะเมื่อดูทั้งเล่ม คือคำที่ใช้ก่อนบทที่สอน ประโยคที่อ้างบทอื่น ตัวเลขที่ปรากฏหลายบท และข้อตกลงเรื่องคำ ผลของมันเป็นรายการให้ตัดสิน ข้อตกลงของการอ่านทั้งเล่มอยู่ในหัวข้อ*ผลของกลุ่มงานที่ 8* ของ `_OUTLINE.md`

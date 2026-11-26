@@ -105,13 +105,13 @@ conda env `tron1` มีรายการจด 7 รายการ คอล�
 | `bipedal_locomotion` | `tron1-rl-isaaclab/exts/bipedal_locomotion/bipedal_locomotion` |
 | `rsl_rl` | `tron1-rl-isaaclab/rsl_rl/rsl_rl` |
 
-รายการเหล่านี้อ่านได้จากโฟลเดอร์ `site-packages` ของ env แต่ละแพ็กเกจมีไฟล์หนึ่งไฟล์ที่ชื่อขึ้นต้นด้วย `__editable__` และลงท้ายด้วย `_finder.py` ตัวแปร `MAPPING` ในไฟล์นั้นคือรายการจด
+รายการเหล่านี้อ่านได้จากโฟลเดอร์ `site-packages` ของ conda env แต่ละแพ็กเกจมีไฟล์หนึ่งไฟล์ที่ชื่อขึ้นต้นด้วย `__editable__` และลงท้ายด้วย `_finder.py` ตัวแปร `MAPPING` ในไฟล์นั้นคือรายการจด
 
 การติดตั้งสองแบบให้ผลต่างกันดังนี้
 
 | | ติดตั้งแบบปกติ (Isaac Sim) | editable install (Isaac Lab และโปรเจกต์) |
 | --- | --- | --- |
-| ไฟล์โค้ดอยู่ที่ | ใน `site-packages` ของ env | ในโฟลเดอร์ที่ clone มา |
+| ไฟล์โค้ดอยู่ที่ | ใน `site-packages` ของ conda env | ในโฟลเดอร์ที่ clone มา |
 | เมื่อแก้ไฟล์ในโฟลเดอร์ที่ clone มา | ไม่มีโฟลเดอร์เช่นนั้น | มีผลในการรันครั้งถัดไป |
 | เมื่อย้ายโฟลเดอร์ที่ clone มา | ไม่เกี่ยว | รายการจดชี้ผิดที่ ต้องติดตั้งใหม่ |
 
@@ -120,10 +120,10 @@ conda env `tron1` มีรายการจด 7 รายการ คอล�
 >
 > แพ็กเกจนี้เป็น editable install Python จึงอ่านไฟล์จากโฟลเดอร์ต้นทางโดยตรงทุกครั้งที่รัน
 >
-> คำตอบคือไม่ต้องทำอะไรอีก เมื่อรัน `train.py` ครั้งถัดไป ค่า 50.0 ถูกใช้ทันที ส่วนใน ROS 2 ถ้าค่านี้อยู่ในโค้ด C++ เราต้อง `colcon build` ใหม่ก่อน
+> คำตอบคือไม่ต้องทำอะไรอีก เมื่อรัน `train.py` ครั้งถัดไป ค่า 50.0 ถูกอ่านทันที (บทที่ 29 แสดงว่าตอนเทรน ค่าที่อ่านได้นี้ยังถูกคูณด้วยตัวเลขสุ่มอีกชั้นหนึ่ง) ส่วนใน ROS 2 ถ้าค่านี้อยู่ในโค้ด C++ เราต้อง `colcon build` ใหม่ก่อน
 
-> [!WARNING] แพ็กเกจ `rsl_rl` ใน env นี้ไม่ใช่ตัวเดียวกับบน PyPI
-> แพ็กเกจ `rsl_rl` ที่ env นี้ใช้ คือโฟลเดอร์ `tron1-rl-isaaclab/rsl_rl/` เวอร์ชัน 2.0.2 (`rsl_rl/setup.py:8`) ซึ่งเป็นสำเนาที่ LimX แก้ไขแล้ว ร่องรอยหนึ่งอยู่ที่ `train.py:49-50` บรรทัดเดิมที่ import จากโมดูลชื่อ `rsl_rl.runners` ถูกปิดไว้ และบรรทัดที่ใช้จริง import จากโมดูลชื่อ `rsl_rl.runner`
+> [!WARNING] แพ็กเกจ `rsl_rl` ใน conda env นี้ไม่ใช่ตัวเดียวกับบน PyPI
+> แพ็กเกจ `rsl_rl` ที่ conda env นี้ใช้ คือโฟลเดอร์ `tron1-rl-isaaclab/rsl_rl/` เวอร์ชัน 2.0.2 (`rsl_rl/setup.py:8`) ซึ่งเป็นสำเนาที่ LimX แก้ไขแล้ว ร่องรอยหนึ่งอยู่ที่ `train.py:49-50` บรรทัดเดิมที่ import จากโมดูลชื่อ `rsl_rl.runners` ถูกปิดไว้ และบรรทัดที่ใช้จริง import จากโมดูลชื่อ `rsl_rl.runner`
 >
 > บน PyPI มีแพ็กเกจชื่อ `rsl-rl-lib` ซึ่งใช้ชื่อ import เดียวกัน คือ `rsl_rl` ถ้าติดตั้งแพ็กเกจนั้นลง env นี้ Python จะพบมันก่อนรายการจด และโค้ดของ LimX จะไม่ถูกใช้
 
@@ -185,7 +185,7 @@ registry ต่างจาก ament index ตรงที่มันถูก�
 | 4 | `tasks/locomotion/__init__.py:3` | `from . import robots` |
 | 5 | `robots/__init__.py:26-91` | `gym.register` ทำงาน 6 ครั้ง |
 
-ถ้าเปิด Python ใน env `tron1` แล้วถาม registry โดยยังไม่ import โปรเจกต์ เราจะไม่พบ task ID ของ LimX เลยสักตัว
+ถ้าเปิด Python ใน conda env `tron1` แล้วถาม registry โดยยังไม่ import โปรเจกต์ เราจะไม่พบ task ID ของ LimX เลยสักตัว
 
 ### config กับ implementation
 
@@ -338,6 +338,9 @@ config ของงานที่เราใช้ไม่ได้จบใ�
 | `isaaclab/isaaclab/managers/manager_base.py` | ส่วนที่ manager ทุกหมวดใช้ร่วมกัน |
 | `isaaclab/isaaclab/managers/reward_manager.py` | manager ของหมวดการให้คะแนน |
 | `isaaclab/isaaclab/managers/observation_manager.py` | manager ของหมวดสิ่งที่ตัวควบคุมรับเข้ามา |
+| `isaaclab/isaaclab/managers/event_manager.py` | manager ของหมวดเหตุการณ์ที่จงใจทำให้เกิด |
+| `isaaclab/isaaclab/envs/mdp/events.py` | implementation สำเร็จรูปของเหตุการณ์ที่จงใจทำให้เกิด (ชื่อซ้ำกับ `events.py` ของโปรเจกต์) |
+| `isaaclab/isaaclab/assets/articulation/articulation.py` | คลาสของหุ่นในตัวจำลอง ซึ่งถือค่าของข้อต่อและของชิ้นส่วน |
 | `isaaclab/isaaclab/envs/mdp/rewards.py` | implementation สำเร็จรูปของการให้คะแนน |
 | `isaaclab/isaaclab/envs/mdp/terminations.py` | implementation สำเร็จรูปของเงื่อนไขที่ทำให้หยุดแล้วเริ่มใหม่ |
 | `isaaclab/isaaclab/envs/mdp/commands/velocity_command.py` | implementation สำเร็จรูปของคำสั่งความเร็ว |
@@ -345,7 +348,7 @@ config ของงานที่เราใช้ไม่ได้จบใ�
 | `isaaclab_tasks/isaaclab_tasks/utils/parse_cfg.py` | การอ่าน config ออกจาก registry |
 | `isaaclab_rl/isaaclab_rl/rsl_rl/vecenv_wrapper.py` | ตัวเชื่อมระหว่างงานกับ `rsl_rl` |
 
-บทหลัง ๆ อ้างไฟล์อีกสองไฟล์ที่ไม่ได้อยู่ใน repo ใดเลย คือ `adam.py` และ `normal.py` ทั้งสองเป็นของไลบรารี PyTorch อยู่ใน `site-packages/torch/optim/` และ `site-packages/torch/distributions/` ของ conda env
+บทหลัง ๆ อ้างไฟล์อีกสี่ไฟล์ที่ไม่ได้อยู่ใน repo ใดเลย คือ `adam.py`, `optimizer.py`, `clip_grad.py` และ `normal.py` ทั้งสี่เป็นของไลบรารี PyTorch สองไฟล์แรกอยู่ใน `site-packages/torch/optim/` ไฟล์ที่สามอยู่ใน `site-packages/torch/nn/utils/` และไฟล์ที่สี่อยู่ใน `site-packages/torch/distributions/` ของ conda env ส่วนบทที่ 30 อ้างไฟล์ของชั้น deploy จากสำเนาที่บทนั้นบอกที่อยู่
 
 > [!WARNING] ชื่อไฟล์ที่ซ้ำกัน
 > ชื่อไฟล์เปล่า ๆ ชี้ได้มากกว่าหนึ่งไฟล์ในสามกรณี เล่มนี้ใช้กติกาต่อไปนี้
@@ -377,7 +380,7 @@ task ID ถูกใช้สามครั้ง คือที่ `:77-79`, 
 > `train.py` แบ่งเป็นสองช่วงที่บรรทัด `:42` ช่วงบน import ได้เฉพาะของที่ไม่ต้องใช้ตัวจำลอง ช่วงล่าง import ส่วนที่เหลือ หลังจากบรรทัด `:39-40` เปิด Isaac Sim แล้ว นี่คือสาเหตุที่ `import isaaclab.envs` และ `import bipedal_locomotion` ล้มเหลวในตารางของหัวข้อปัญหา ตอนนั้นยังไม่มีใครเปิด Isaac Sim
 
 > [!WARNING] อย่า source ROS 2 ใน shell ที่ใช้เทรน
-> ในเครื่องที่มี ROS 2 ติดตั้งอยู่ด้วย การ `source` ไฟล์ `setup.bash` ของ ROS 2 จะใส่ path ของแพ็กเกจ Python ของ ROS ลงในตัวแปร `PYTHONPATH` ถ้า ROS นั้นใช้ Python คนละเวอร์ชันกับ 3.10 ของ env `tron1` เช่น ROS 2 Jazzy ซึ่งใช้ Python 3.12 การ import จะล้มเหลว และถึงเวอร์ชันจะตรงกัน แพ็กเกจของ ROS ก็อาจถูกพบก่อนแพ็กเกจของ env ให้เปิด terminal ใหม่ที่ไม่ได้ source ROS สำหรับการเทรน
+> ในเครื่องที่มี ROS 2 ติดตั้งอยู่ด้วย การ `source` ไฟล์ `setup.bash` ของ ROS 2 จะใส่ path ของแพ็กเกจ Python ของ ROS ลงในตัวแปร `PYTHONPATH` ถ้า ROS นั้นใช้ Python คนละเวอร์ชันกับ 3.10 ของ conda env `tron1` เช่น ROS 2 Jazzy ซึ่งใช้ Python 3.12 การ import จะล้มเหลว และถึงเวอร์ชันจะตรงกัน แพ็กเกจของ ROS ก็อาจถูกพบก่อนแพ็กเกจของ conda env ให้เปิด terminal ใหม่ที่ไม่ได้ source ROS สำหรับการเทรน
 
 > [!NOTE]
 > `train.py` เขียนผลการเทรนลงโฟลเดอร์ `logs/rsl_rl/` นับจากโฟลเดอร์ที่เรายืนอยู่ตอนพิมพ์คำสั่ง (`train.py:88-89`) ให้รันจาก `tron1-rl-isaaclab/` ทุกครั้ง ผลของทุกรอบจะได้อยู่ที่เดียวกัน

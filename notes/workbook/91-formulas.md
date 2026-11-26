@@ -30,15 +30,15 @@
 
 | สมการ | สูตร | ทำอะไร | บท |
 | --- | --- | --- | --- |
+| (30) | $D_{KL}\big(\pi_{old} \,\Vert\, \pi_{new}\big) = \sum_{i}\left[\ln\frac{\sigma_{n,i}}{\sigma_{o,i}} + \frac{\sigma_{o,i}^2 + (\mu_{o,i}-\mu_{n,i})^2}{2\,\sigma_{n,i}^2} - \frac12\right]$ | วัดว่าระฆังขยับไปเท่าไร แล้วปรับ $\alpha$ | 26 |
+| (37) | ถ้า KL เฉลี่ยเกิน 0.02 หาร $\alpha$ ด้วย 1.5 ถ้าต่ำกว่า 0.005 คูณด้วย 1.5 โดยอยู่ในช่วง $10^{-5}$ ถึง $10^{-2}$ |  | 26 |
 | (21) | $\rho_t = \frac{\pi_{new}(a_t \mid s_t)}{\pi_{old}(a_t \mid s_t)} = \exp\!\big(\log\pi_{new}(a_t \mid s_t) - \log\pi_{old}(a_t \mid s_t)\big)$ | ระฆังใหม่ชอบ action เดิมมากขึ้นกี่เท่า | 18 |
 | (29) | $L^{CLIP} = \text{mean}\Big[\max\big(-\rho_t\,\hat A_t,\ \ -\text{clip}(\rho_t,\ 1-\epsilon,\ 1+\epsilon)\,\hat A_t\big)\Big]$ | loss ของ policy | 23 |
 | (32) | $L_V = \text{mean}\Big[\max\big((V_{new} - R_t)^2,\ (V_{clip} - R_t)^2\big)\Big]$ | loss ของ critic | 24 |
 | (31) | $H = \sum_{i}\Big[\tfrac12 + \tfrac12\ln 2\pi + \ln\sigma_i\Big]$ | ความกว้างของระฆัง | 24 |
 | (33) | $L = L^{CLIP} + c_V\,L_V - c_H\,H$ | รวมสามพจน์เป็นตัวเลขตัวเดียว | 24 |
-| (30) | $D_{KL}\big(\pi_{old} \,\Vert\, \pi_{new}\big) = \sum_{i}\left[\ln\frac{\sigma_{n,i}}{\sigma_{o,i}} + \frac{\sigma_{o,i}^2 + (\mu_{o,i}-\mu_{n,i})^2}{2\,\sigma_{n,i}^2} - \frac12\right]$ | วัดว่าระฆังขยับไปเท่าไร แล้วปรับ $\alpha$ | 26 |
-| (37) | ถ้า KL เฉลี่ยเกิน 0.02 หาร $\alpha$ ด้วย 1.5 ถ้าต่ำกว่า 0.005 คูณด้วย 1.5 โดยอยู่ในช่วง $10^{-5}$ ถึง $10^{-2}$ |  | 26 |
-| (G) | $\frac{\partial L_i}{\partial\mu} = -\hat A_t\ \rho_t\ \frac{a_t - \mu}{\sigma^2}$ | ความชันที่ไหลถึง $\mu$ และ $\ell$ | 23 |
-| (35) | $\frac{\partial L_i}{\partial\ell} = -\hat A_t\ \rho_t\ (z^2 - 1), \qquad \frac{\partial H}{\partial\ell} = 1$ |  | 24 |
+| (G) | $\frac{\partial L_i}{\partial\mu} = -\hat A_t\ \rho_t\ \frac{a_t - \mu}{\sigma^2}$ | ความชันที่ไหลถึง $\mu$ | 23 |
+| (35) | $\frac{\partial L_i}{\partial\ell} = -\hat A_t\ \rho_t\ (z^2 - 1), \qquad \frac{\partial H}{\partial\ell} = 1$ | ความชันที่ไหลถึง $\ell$ จาก $L^{CLIP}$ และจาก $H$ | 24 |
 | (36) | $\theta \leftarrow \theta - \alpha\,\frac{\hat m_k}{\sqrt{\hat v_k} + \texttt{eps}}$ | Adam ก้าวลูกบิดทุกตัว | 25 |
 
 ### สมการที่มีเลขทั้งหมด

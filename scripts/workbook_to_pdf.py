@@ -26,7 +26,8 @@ Content conventions (see notes/workbook/_STYLE.md):
   <!-- เฉลย -->    everything after this line in a chapter file moves to the answer key
 
 Checks printed after every build: mjx-merror (must be 0), elements wider than the text block,
-chapters missing INTRO/SUMMARY.
+chapters missing INTRO/SUMMARY, and specks at the foot of a page (a Thai tone mark that Chrome painted on the page
+before its heading; scripts/workbook_audit.py `dots`).
 
 Usage (from anywhere):  python3 scripts/workbook_to_pdf.py [--keep-html]
 Needs: pip install --user markdown ; google-chrome ; poppler-utils ; fonts-tlwg-laksaman, fonts-noto.
@@ -157,10 +158,13 @@ section.chapter { break-before: page; }
 h2.chapter { display: inline-block; position: relative; font-size: 21px; line-height: 1.4; font-weight: bold; margin: 0 0 18px; padding: 7px 16px 6px;
              background: #eceff1; border: 1.3px solid #37474f; border-radius: 8px; break-after: avoid; }
 .pm { position: absolute; left: 0; top: 0; font-size: 1px; line-height: 1px; color: transparent; }
-h3 { font-size: 17.5px; line-height: 1.4; margin: 28px 0 8px; break-after: avoid; }
+/* Space above a heading is padding, not margin. At the top of a page Chrome drops the margin, and the upper tone mark of a
+   stacked Thai cluster, which rises above the line box, was then painted at the foot of the page before (12 pages of the
+   2026-11-26 build). Padding stays with the box, so the mark stays on its own page. */
+h3 { font-size: 17.5px; line-height: 1.4; margin: 16px 0 8px; padding-top: 12px; break-after: avoid; }
 h3 .secno { color: var(--accent); margin-right: 10px; }
-h3.exh { text-decoration: underline; text-underline-offset: 4px; font-size: 16px; margin-top: 30px; }
-h4 { font-size: 15px; margin: 18px 0 6px; color: #1a4d7a; break-after: avoid; }
+h3.exh { text-decoration: underline; text-underline-offset: 4px; font-size: 16px; margin-top: 18px; }
+h4 { font-size: 15px; margin: 8px 0 6px; padding-top: 10px; color: #1a4d7a; break-after: avoid; }
 
 /* ---- tables: open, compact; a short table is one unit ---- */
 table { border-collapse: collapse; width: 100%; margin: 0.2em 0 1.2em; font-size: 0.93em; line-height: 1.5;
@@ -418,7 +422,16 @@ def main():
     bad = thai_in_math(store)
     for b in bad:
         print('  Thai inside math: ' + re.sub(r'\s+', ' ', b)[:100])
-    if bad or err or missing or not over or over.group(1) != '0':
+    # a tone mark painted on the page before its heading (see the h3 rule in CSS); needs Pillow, skipped without it
+    specks = []
+    try:
+        sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+        from workbook_audit import dots
+        specks = dots(pdf, show=False)
+        print(f'  specks at the foot of a page: {len(specks)}' + ''.join(f'  p.{n}' for n, *_ in specks))
+    except (ImportError, SystemExit):
+        print('  specks at the foot of a page: not checked (Pillow missing)')
+    if bad or err or missing or specks or not over or over.group(1) != '0':
         sys.exit(1)
 
 

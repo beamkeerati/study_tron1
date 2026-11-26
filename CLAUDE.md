@@ -107,7 +107,10 @@ it fails on a MathJax error, on anything wider than the text block, and on Thai 
 math). Everything above applies — glossary wording, global equation numbers, verified
 citations, the reviewer — plus two things of its own: a chapter may use only terms
 taught by an earlier chapter (`_OUTLINE.md` lists them), and every exercise answer
-comes from `scripts/workbook_answer_key.py`. The groups of chapters are called **ส่วนที่ 1–6**, never
+comes from `scripts/workbook_answer_key.py`. After editing an existing chapter, run `python3 scripts/workbook_audit.py` — the whole-book checks (a term
+used before the chapter that teaches it, every sentence that names another chapter, numbers quoted in several
+chapters vs the answer key, the word agreements of `_OUTLINE.md`); its output is a list to judge, not a pass/fail,
+except `dots` (a tone mark painted on the page before its heading), which the PDF build runs and fails on. The groups of chapters are called **ส่วนที่ 1–6**, never
 "ภาค", and the book uses Arabic digits only, no Thai numerals (owner's instruction, 2026-11-26).
 
 ### Diagrams

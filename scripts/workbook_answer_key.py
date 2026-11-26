@@ -1638,6 +1638,14 @@ def ch24():
     print("-- lines cited")
     show(PPO_PY, 53, 54); show(PPO_PY, 57); show(PPO_PY, 99, 100); show(PPO_PY, 104); show(PPO_PY, 196, 198); show(PPO_PY, 216, 219); show(PPO_PY, 263, 278)
     show(PPO_PY, 293, 294); show(AC_PY, 118); show(AC_PY, 151, 157); show(TORCH_NORMAL, 104, 105)
+    print("-- real runs under logs/ (outside git): which way sigma went (Policy/mean_noise_std, on_policy_runner.py:284)")
+    runs = training_runs()
+    if not runs:
+        print("  skipped: no logs/ folder")
+    for nm, n_env, max_it, sc in runs:
+        sd = [v for _, v in sc["Policy/mean_noise_std"]]
+        down = sum(1 for a_, b_ in zip(sd, sd[1:]) if b_ < a_)
+        print(f"  {nm}: {n_env} envs, {len(sd)} iterations: mean sigma {sd[0]:.4f} -> {sd[-1]:.4f};  fell in {down} of {len(sd) - 1} consecutive pairs")
     show(STORE_PY, 243, 244); show(STORE_PY, 269, 273); show(RUN_PY, 277); show(RUN_PY, 281); show(RUN_PY, 322, 323)
     show(PPO_CFG, 94, 97); show(PPO_CFG, 100); show(STORE_PY, 201); show(PPO_PY, 221); show(PPO_PY, 244); show(PPO_PY, 287, 290); show(PPO_PY, 326, 329)
 

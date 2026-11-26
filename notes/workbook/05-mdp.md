@@ -207,7 +207,7 @@ command ไม่ใช่ค่าจากเซนเซอร์ แต่ p
 
 | ช่อง | ชนิด | Tron1 กรอกว่า | อ่านจาก |
 | --- | --- | --- | --- |
-| $\mathcal{S}$ | เซต | สถานะเต็มของโลกจำลอง ซึ่ง policy ได้รับเพียง observation 36 ค่า กับ command 3 ค่า เป็นจำนวนจริงทั้งหมด | `PolicyCfg` `limx_base_env_cfg.py:130-146` · `CommandsCfg` `:84` |
+| $\mathcal{S}$ | เซต | สถานะเต็มของโลกจำลอง ซึ่ง policy ได้รับเพียง observation 36 ค่า กับ command 3 ค่า และอีก 3 ค่าที่บทที่ 21 อธิบาย เป็นจำนวนจริงทั้งหมด | `PolicyCfg` `limx_base_env_cfg.py:130-146` · `CommandsCfg` `:84` |
 | $\mathcal{A}$ | เซต | $\mathbb{R}^8$ คือตัวเลขหนึ่งตัวต่อข้อต่อ | `ActionsCfg` `:113` |
 | $P(s' \mid s, a)$ | การแจกแจง | ตัวจำลองฟิสิกส์ เดิน 4 ก้าวย่อยต่อรอบ | `decimation` `:497` · `sim.dt` `:501` |
 | $R(s, a)$ | ฟังก์ชัน | ผลรวมของ 20 พจน์ | `RewardsCfg` `limx_base_env_cfg.py:368` |
