@@ -1642,9 +1642,523 @@ def ch24():
     show(PPO_CFG, 94, 97); show(PPO_CFG, 100); show(STORE_PY, 201); show(PPO_PY, 221); show(PPO_PY, 244); show(PPO_PY, 287, 290); show(PPO_PY, 326, 329)
 
 
+# ---------------------------------------------------------------- chapters 25-27: the gradient step, the KL gauge, one whole iteration
+import statistics
+import struct
+
+TORCH = pathlib.Path.home() / "anaconda3/envs/tron1/lib/python3.10/site-packages/torch"
+ADAM_PY = TORCH / "optim/adam.py"
+CLIPGRAD_PY = TORCH / "nn/utils/clip_grad.py"
+OPTIM_PY = TORCH / "optim/optimizer.py"
+TRAIN_PY = T / "scripts/rsl_rl/train.py"
+B1, B2, ADAM_EPS = 0.9, 0.999, 1e-8      # torch defaults (adam.py:37-38); ppo.py:85 passes only lr
+KNOBS = ("b", "ell", "b_V")
+ELL0 = math.log(SIG)
+
+
+def three_knobs(keys, x=(0.0, ELL0, 0.0), eps=EPS, cV=1.0, cH=0.01):
+    """ppo.py:252-278 on the cells `keys`, when three SHARED knobs sit at x = (b, ell, b_V):
+    b   = last-layer bias of the actor (chapter 14): mu_new = mu_old + b in every cell,
+    ell = logstd: sigma_new = e^ell in every cell,
+    b_V = last-layer bias of the critic, built the same way: V_new = V_old + b_V in every cell.
+    The knobs are this book's assumption (the toy table has no network); the formulas are the code's.
+    Returns the three terms, the loss, and the analytic gradient that loss.backward() would leave in .grad."""
+    b, ell, bV = x
+    s = math.exp(ell)
+    rows = []
+    for k in keys:
+        c = cells[k]
+        mu_n = c["mu"] + b
+        z = (c["a"] - mu_n) / s
+        lp = -0.5 * math.log(2 * math.pi) - ell - 0.5 * z * z
+        rho = math.exp(lp - c["logpi_old"])
+        raw, cl = -c["Ahat"] * rho, -c["Ahat"] * clipf(rho, 1 - eps, 1 + eps)
+        pc = cl > raw
+        v = vloss_cell(c["V"], c["R"], c["V"] + bV, eps)
+        rows.append(dict(key=k, rho=rho, z=z, Li=max(raw, cl), pc=pc, g_b=0.0 if pc else -c["Ahat"] * rho * z / s,
+                         g_l=0.0 if pc else -c["Ahat"] * rho * (z * z - 1), Lv=v["L"], vc=v["clipped"], g_V=v["slope"]))
+    n = len(rows)
+    Lc, Lv, H = sum(r["Li"] for r in rows) / n, sum(r["Lv"] for r in rows) / n, H_gauss(s)
+    grad = [sum(r["g_b"] for r in rows) / n, sum(r["g_l"] for r in rows) / n - cH, cV * sum(r["g_V"] for r in rows) / n]
+    return dict(rows=rows, Lc=Lc, Lv=Lv, H=H, L=Lc + cV * Lv - cH * H, grad=grad)
+
+
+def clip_grad(g, max_norm=1.0):
+    """clip_grad.py:105-109: one norm over every knob, every knob multiplied by the same coefficient."""
+    n = math.sqrt(sum(x * x for x in g))
+    coef = min(1.0, max_norm / (n + 1e-6))
+    return [x * coef for x in g], n, coef
+
+
+class AdamPy:
+    """adam.py:378-379 and :414-432 written out for a list of scalars (no weight decay, no amsgrad)."""
+    def __init__(self, n):
+        self.m, self.v, self.k = [0.0] * n, [0.0] * n, 0
+
+    def step(self, x, g, lr):
+        self.k += 1
+        out, info = [], []
+        for i in range(len(x)):
+            self.m[i] = B1 * self.m[i] + (1 - B1) * g[i]
+            self.v[i] = B2 * self.v[i] + (1 - B2) * g[i] ** 2
+            mh, vh = self.m[i] / (1 - B1 ** self.k), self.v[i] / (1 - B2 ** self.k)
+            d = -lr * mh / (math.sqrt(vh) + ADAM_EPS)
+            out.append(x[i] + d)
+            info.append(dict(m=self.m[i], v=self.v[i], mh=mh, vh=vh, d=d, ratio=mh / (math.sqrt(vh) + ADAM_EPS)))
+        return out, info
+
+
+def kl_gauss(mu_o, s_o, mu_n, s_n, guard=0.0):
+    """(30) for one joint; guard = 1e-5 reproduces the term inside the log at ppo.py:224."""
+    return math.log(s_n / s_o + guard) + (s_o ** 2 + (mu_o - mu_n) ** 2) / (2 * s_n ** 2) - 0.5
+
+
+def lr_rule(lr, kl, desired=0.01):
+    """(37) = ppo.py:238-241."""
+    if kl > desired * 2.0:
+        return max(1e-5, lr / 1.5), "cut"
+    if kl < desired / 2.0 and kl > 0.0:
+        return min(1e-2, lr * 1.5), "raise"
+    return lr, "hold"
+
+
+def toy_update(order=(SET1, SET2), epochs=2, lr=1e-3, rule=True, adam=True, clipnorm=True, max_norm=1.0):
+    """The loop of ppo.py:190-295 on the toy table: for every set, KL -> lr rule -> loss -> backward -> clip_grad_norm_ -> step.
+    The split into sets is made once and reused by every epoch (rollout_storage.py:230 is outside the loop at :251)."""
+    x, opt, log = [0.0, ELL0, 0.0], AdamPy(3), []
+    for ep in range(epochs):
+        for keys in order:
+            kl = kl_gauss(0.0, SIG, x[0], math.exp(x[1]), guard=1e-5)   # one joint, shared knobs: the same in every cell
+            act = "-"
+            if rule:
+                lr, act = lr_rule(lr, kl)
+            r = three_knobs(keys, x)
+            g, norm, coef = clip_grad(r["grad"], max_norm) if clipnorm else (list(r["grad"]), math.sqrt(sum(v * v for v in r["grad"])), 1.0)
+            if adam:
+                x_new, info = opt.step(x, g, lr)
+            else:
+                x_new, info = [xi - lr * gi for xi, gi in zip(x, g)], None
+            log.append(dict(ep=ep + 1, keys=keys, kl=kl, act=act, lr=lr, r=r, raw=list(r["grad"]), norm=norm, coef=coef, g=g, x=list(x), x_new=x_new, info=info))
+            x = x_new
+    return log, x
+
+
+def _varint(buf, i):
+    n = shift = 0
+    while True:
+        byte = buf[i]
+        i += 1
+        n |= (byte & 0x7F) << shift
+        if byte < 0x80:
+            return n, i
+        shift += 7
+
+
+def _pb(buf):
+    """Fields of one protobuf message as (field number, wire type, value) - just enough for a TensorBoard scalar."""
+    i = 0
+    while i < len(buf):
+        key, i = _varint(buf, i)
+        f, wt = key >> 3, key & 7
+        if wt == 0:
+            val, i = _varint(buf, i)
+        elif wt == 1:
+            val, i = buf[i:i + 8], i + 8
+        elif wt == 2:
+            ln, i = _varint(buf, i)
+            val, i = buf[i:i + ln], i + ln
+        elif wt == 5:
+            val, i = buf[i:i + 4], i + 4
+        else:
+            return
+        yield f, wt, val
+
+
+def tfevents_scalars(path):
+    """Every scalar in one TensorBoard event file, read with the standard library only (TFRecord framing:
+    8-byte length, 4-byte crc, payload, 4-byte crc; Event.step = field 2, Event.summary = 5, Value.tag = 1,
+    Value.simple_value = 2). Returns {tag: [(step, value), ...]}."""
+    data, pos, out = pathlib.Path(path).read_bytes(), 0, {}
+    while pos + 12 <= len(data):
+        n = struct.unpack("<Q", data[pos:pos + 8])[0]
+        rec = data[pos + 12:pos + 12 + n]
+        pos += 12 + n + 4
+        step, summ = 0, None
+        for f, wt, val in _pb(rec):
+            if f == 2 and wt == 0:
+                step = val
+            elif f == 5 and wt == 2:
+                summ = val
+        for f, wt, val in _pb(summ or b""):
+            if f == 1 and wt == 2:
+                tag = sv = None
+                for f2, wt2, v2 in _pb(val):
+                    if f2 == 1 and wt2 == 2:
+                        tag = v2.decode()
+                    elif f2 == 2 and wt2 == 5:
+                        sv = struct.unpack("<f", v2)[0]
+                if tag is not None and sv is not None:
+                    out.setdefault(tag, []).append((step, sv))
+    return out
+
+
+def training_runs():
+    """The runs under logs/ (outside git): (folder name, num_envs, max_iterations, scalars). Empty list if none."""
+    out = []
+    for d in sorted((T / "logs/rsl_rl/sf_tron_1a_flat").glob("*")):
+        ev = sorted(d.glob("events.out.tfevents.*"))
+        if not ev:
+            continue
+        n_env = int(re.search(r"num_envs: (\d+)", (d / "params/env.yaml").read_text()).group(1))
+        max_it = int(re.search(r"max_iterations: (\d+)", (d / "params/agent.yaml").read_text()).group(1))
+        out.append((d.name, n_env, max_it, tfevents_scalars(ev[0])))
+    return out
+
+
+def ckpt_optimizer():
+    """optimizer_state_dict of the newest checkpoint, read without torch: the param_groups (plain Python) and, for
+    every parameter tensor, the shape of exp_avg plus the VALUE of the 0-d `step` tensor (4 bytes from the zip)."""
+    runs = sorted((T / "logs/rsl_rl/sf_tron_1a_flat").glob("*/model_*.pt"))
+    if not runs:
+        return None, None
+
+    class Stub:
+        def __init__(self, *a, **k):
+            pass
+
+    with zipfile.ZipFile(runs[-1]) as z:
+        names = z.namelist()
+
+        class U(pickle.Unpickler):
+            def find_class(self, mod, name):
+                if name == "_rebuild_tensor_v2":
+                    def rebuild(storage, offset, size, *rest):
+                        if tuple(size) == () and storage is not None:
+                            raw = z.read(next(n for n in names if n.endswith("data/" + storage)))
+                            return struct.unpack("<f", raw[offset * 4:offset * 4 + 4])[0]
+                        return tuple(size)
+                    return rebuild
+                if name == "_rebuild_parameter":
+                    return lambda data, *rest: data
+                if name == "OrderedDict":
+                    return collections.OrderedDict
+                return Stub
+
+            def persistent_load(self, pid):
+                return pid[2]          # ('storage', type, key, location, numel) -> key
+
+        d = U(z.open(next(n for n in names if n.endswith("data.pkl")))).load()
+    return runs[-1], d["optimizer_state_dict"]
+
+
+def ch25():
+    print("=== chapter 25 — Adam and optimizer.step() ===")
+    name = lambda k: f"e{k[0]}t{k[1]}"
+    cfg = sf_ppo()
+    max_norm = cfg["max_grad_norm"][0]
+    print(f"  three shared knobs (this book's assumption): b (actor's last bias), ell (logstd), b_V (critic's last bias); start (0, {ELL0:.6f}, 0)")
+    print(f"  config: learning_rate = {cfg['learning_rate'][0]} (line {cfg['learning_rate'][1]}), max_grad_norm = {max_norm} (line {cfg['max_grad_norm'][1]});  Adam defaults: beta1 {B1}, beta2 {B2}, eps {ADAM_EPS}")
+    print("-- what loss.backward() leaves in .grad at the first gradient step: the MEAN over the set of the per-cell slopes")
+    for label, keys in (("e0 t0 alone", [(0, 0)]), ("set 1", SET1), ("set 2", SET2), ("all 8", list(cells))):
+        r = three_knobs(keys)
+        if 1 < len(keys) <= 4:
+            for row in r["rows"]:
+                print(f"     {name(row['key'])}: dL_i/dmu {row['g_b']:+.4f}   dL_i/dell {row['g_l']:+.4f}   2(V - R) {row['g_V']:+.4f}")
+        g2, norm, coef = clip_grad(r["grad"], max_norm)
+        print(f"  {label}: L = {r['L']:+.4f};  .grad (b, ell, b_V) = " + "  ".join(f"{g:+.4f}" for g in r["grad"])
+              + f";  squares " + " + ".join(f"{g*g:.4f}" for g in r["grad"]) + f" = {norm*norm:.4f}, norm {norm:.4f}, share of b_V {r['grad'][2]**2/norm**2*100:.1f} %;  coef {coef:.4f}  -> " + "  ".join(f"{g:+.4f}" for g in g2))
+    h = 1e-6
+    r0 = three_knobs(SET1)
+    num = []
+    for i in range(3):
+        xp, xm = [0.0, ELL0, 0.0], [0.0, ELL0, 0.0]
+        xp[i] += h; xm[i] -= h
+        num.append((three_knobs(SET1, xp)["L"] - three_knobs(SET1, xm)["L"]) / (2 * h))
+    print("  central difference on L of set 1: " + "  ".join(f"{g:+.4f}" for g in num) + "   (analytic " + "  ".join(f"{g:+.4f}" for g in r0["grad"]) + ")")
+    print("  1/N: the slope of the averaged L w.r.t. ONE cell's mu is 1/N of the per-cell slope: e0t0 in set 1 "
+          f"{r0['rows'][0]['g_b']:+.4f} / 4 = {r0['rows'][0]['g_b']/4:+.4f};  Tron1 N = 49152/4 = {49152//4:,}")
+    print("-- the three clips")
+    print(f"  rho: clip_param {cfg['clip_param'][0]} -> [{1-EPS}, {1+EPS}];  V: +-{cfg['clip_param'][0]};  gradient norm: max_grad_norm {max_norm}")
+    print("-- one step from set 1's .grad, alpha = 1e-3: SGD (12) against Adam (36)")
+    g_raw = r0["grad"]
+    g, norm, coef = clip_grad(g_raw, max_norm)
+    x0 = [0.0, ELL0, 0.0]
+    for label, gg in (("SGD, unclipped .grad", g_raw), ("SGD, clipped .grad", g)):
+        x1 = [xi - 1e-3 * gi for xi, gi in zip(x0, gg)]
+        print(f"  {label}: steps " + "  ".join(f"{a-b_:+.6f}" for a, b_ in zip(x1, x0)) + f"   sigma -> {math.exp(x1[1]):.6f}")
+    opt = AdamPy(3)
+    x1, info = opt.step(x0, g, 1e-3)
+    for nme, gi, inf in zip(KNOBS, g, info):
+        print(f"  Adam step 1, {nme}: g {gi:+.6f}  m {inf['m']:+.6f}  v {inf['v']:.9f}  m^ {inf['mh']:+.6f}  v^ {inf['vh']:.6f}  sqrt {math.sqrt(inf['vh']):.6f}  ratio {inf['ratio']:+.6f}  step {inf['d']:+.6f}")
+    print(f"     sigma after Adam's first step = 0.5 e^-0.001 = {math.exp(x1[1]):.6f}   (chapter 24's SGD figure, one cell: 0.499670; SGD with set 1's mean: {math.exp(ELL0 - 1e-3*g_raw[1]):.6f})")
+    print(f"     bias correction at k = 1: 1 - beta1 = {1-B1:.1f}, 1 - beta2 = {1-B2:.3f};  without it: m/sqrt(v) = {(1-B1)/math.sqrt(1-B2):.4f} x sign(g)")
+    print("  the first step for any gradient size: g/(|g| + eps) = " + "  ".join(f"g={gv:g}: {gv/(abs(gv)+ADAM_EPS):.4f}" for gv in (100.0, 1.0, 1e-4, 1e-8, 1e-9, 0.0)))
+    print("-- exercise: the first gradient step taken on set 2 instead")
+    r2 = three_knobs(SET2)
+    g2c, n2, c2 = clip_grad(r2["grad"], max_norm)
+    print("  (12), alpha 1e-3, clipped .grad: steps " + "  ".join(f"{-1e-3*gi:+.6f}" for gi in g2c) + ";   Adam: " + "  ".join(f"{-1e-3*(gi/(abs(gi)+ADAM_EPS)):+.6f}" for gi in g2c)
+          + f";   ell -> {ELL0 + 1e-3:.6f}, sigma -> {math.exp(ELL0 + 1e-3):.6f}")
+    print(f"  exercise: constant +g, third step: m3 = 0.9 x 0.19 + 0.1 = {0.9*0.19+0.1:.3f} g, 1 - 0.9^3 = {1-0.9**3:.3f}")
+    print(f"  exercise: 4 x 469,905 = {4*469905:,};  2 x 125,699 = {2*125699:,};  -0.6380/12288 = {-0.6380/12288:.7f}")
+    print("-- pure cases, any size g: constant sign, and alternating sign")
+    for label, seq in (("constant +g", lambda k: 1.0), ("alternating +g, -g", lambda k: 1.0 if k % 2 == 0 else -1.0), ("constant, g x 100", lambda k: 100.0)):
+        o, xs, ds = AdamPy(1), [0.0], []
+        for k in range(200):
+            xs, inf = o.step(xs, [seq(k)], 1.0)
+            ds.append(inf[0]["d"])
+        print(f"  {label}: steps/alpha 1..6 = " + " ".join(f"{d:+.4f}" for d in ds[:6]) + f"   net after 200 = {sum(ds):+.3f}   last two {ds[-2]:+.4f} {ds[-1]:+.4f}")
+    print(f"  alternating, steady amplitude of m = (1-beta1)/(1+beta1) g = {(1-B1)/(1+B1):.4f} g")
+    print(f"  memory: weights (1-beta) beta^j sum to 1; 1/(1-beta1) = {1/(1-B1):.0f} gradient steps, 1/(1-beta2) = {1/(1-B2):.0f} gradient steps = {1/(1-B2)/20:.0f} iterations of 20")
+    print(f"  after max_norm clipping |g_i| <= {max_norm}: one step adds at most (1-beta1) x 1 = {(1-B1)*max_norm:.1f} to m and (1-beta2) x 1 = {(1-B2)*max_norm**2:.3f} to v")
+    print("-- four gradient steps on the toy table, alpha fixed at 1e-3 (no lr rule yet), sets 1, 2, 1, 2")
+    for label, kw in (("Adam + clip_grad_norm_", dict()), ("Adam, no clip_grad_norm_", dict(clipnorm=False)), ("SGD + clip_grad_norm_", dict(adam=False))):
+        log, x = toy_update(rule=False, **kw)
+        print(f"  {label}:")
+        for i, e in enumerate(log, 1):
+            line = (f"    step {i} set {1 if e['keys'] is SET1 else 2}: .grad " + " ".join(f"{g:+.4f}" for g in e["raw"]) + f"  norm {e['norm']:.4f} coef {e['coef']:.4f}  clipped " + " ".join(f"{g:+.4f}" for g in e["g"]))
+            if e["info"]:
+                line += "  | ratio m^/sqrt(v^) " + " ".join(f"{inf['ratio']:+.4f}" for inf in e["info"])
+            line += "  | step " + " ".join(f"{a-b_:+.6f}" for a, b_ in zip(e["x_new"], e["x"]))
+            print(line)
+            if e["info"] and not kw:
+                print("         m " + " ".join(f"{inf['m']:+.6f}" for inf in e["info"]) + "   v " + " ".join(f"{inf['v']:.8f}" for inf in e["info"])
+                      + "   m^ " + " ".join(f"{inf['mh']:+.6f}" for inf in e["info"]) + "   sqrt(v^) " + " ".join(f"{math.sqrt(inf['vh']):.6f}" for inf in e["info"]))
+        print(f"    after 4: b {x[0]:+.6f}  ell {x[1]:.6f} (sigma {math.exp(x[1]):.6f})  b_V {x[2]:+.6f};   total moved " + " ".join(f"{a-b_:+.6f}" for a, b_ in zip(x, [0.0, ELL0, 0.0])))
+    print("-- the numbers an Adam optimizer carries: value, .grad, m, v per knob + one count")
+    a_n, c_n, e_n = mlp_count([42, 512, 256, 128, 8]), mlp_count([230, 512, 256, 128, 1]), mlp_count([360, 256, 128, 3])
+    print(f"  main optimizer: {a_n:,} + {c_n:,} + 8 = {a_n + c_n + 8:,} knobs in 8 + 8 + 1 = 17 tensors;  m and v: 2 x {a_n + c_n + 8:,} = {2*(a_n + c_n + 8):,} more numbers")
+    print(f"  encoder optimizer: {e_n:,} knobs in 6 tensors")
+    path, osd = ckpt_optimizer()
+    if osd:
+        st, pg = osd["state"], osd["param_groups"][0]
+        print(f"  checkpoint {path.parent.name}/{path.name}: {len(st)} tensors with state; keys {sorted(next(iter(st.values())).keys())};  step = {sorted({v['step'] for v in st.values()})};  "
+              f"lr = {pg['lr']}, betas = {pg['betas']}, eps = {pg['eps']}, weight_decay = {pg['weight_decay']}, amsgrad = {pg['amsgrad']}")
+        print("     exp_avg shapes: " + " ".join(str(v["exp_avg"]) for v in st.values()))
+    else:
+        print("  (no checkpoint under logs/: skipped)")
+    print("-- lines cited")
+    show(PPO_PY, 56); show(PPO_PY, 85); show(PPO_PY, 88, 90); show(PPO_PY, 103); show(PPO_PY, 260); show(PPO_PY, 269); show(PPO_PY, 273); show(PPO_PY, 286, 290); show(PPO_PY, 319, 321)
+    show(PPO_CFG, 100); show(PPO_CFG, 105); show(RUN_PY, 360); show(RUN_PY, 367); show(RUN_PY, 371, 372); show(TRAIN_PY, 136)
+    show(ADAM_PY, 36, 38); show(ADAM_PY, 364); show(ADAM_PY, 378, 379); show(ADAM_PY, 414, 419); show(ADAM_PY, 421); show(ADAM_PY, 430); show(ADAM_PY, 432); show(ADAM_PY, 439)
+    show(CLIPGRAD_PY, 69); show(CLIPGRAD_PY, 86); show(CLIPGRAD_PY, 94, 96); show(CLIPGRAD_PY, 105); show(CLIPGRAD_PY, 109); show(CLIPGRAD_PY, 114); show(OPTIM_PY, 917); show(OPTIM_PY, 951, 952)
+
+
+def ch26():
+    print("=== chapter 26 — KL and the learning-rate rule ===")
+    name = lambda k: f"e{k[0]}t{k[1]}"
+    cfg = sf_ppo()
+    d = cfg["desired_kl"][0]
+    print(f"  config: schedule = {cfg['schedule'][0]!r} (line {cfg['schedule'][1]}), desired_kl = {d} (line {cfg['desired_kl'][1]});  thresholds {2*d} and {d/2}")
+    print("-- the simple gauges fail: the mean of rho is 1 for any new bell; the mean of -log rho is the KL")
+    for dm, sn in ((0.05, 0.5), (0.15, 0.5), (0.05, 0.45)):
+        f_old = lambda a: pdf(a, 0.2, SIG)
+        rho = lambda a: pdf(a, 0.2 + dm, sn) / pdf(a, 0.2, SIG)
+        print(f"  e0t0's bell N(0.20, 0.5) -> N({0.2+dm:.2f}, {sn}): E_old[rho] = {integrate(lambda a: f_old(a) * rho(a)):.4f}   E_old[-log rho] = {integrate(lambda a: -f_old(a) * math.log(rho(a))):.6f}   (30) = {kl_gauss(0.2, SIG, 0.2+dm, sn):.6f}")
+    print("-- from eight sampled actions instead of the whole bell (mu shifted +0.05, sigma kept):")
+    ls = {k: -(c["s05_logpi_new"] - c["logpi_old"]) for k, c in cells.items()}
+    for k, v in ls.items():
+        c = cells[k]
+        print(f"  {name(k)}: z {(c['a']-c['mu'])/SIG:+.2f}  rho {c['s05_rho']:.4f}  -log rho {v:+.4f}")
+    zbar = sum((c["a"] - c["mu"]) / SIG for c in cells.values()) / 8
+    print(f"  mean of -log rho over the 8 cells = {sum(ls.values())/8:+.4f}   (true KL 0.0050; = 0.005 - (0.05/0.5) x mean z, mean z = {zbar:+.4f});  mean rho over the 8 cells = {sum(c['s05_rho'] for c in cells.values())/8:.4f}")
+    print("-- (30) piece by piece: E_old[(a - mu_o)^2] = sigma_o^2,  E_old[(a - mu_n)^2] = sigma_o^2 + (mu_o - mu_n)^2")
+    print(f"  by integration, old N(0.20, 0.5), mu_n = 0.25: {integrate(lambda a: pdf(a, 0.2) * (a - 0.2) ** 2):.4f} and {integrate(lambda a: pdf(a, 0.2) * (a - 0.25) ** 2):.4f}  (0.25 + 0.0025 = 0.2525)")
+    print("-- (30) values, one joint")
+    for mo, so, mn, sn in ((0.2, 0.5, 0.2, 0.5), (0.2, 0.5, 0.25, 0.5), (0.2, 0.5, 0.35, 0.5), (0.2, 0.5, 0.3, 0.5), (0.2, 0.5, 0.2, 0.45), (0.2, 0.5, 0.25, 0.45),
+                           (0.2, 0.5, 0.2, 0.25), (0.2, 0.25, 0.2, 0.5), (0.2, 0.5, 0.2, 1.0), (0.2, 0.25, 0.25, 0.25), (0.2, 1.0, 0.25, 1.0), (0.2, 0.5, 0.2, 0.55)):
+        terms = (math.log(sn / so), (so ** 2 + (mo - mn) ** 2) / (2 * sn ** 2), -0.5)
+        print(f"  N({mo}, {so}) || N({mn}, {sn}): ln {terms[0]:+.6f}  middle {terms[1]:.6f}  -0.5  =  {sum(terms):.6f}   [(dmu/sigma)^2/2 = {((mo-mn)/sn)**2/2:.6f}]")
+    print("  reversed order of the two pairs with different sigma: " + f"KL(N(.2,.5)||N(.25,.45)) = {kl_gauss(0.2,0.5,0.25,0.45):.6f},  KL(N(.25,.45)||N(.2,.5)) = {kl_gauss(0.25,0.45,0.2,0.5):.6f}")
+    print("-- where the thresholds sit: equal sigma, KL = n_joints x (dmu/sigma)^2 / 2")
+    for nj in (1, 8):
+        lo, hi = math.sqrt(2 * (d / 2) / nj), math.sqrt(2 * (2 * d) / nj)
+        print(f"  {nj} joint(s): KL = {d/2} at dmu/sigma = {lo:.4f},  KL = {2*d} at dmu/sigma = {hi:.4f};  sigma 0.5: {lo*0.5:.4f} .. {hi*0.5:.4f};  sigma 1.0: {lo:.4f} .. {hi:.4f} -> x 0.25 rad = {lo*0.25:.4f} .. {hi*0.25:.4f} rad = {math.degrees(lo*0.25):.2f} .. {math.degrees(hi*0.25):.2f} deg")
+    print("  sigma only (mu kept): KL(sigma_o || sigma_n) for sigma_n/sigma_o = " + "  ".join(f"{q}: {kl_gauss(0, 1, 0, q):.5f}" for q in (0.8, 0.9, 0.95, 1.05, 1.1, 1.2)))
+    print(f"  for a small change of ell, KL ~ (d ell)^2: d ell = 0.1 -> {kl_gauss(0, 1, 0, math.exp(0.1)):.5f} and {kl_gauss(0, 1, 0, math.exp(-0.1)):.5f}")
+    print("-- the code's guard inside the log (ppo.py:224): the first gradient step of an iteration, bells identical")
+    g1 = math.log(1 + 1e-5)
+    print(f"  ln(1 + 1e-5) = {g1:.3e} per joint;  1 joint: {kl_gauss(0, SIG, 0, SIG, 1e-5):.3e};  8 joints: {8*g1:.3e}  -> 0 < KL < {d/2}: lr x 1.5 every time")
+    print("-- (37) on the toy shifts (one joint, sigma 0.5, with the guard)")
+    for dm in (0.0, 0.05, 0.07, 0.10, 0.15):
+        kl = kl_gauss(0, SIG, dm, SIG, 1e-5)
+        lr, act = lr_rule(1e-3, kl)
+        print(f"  dmu = {dm:.2f}: KL = {dm*dm/(2*SIG**2):.4f} (code {kl:.6f}) -> {act}: lr 1e-3 -> {lr:.6g}")
+    print("-- the ladder of lr values")
+    lr, k = 1e-3, 0
+    seq = [lr]
+    while lr < 1e-2:
+        lr = min(1e-2, lr * 1.5); k += 1; seq.append(lr)
+    print(f"  up from 1e-3: " + " ".join(f"{v:.5g}" for v in seq) + f"   ({k} raises reach the ceiling; 1e-3 x 1.5^6 = {1e-3*1.5**6:.5g})")
+    lr, k = 1e-3, 0
+    seq = [lr]
+    while lr > 1e-5:
+        lr = max(1e-5, lr / 1.5); k += 1; seq.append(lr)
+    print(f"  down from 1e-3: " + " ".join(f"{v:.4g}" for v in seq) + f"   ({k} cuts reach the floor; 1e-3 / 1.5^11 = {1e-3/1.5**11:.4g}, / 1.5^12 = {1e-3/1.5**12:.4g})")
+    print("  from the floor: " + " ".join(f"{1e-5*1.5**j:.4g}" for j in range(0, 18)) + f"   (1e-5 x 1.5^17 = {1e-5*1.5**17:.4g}, x 1.5^18 = {1e-5*1.5**18:.4g} -> ceiling)")
+    print(f"  1 raise then 19 cuts from 1e-3: {max(1e-5, 1.5e-3/1.5**19):.1e};  the floor is reached after 1 raise + {next(j for j in range(30) if 1.5e-3/1.5**j <= 1e-5)} cuts")
+    print("  printed with 4 decimals (on_policy_runner.py:325): " + "  ".join(f"{v:.4g} -> '{v:.4f}'" for v in (1e-5, 3.4e-5, 5.1e-5, 1.14e-4, 3.84e-4, 1e-3)))
+    print("-- the rule on the toy table: four gradient steps, Adam, alpha starts at 1e-3")
+    log, x = toy_update(rule=True)
+    for i, e in enumerate(log, 1):
+        s_n = math.exp(e["x"][1])
+        print(f"  step {i} set {1 if e['keys'] is SET1 else 2}: knobs before b {e['x'][0]:+.6f} sigma {s_n:.6f}  ->  KL {e['kl']:.3e} (without guard {kl_gauss(0, SIG, e['x'][0], s_n):.3e})  {e['act']}: lr = {e['lr']:.6g}   steps " + " ".join(f"{a-b_:+.6f}" for a, b_ in zip(e["x_new"], e["x"])))
+    print(f"  after 4: b {x[0]:+.6f}  sigma {math.exp(x[1]):.6f}  b_V {x[2]:+.6f};  KL of the final bell {kl_gauss(0, SIG, x[0], math.exp(x[1])):.3e}")
+    print("-- clip and KL do not measure the same thing: one joint, equal sigma, mu moved dmu toward a: rho = exp(dmu/sigma x z - (dmu/sigma)^2/2)")
+    for q in (0.1, 0.2):
+        zc = (math.log(1.2) + q * q / 2) / q
+        print(f"  dmu/sigma = {q}: KL = {q*q/2:.4f};  rho reaches 1.2 for z >= {zc:.4f}")
+    for k in ((0, 0), (0, 2)):
+        c = cells[k]
+        for dm in (0.10, 0.12, 0.15):
+            print(f"  {name(k)} (z {(c['a']-c['mu'])/SIG:+.2f}) moved {dm:+.2f}: rho {rho_of(c, dm):.4f}   KL {dm*dm/(2*SIG**2):.4f}")
+    print("-- exercises")
+    for label, mo, so, mn, sn in (("e1t3 bell moved to -0.18", -0.30, 0.5, -0.18, 0.5), ("e1t0 bell moved to -0.02", -0.10, 0.5, -0.02, 0.5), ("sigma 0.5 -> 0.55", 0.2, 0.5, 0.2, 0.55),
+                                  ("sigma 0.5 -> 0.25", 0.2, 0.5, 0.2, 0.25), ("reversed: N(0.25,0.45)||N(0.2,0.5)", 0.25, 0.45, 0.2, 0.5), ("e0t1 bell 0.30 -> 0.36, sigma 0.5 -> 0.48", 0.30, 0.5, 0.36, 0.48)):
+        kl = kl_gauss(mo, so, mn, sn)
+        print(f"  {label}: ln {math.log(sn/so):+.6f}  middle {(so**2 + (mo-mn)**2)/(2*sn**2):.6f}  KL = {kl:.6f}  -> {lr_rule(1e-3, kl)[1]}")
+    print(f"  shift that gives KL = 0.02 at sigma 0.25: {0.2*0.25:.4f};  at sigma 1.0: {0.2:.4f};  8 joints, sigma 0.5, equal shifts: {math.sqrt(2*0.02/8)*0.5:.4f}")
+    for label, lr0, kls in (("ladder A", 1e-3, (8e-5, 0.003, 0.025, 0.012, 0.04)), ("ladder B", 5e-3, (8e-5, 0.004, 0.012, 0.031, 0.0199)), ("ladder C", 1.5e-5, (0.03, 0.05, 8e-5, 0.021))):
+        lr, seq = lr0, []
+        for kl in kls:
+            lr, act = lr_rule(lr, kl)
+            seq.append(f"{kl:g} {act} {lr:.6g}")
+        print(f"  {label} from {lr0:g}: " + " | ".join(seq))
+    e0 = [ls[(0, t)] for t in range(4)]
+    e1 = [ls[(1, t)] for t in range(4)]
+    print(f"  mean of -log rho over env 0's four cells: ({' '.join(f'{v:+.4f}' for v in e0)})/4 = {sum(e0)/4:+.4f};  env 1: {sum(e1)/4:+.4f};  mean z env 0 {sum((cells[(0,t)]['a']-cells[(0,t)]['mu'])/SIG for t in range(4))/4:+.2f}")
+    print(f"  net raises from 1e-5 to 1.139e-4: log(11.39)/log(1.5) = {math.log(1.139e-4/1e-5)/math.log(1.5):.2f}")
+    runs = training_runs()
+    if len(runs) >= 3:
+        a, b_ = runs[1][3], runs[2][3]
+        same = 0
+        for (s1, v1), (s2, v2) in zip(a["Loss/learning_rate"], b_["Loss/learning_rate"]):
+            if v1 != v2:
+                break
+            same += 1
+        samek = 0
+        for (s1, v1), (s2, v2) in zip(a["Policy/mean_kl"], b_["Policy/mean_kl"]):
+            if v1 != v2:
+                break
+            samek += 1
+        print(f"  the two 64-env runs (same seed): learning_rate identical for the first {same} iterations, mean_kl for the first {samek}")
+        lr = [v for _, v in a["Loss/learning_rate"]]
+        print(f"  218-iteration run: iterations whose end lr is the floor 1e-5: {sum(1 for v in lr if abs(v-1e-5) < 1e-9)};  ever back to 1e-3 or above: {sum(1 for v in lr if v >= 1e-3)};  median rung: {statistics.median(round(math.log(v/1e-5)/math.log(1.5)) for v in lr)}")
+    print("-- real runs under logs/ (not the 2048-env configuration): what the rule did")
+    for nm, n_env, max_it, sc in training_runs():
+        lr = [v for _, v in sc["Loss/learning_rate"]]
+        kl = [v for _, v in sc["Policy/mean_kl"]]
+        rung = [round(math.log(v / 1e-5) / math.log(1.5)) for v in lr]
+        off = max(abs(v - 1e-5 * 1.5 ** r_) / v for v, r_ in zip(lr, rung))
+        cnt = collections.Counter(rung)
+        print(f"  {nm}: {n_env} envs, max_iterations {max_it}, {len(lr)} iterations logged ({24*n_env:,} transitions per table, {24*n_env//4:,} per set)")
+        print(f"     lr at the end of iteration 0: {lr[0]:.3g};  min {min(lr):.3g}  max {max(lr):.3g} = 1e-5 x 1.5^{max(rung)};  largest relative distance from the ladder {off:.1e}")
+        print("     iterations on each rung k (lr = 1e-5 x 1.5^k): " + " ".join(f"{k_}:{cnt[k_]}" for k_ in sorted(cnt)) + f";  printed as 0.0000 (< 5e-5): {sum(1 for v in lr if v < 5e-5)} of {len(lr)}")
+        skl = sorted(kl)
+        print(f"     mean_kl: iteration 0 = {kl[0]:.4f};  median {statistics.median(kl):.4f}  mean {sum(kl)/len(kl):.4f}  min {skl[0]:.4f}  max {skl[-1]:.4f};  inside [0.005, 0.02]: {sum(1 for v in kl if 0.005 <= v <= 0.02)} of {len(kl)}")
+        print("     first 10 (lr, mean_kl): " + "  ".join(f"({a:.3g}, {b_:.4f})" for a, b_ in list(zip(lr, kl))[:10]))
+    print("-- lines cited")
+    show(PPO_PY, 58, 59); show(PPO_PY, 63, 64); show(PPO_PY, 71, 74); show(PPO_PY, 150, 151); show(PPO_PY, 200, 201); show(PPO_PY, 217, 218); show(PPO_PY, 221, 249)
+    show(PPO_PY, 280, 284); show(PPO_PY, 295); show(PPO_PY, 330); show(STORE_PY, 145, 146); show(STORE_PY, 248, 249); show(STORE_PY, 281, 285)
+    show(RUN_PY, 283); show(RUN_PY, 285); show(RUN_PY, 325); show(PPO_CFG, 100, 101); show(PPO_CFG, 104)
+
+
+def ch27():
+    print("=== chapter 27 — one whole iteration ===")
+    name = lambda k: f"e{k[0]}t{k[1]}"
+    cfg = sf_ppo()
+    Tn, ep, mb = cfg["num_steps_per_env"][0], cfg["num_learning_epochs"][0], cfg["num_mini_batches"][0]
+    B = 2048
+    print(f"  config: num_steps_per_env {Tn} (line {cfg['num_steps_per_env'][1]}), num_learning_epochs {ep} (line {cfg['num_learning_epochs'][1]}), num_mini_batches {mb} (line {cfg['num_mini_batches'][1]}), "
+          f"max_iterations {cfg['max_iterations'][0]:,} (line {cfg['max_iterations'][1]}), save_interval {cfg['save_interval'][0]} (line {cfg['save_interval'][1]})")
+    print(f"-- sizes: table {Tn} x {B} = {Tn*B:,};  mini-batch {Tn*B}//{mb} = {Tn*B//mb:,};  gradient steps {ep} x {mb} = {ep*mb};  each cell used {ep} times;  toy: 8 cells, 2 sets of 4, 2 x 2 = 4")
+    for n_env in (16, 64, 4096):
+        print(f"     {n_env} envs: table {Tn*n_env:,}, mini-batch {Tn*n_env//mb:,}")
+    print(f"  flatten(0, 1) of a (T, B) table: cell (t, e) -> index t x B + e;  toy (B = 2): " + " ".join(f"{name((e, t))}->{t*2+e}" for t in range(4) for e in range(2)))
+    idx = {k: k[1] * 2 + k[0] for k in cells}
+    print(f"  the toy split as indices: set 1 = {[idx[k] for k in SET1]}  set 2 = {[idx[k] for k in SET2]}  -> one permutation that gives it: {[idx[k] for k in SET1 + SET2]}")
+    print(f"  number of ways to split 8 cells into an ordered pair of sets of 4: C(8,4) = {math.comb(8, 4)}")
+    print("-- how many times each thing happens in one iteration (toy / Tron1)")
+    for what, toy_n, real_n in (("policy steps (act + env.step)", 4, Tn), ("transitions written", 8, Tn * B), ("GAE backward pass", 1, 1), ("normalisation of A", 1, 1), ("shuffle", 1, 1),
+                                ("epochs", 2, ep), ("mini-batches per epoch", 2, mb), ("KL checks = gradient steps", 4, ep * mb), ("encoder gradient steps", "-", ep * mb), ("storage.clear()", 1, 1)):
+        print(f"  {what}: {toy_n} / {real_n:,}" if isinstance(real_n, int) else f"  {what}: {toy_n} / {real_n}")
+    it = cfg["max_iterations"][0]
+    print(f"-- whole training: {it:,} iterations x {ep*mb} = {it*ep*mb:,} gradient steps (and as many for the encoder);  {it:,} x {Tn*B:,} = {it*Tn*B:,} transitions")
+    dec, dt, step_dt, ep_s = timing()
+    ep_steps = round(ep_s / step_dt)
+    print(f"  one episode of {ep_steps} steps spans {ep_steps}/{Tn} = {ep_steps/Tn:.2f} tables = {ep_steps/Tn*ep*mb:.0f} gradient steps;  one table = {Tn} x {step_dt} s = {Tn*step_dt:.2f} s of simulated time")
+    print("-- (34): the horizon of GAE, 1/(1 - gamma lambda)")
+    g, l = cfg["gamma"][0], cfg["lam"][0]
+    for label, gg, ll, Tt in (("toy", GAMMA, LAM, 4), ("Tron1", g, l, Tn)):
+        gl = gg * ll
+        print(f"  {label}: gamma {gg} x lambda {ll} = {gl:.4f};  1/(1 - {gl:.4f}) = {1/(1-gl):.2f} steps;  weight of the delta {Tt} steps ahead (gamma lambda)^{Tt} = {gl**Tt:.4f};  share of the weight inside {Tt} steps 1 - that = {1-gl**Tt:.4f};  1/(1-gamma) = {1/(1-gg):.0f}")
+    gl = g * l
+    for Tt in (4, 8, 16, 17, 24, 48, 100, 200):
+        print(f"     Tron1, table of {Tt} rows: share of the GAE weight that falls inside the table for the top row = {1-gl**Tt:.4f}")
+    print(f"  mean over the {Tn} rows of the share inside the table (row t has {Tn}-t steps left): {sum(1-gl**(Tn-t) for t in range(Tn))/Tn:.4f};  toy: {sum(1-GL**(4-t) for t in range(4))/4:.4f}")
+    print("-- memory of one table: floats per transition (rollout_storage.py:71-120)")
+    parts = dict(observations=36, next_observations=36, critic_obs=230, observation_history=360, commands=3, rewards=1, actions=8, actions_log_prob=1, values=1, returns=1, advantages=1, mu=8, sigma=8)
+    nf = sum(parts.values())
+    print("  " + " + ".join(f"{v}" for v in parts.values()) + f" = {nf} floats x 4 bytes + 1 byte (dones) = {nf*4+1} bytes")
+    for Tt in (24, 100, 200):
+        print(f"     {Tt} rows x {B} envs: {Tt*B*(nf*4+1)/1e6:.1f} MB ({Tt*B*(nf*4+1)/2**20:.1f} MiB)")
+    print(f"  share of the history: {parts['observation_history']}/{nf} = {parts['observation_history']/nf*100:.0f} %")
+    copied = nf - parts["next_observations"] - parts["rewards"]      # rollout_storage.py:236-249 index with a tensor: 11 copies
+    print(f"  mini_batch_generator copies {copied} of the {nf} floats per cell (advanced indexing): {copied*4*Tn*B/1e6:.1f} MB more at {Tn} x {B} while update() runs")
+    print("-- the toy iteration end to end: phases A and B are chapters 7 and 22; phase C = 4 gradient steps (Adam, lr rule, clip_grad_norm_)")
+    log, x = toy_update(rule=True)
+    for i, e in enumerate(log, 1):
+        r = e["r"]
+        print(f"  step {i} (epoch {e['ep']}, set {1 if e['keys'] is SET1 else 2}): KL {e['kl']:.3e} {e['act']} lr {e['lr']:.6g} | rho " + " ".join(f"{row['rho']:.4f}" for row in r["rows"])
+              + f" | L^CLIP {r['Lc']:+.4f}  L_V {r['Lv']:.4f}  H {r['H']:.4f}  L {r['L']:+.4f} | .grad " + " ".join(f"{g:+.4f}" for g in e["raw"]) + f" norm {e['norm']:.4f} coef {e['coef']:.4f} | steps " + " ".join(f"{a-b_:+.6f}" for a, b_ in zip(e["x_new"], e["x"]))
+              + f" | after: b {e['x_new'][0]:+.6f} sigma {math.exp(e['x_new'][1]):.6f} b_V {e['x_new'][2]:+.6f}")
+        if any(row["pc"] or row["vc"] for row in r["rows"]):
+            print("       clipped terms chosen: " + ", ".join(f"{name(row['key'])}{' rho' if row['pc'] else ''}{' V' if row['vc'] else ''}" for row in r["rows"] if row["pc"] or row["vc"]))
+    print(f"  mean over the 4 steps (what the log prints): Value function loss {sum(e['r']['Lv'] for e in log)/4:.4f}   Surrogate loss {sum(e['r']['Lc'] for e in log)/4:+.4f}   mean_kl {sum(e['kl'] for e in log)/4:.3e}")
+    print("  the other order (set 2 first):")
+    log2, x2 = toy_update(order=(SET2, SET1), rule=True)
+    for i, e in enumerate(log2, 1):
+        r = e["r"]
+        print(f"  step {i} (epoch {e['ep']}, set {1 if e['keys'] is SET1 else 2}): KL {e['kl']:.3e} {e['act']} lr {e['lr']:.6g} | L^CLIP {r['Lc']:+.4f}  L_V {r['Lv']:.4f}  L {r['L']:+.4f} | .grad " + " ".join(f"{g:+.4f}" for g in e["raw"])
+              + f" norm {e['norm']:.4f} coef {e['coef']:.4f} | steps " + " ".join(f"{a-b_:+.6f}" for a, b_ in zip(e["x_new"], e["x"])))
+    print(f"     after 4: b {x2[0]:+.6f} sigma {math.exp(x2[1]):.6f} b_V {x2[2]:+.6f}   (order 1,2: b {x[0]:+.6f} sigma {math.exp(x[1]):.6f} b_V {x[2]:+.6f})")
+    print("  one gradient step on the whole table instead of four on halves (same lr rule):")
+    log3, x3 = toy_update(order=(list(cells),), epochs=1, rule=True)
+    e = log3[0]
+    print(f"     L {e['r']['L']:+.4f}  .grad " + " ".join(f"{g:+.4f}" for g in e["raw"]) + f"  norm {e['norm']:.4f}  steps " + " ".join(f"{a-b_:+.6f}" for a, b_ in zip(e["x_new"], e["x"])))
+    print("-- exercises")
+    print(f"  8 epochs x 8 mini-batches: {8*8} gradient steps, mini-batch {Tn*B//8:,}, each cell used 8 times;  cell (t=3, e=10) -> index 3 x 2048 + 10 = {3*2048+10}")
+    for ll in (0.9, 0.99):
+        gl2 = g * ll
+        print(f"  gamma {g}, lambda {ll}: gamma lambda = {gl2:.4f}, horizon {1/(1-gl2):.2f}, share inside 24 rows (top row) {1-gl2**24:.4f}")
+    print("  toy weights (gamma lambda)^k: " + " ".join(f"{GL**k:.4f}" for k in range(4)) + f"  sum of 4 = {sum(GL**k for k in range(4)):.4f} of {1/(1-GL):.4f};  share by rows left: " + " ".join(f"{n} left: {1-GL**n:.4f}" for n in (4, 3, 2, 1)))
+    print("  Tron1 share by rows left: " + " ".join(f"{n} left: {1-gl**n:.4f}" for n in (24, 12, 6, 1)))
+    print(f"  memory, 48 rows x 4096 envs: 48 x 4096 x {nf*4+1} = {48*4096*(nf*4+1):,} bytes = {48*4096*(nf*4+1)/1e6:.1f} MB;  24 rows x 4096 envs: {24*4096*(nf*4+1)/1e6:.1f} MB")
+    vals = []
+    for f_ in sorted((ISAAC / "isaaclab_tasks").rglob("rsl_rl_ppo_cfg.py")):
+        vals += [(int(v), "locomotion" in str(f_)) for v in re.findall(r"num_steps_per_env\s*=\s*(\d+)", f_.read_text())]
+    cnt = collections.Counter(v for v, _ in vals)
+    print(f"  num_steps_per_env in Isaac Lab's own rsl_rl configs ({len(vals)} classes): " + " ".join(f"{k}:{cnt[k]}" for k in sorted(cnt))
+          + f";  the locomotion tasks: {sorted(collections.Counter(v for v, loco in vals if loco).items())}")
+    limx = re.findall(r"num_steps_per_env = (\d+)", PPO_CFG.read_text())
+    print(f"  LimX file: {limx}")
+    print("-- real runs under logs/: time per phase (NOT the 2048-env configuration)")
+    for nm, n_env, max_it, sc in training_runs():
+        col = [v for _, v in sc["Perf/collection time"]]
+        lrn = [v for _, v in sc["Perf/learning_time"]]
+        fps = [v for _, v in sc["Perf/total_fps"]]
+        med = statistics.median
+        print(f"  {nm}: {n_env} envs, {len(col)} iterations: collection median {med(col):.3f} s, learning median {med(lrn):.3f} s ({med(lrn)/(med(col)+med(lrn))*100:.0f} % of the iteration), total_fps median {med(fps):.1f};  {24*n_env} / ({med(col):.3f} + {med(lrn):.3f}) = {24*n_env/(med(col)+med(lrn)):.0f}")
+    print("-- lines cited")
+    show(RUN_PY, 81); show(RUN_PY, 170, 177); show(RUN_PY, 192); show(RUN_PY, 212, 213); show(RUN_PY, 218); show(RUN_PY, 225); show(RUN_PY, 227, 234); show(RUN_PY, 237, 239); show(RUN_PY, 250)
+    show(RUN_PY, 270, 274); show(RUN_PY, 314); show(RUN_PY, 320, 327)
+    show(PPO_PY, 97, 98); show(PPO_PY, 176, 178); show(PPO_PY, 180, 190); show(PPO_PY, 203, 205); show(PPO_PY, 212); show(PPO_PY, 216); show(PPO_PY, 292, 303); show(PPO_PY, 326, 333)
+    show(STORE_PY, 132, 133); show(STORE_PY, 148); show(STORE_PY, 184, 185); show(STORE_PY, 222, 236); show(STORE_PY, 251, 255); show(STORE_PY, 287); show(STORE_PY, 289, 294); show(STORE_PY, 304, 305)
+    show(PPO_CFG, 81, 83); show(PPO_CFG, 98, 99); show(PPO_CFG, 102, 103)
+
+
 CHAPTERS = {"01": ch01, "02": ch02, "03": ch03, "04": ch04, "05": ch05, "06": ch06, "07": ch07, "08": ch08, "09": ch09,
             "10": ch10, "11": ch11, "12": ch12, "13": ch13, "14": ch14, "15": ch15, "16": ch16, "17": ch17, "18": ch18,
-            "19": ch19, "20": ch20, "21": ch21, "22": ch22, "23": ch23, "24": ch24}
+            "19": ch19, "20": ch20, "21": ch21, "22": ch22, "23": ch23, "24": ch24, "25": ch25, "26": ch26, "27": ch27}
 
 if __name__ == "__main__":
     for key in sys.argv[1:] or CHAPTERS:

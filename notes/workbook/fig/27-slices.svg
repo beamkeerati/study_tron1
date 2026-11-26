@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 300" width="700" font-family="inherit" font-size="14">
+  <defs><marker id="f27a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#6e7781"/></marker></defs>
+  <text x="150.0" y="22.0" text-anchor="middle" fill="#37474f" font-weight="bold">ตารางหนึ่งใบ 8 ช่อง</text>
+  <text x="110.0" y="46.0" text-anchor="middle" font-size="13" fill="#37474f" font-weight="bold">env 0</text>
+  <text x="190.0" y="46.0" text-anchor="middle" font-size="13" fill="#37474f" font-weight="bold">env 1</text>
+  <text x="58.0" y="82.0" text-anchor="end" font-size="12.5" fill="#6e7781">t0</text>
+  <rect x="70.0" y="54.0" width="80.0" height="46.0" fill="#cfe9e9" stroke="#8c959f" stroke-width="1"/>
+  <text x="76.0" y="69.0" text-anchor="start" font-size="12.5" fill="#6e7781">0</text>
+  <text x="114.0" y="85.0" text-anchor="middle" font-size="13.5" fill="#37474f">e0 t0</text>
+  <rect x="150.0" y="54.0" width="80.0" height="46.0" fill="#ffffff" stroke="#8c959f" stroke-width="1"/>
+  <text x="156.0" y="69.0" text-anchor="start" font-size="12.5" fill="#6e7781">1</text>
+  <text x="194.0" y="85.0" text-anchor="middle" font-size="13.5" fill="#37474f">e1 t0</text>
+  <text x="58.0" y="128.0" text-anchor="end" font-size="12.5" fill="#6e7781">t1</text>
+  <rect x="70.0" y="100.0" width="80.0" height="46.0" fill="#ffffff" stroke="#8c959f" stroke-width="1"/>
+  <text x="76.0" y="115.0" text-anchor="start" font-size="12.5" fill="#6e7781">2</text>
+  <text x="114.0" y="131.0" text-anchor="middle" font-size="13.5" fill="#37474f">e0 t1</text>
+  <rect x="150.0" y="100.0" width="80.0" height="46.0" fill="#cfe9e9" stroke="#8c959f" stroke-width="1"/>
+  <text x="156.0" y="115.0" text-anchor="start" font-size="12.5" fill="#6e7781">3</text>
+  <text x="194.0" y="131.0" text-anchor="middle" font-size="13.5" fill="#37474f">e1 t1</text>
+  <text x="58.0" y="174.0" text-anchor="end" font-size="12.5" fill="#6e7781">t2</text>
+  <rect x="70.0" y="146.0" width="80.0" height="46.0" fill="#cfe9e9" stroke="#8c959f" stroke-width="1"/>
+  <text x="76.0" y="161.0" text-anchor="start" font-size="12.5" fill="#6e7781">4</text>
+  <text x="114.0" y="177.0" text-anchor="middle" font-size="13.5" fill="#37474f">e0 t2</text>
+  <rect x="150.0" y="146.0" width="80.0" height="46.0" fill="#ffffff" stroke="#8c959f" stroke-width="1"/>
+  <text x="156.0" y="161.0" text-anchor="start" font-size="12.5" fill="#6e7781">5</text>
+  <text x="194.0" y="177.0" text-anchor="middle" font-size="13.5" fill="#37474f">e1 t2</text>
+  <text x="58.0" y="220.0" text-anchor="end" font-size="12.5" fill="#6e7781">t3</text>
+  <rect x="70.0" y="192.0" width="80.0" height="46.0" fill="#ffffff" stroke="#8c959f" stroke-width="1"/>
+  <text x="76.0" y="207.0" text-anchor="start" font-size="12.5" fill="#6e7781">6</text>
+  <text x="114.0" y="223.0" text-anchor="middle" font-size="13.5" fill="#37474f">e0 t3</text>
+  <rect x="150.0" y="192.0" width="80.0" height="46.0" fill="#cfe9e9" stroke="#8c959f" stroke-width="1"/>
+  <text x="156.0" y="207.0" text-anchor="start" font-size="12.5" fill="#6e7781">7</text>
+  <text x="194.0" y="223.0" text-anchor="middle" font-size="13.5" fill="#37474f">e1 t3</text>
+  <rect x="70.0" y="252.0" width="16.0" height="14.0" fill="#cfe9e9" stroke="#8c959f" stroke-width="1"/>
+  <text x="92.0" y="264.0" text-anchor="start" font-size="12.5" fill="#37474f">mini-batch ที่ 1</text>
+  <rect x="70.0" y="274.0" width="16.0" height="14.0" fill="#ffffff" stroke="#8c959f" stroke-width="1"/>
+  <text x="92.0" y="286.0" text-anchor="start" font-size="12.5" fill="#37474f">mini-batch ที่ 2</text>
+  <path d="M 240 146 L 296 146" fill="none" stroke="#6e7781" stroke-width="1.4" marker-end="url(#f27a)"/>
+  <text x="268.0" y="136.0" text-anchor="middle" font-size="12.5" fill="#6e7781">สับ</text>
+  <text x="268.0" y="166.0" text-anchor="middle" font-size="12.5" fill="#6e7781">ครั้งเดียว</text>
+  <text x="490.0" y="22.0" text-anchor="middle" fill="#37474f" font-weight="bold">ลำดับการใช้ใน iteration เดียว</text>
+  <text x="310.0" y="96.0" text-anchor="start" font-size="13" fill="#37474f" font-weight="bold">epoch 1</text>
+  <rect x="388.0" y="56.0" width="132.0" height="70.0" fill="#cfe9e9" stroke="#0f6e6e" stroke-width="1.4"/>
+  <text x="454.0" y="82.0" text-anchor="middle" font-size="13" fill="#37474f">mini-batch ที่ 1</text>
+  <text x="454.0" y="104.0" text-anchor="middle" font-size="12.5" fill="#6e7781">gradient step 1</text>
+  <path d="M 522 91 L 536 91" fill="none" stroke="#6e7781" stroke-width="1.4" marker-end="url(#f27a)"/>
+  <rect x="538.0" y="56.0" width="132.0" height="70.0" fill="#ffffff" stroke="#8c959f" stroke-width="1.4"/>
+  <text x="604.0" y="82.0" text-anchor="middle" font-size="13" fill="#37474f">mini-batch ที่ 2</text>
+  <text x="604.0" y="104.0" text-anchor="middle" font-size="12.5" fill="#6e7781">gradient step 2</text>
+  <text x="310.0" y="208.0" text-anchor="start" font-size="13" fill="#37474f" font-weight="bold">epoch 2</text>
+  <rect x="388.0" y="168.0" width="132.0" height="70.0" fill="#cfe9e9" stroke="#0f6e6e" stroke-width="1.4"/>
+  <text x="454.0" y="194.0" text-anchor="middle" font-size="13" fill="#37474f">mini-batch ที่ 1</text>
+  <text x="454.0" y="216.0" text-anchor="middle" font-size="12.5" fill="#6e7781">gradient step 3</text>
+  <path d="M 522 203 L 536 203" fill="none" stroke="#6e7781" stroke-width="1.4" marker-end="url(#f27a)"/>
+  <rect x="538.0" y="168.0" width="132.0" height="70.0" fill="#ffffff" stroke="#8c959f" stroke-width="1.4"/>
+  <text x="604.0" y="194.0" text-anchor="middle" font-size="13" fill="#37474f">mini-batch ที่ 2</text>
+  <text x="604.0" y="216.0" text-anchor="middle" font-size="12.5" fill="#6e7781">gradient step 4</text>
+  <path d="M 604 128 L 604 142 L 454 142 L 454 164" fill="none" stroke="#6e7781" stroke-width="1.4" marker-end="url(#f27a)"/>
+  <text x="530.0" y="274.0" text-anchor="middle" font-size="12.5" fill="#6e7781">epoch 2 ใช้การหั่นชุดเดิม ไม่สับใหม่</text>
+</svg>

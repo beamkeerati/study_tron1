@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 232" width="700" font-family="inherit" font-size="14">
+  <defs><marker id="f27b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#6e7781"/></marker></defs>
+  <rect x="12.0" y="46.0" width="150.0" height="118.0" fill="#ffffff" stroke="#8c959f" stroke-width="1.5"/>
+  <text x="87.0" y="72.0" text-anchor="middle" fill="#37474f" font-weight="bold">ก เก็บข้อมูล</text>
+  <text x="87.0" y="100.0" text-anchor="middle" font-size="12.5" fill="#37474f">24 step</text>
+  <text x="87.0" y="122.0" text-anchor="middle" font-size="12.5" fill="#37474f">policy กับ environment</text>
+  <text x="87.0" y="144.0" text-anchor="middle" font-size="12.5" fill="#37474f">ไม่บันทึกการคำนวณ</text>
+  <path d="M 164 105.0 L 186 105.0" fill="none" stroke="#6e7781" stroke-width="1.4" marker-end="url(#f27b)"/>
+  <rect x="188.0" y="46.0" width="150.0" height="118.0" fill="#ffffff" stroke="#8c959f" stroke-width="1.5"/>
+  <text x="263.0" y="72.0" text-anchor="middle" fill="#37474f" font-weight="bold">ข คิด advantage</text>
+  <text x="263.0" y="100.0" text-anchor="middle" font-size="12.5" fill="#37474f">1 ครั้งทั้งตาราง</text>
+  <text x="263.0" y="122.0" text-anchor="middle" font-size="12.5" fill="#37474f">GAE เดินย้อน</text>
+  <text x="263.0" y="144.0" text-anchor="middle" font-size="12.5" fill="#37474f">แล้วสมการ (28)</text>
+  <path d="M 340 105.0 L 362 105.0" fill="none" stroke="#6e7781" stroke-width="1.4" marker-end="url(#f27b)"/>
+  <rect x="364.0" y="46.0" width="150.0" height="118.0" fill="#cfe9e9" stroke="#0f6e6e" stroke-width="1.5"/>
+  <text x="439.0" y="72.0" text-anchor="middle" fill="#37474f" font-weight="bold">ค ปรับลูกบิด</text>
+  <text x="439.0" y="100.0" text-anchor="middle" font-size="12.5" fill="#37474f">สับตาราง 1 ครั้ง</text>
+  <text x="439.0" y="122.0" text-anchor="middle" font-size="12.5" fill="#37474f">gradient step 20 ครั้ง</text>
+  <text x="439.0" y="144.0" text-anchor="middle" font-size="12.5" fill="#37474f">encoder อีก 20 ครั้ง</text>
+  <path d="M 516 105.0 L 538 105.0" fill="none" stroke="#6e7781" stroke-width="1.4" marker-end="url(#f27b)"/>
+  <rect x="540.0" y="46.0" width="150.0" height="118.0" fill="#ffffff" stroke="#8c959f" stroke-width="1.5"/>
+  <text x="615.0" y="72.0" text-anchor="middle" fill="#37474f" font-weight="bold">ง ล้างและบันทึก</text>
+  <text x="615.0" y="100.0" text-anchor="middle" font-size="12.5" fill="#37474f">ล้างตาราง</text>
+  <text x="615.0" y="122.0" text-anchor="middle" font-size="12.5" fill="#37474f">พิมพ์ล็อก</text>
+  <text x="615.0" y="144.0" text-anchor="middle" font-size="12.5" fill="#37474f">บันทึกทุก 500</text>
+  <path d="M 615.0 166 L 615.0 198 L 87.0 198 L 87.0 168" fill="none" stroke="#6e7781" stroke-width="1.4" marker-end="url(#f27b)"/>
+  <text x="350.0" y="218.0" text-anchor="middle" font-size="12.5" fill="#6e7781">iteration ถัดไปเก็บตารางใบใหม่ด้วยลูกบิดที่ปรับแล้ว</text>
+  <text x="439.0" y="30.0" text-anchor="middle" font-size="12.5" fill="#0f6e6e">ลูกบิดเปลี่ยนค่าเฉพาะในช่วงนี้</text>
+  <text x="175.0" y="30.0" text-anchor="middle" font-size="12.5" fill="#6e7781">ลูกบิดไม่เปลี่ยน</text>
+</svg>
