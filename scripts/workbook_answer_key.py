@@ -2156,9 +2156,429 @@ def ch27():
     show(PPO_CFG, 81, 83); show(PPO_CFG, 98, 99); show(PPO_CFG, 102, 103)
 
 
+# ---------------------------------------------------------------- chapters 28-30 (part 6: the whole system)
+import json
+
+PROBE = pathlib.Path(__file__).with_name("env_probe_2026-11-26.json")           # written by scripts/workbook_env_probe.py
+DEPLOY = pathlib.Path(__file__).with_name("deploy_snapshot_2026-11-26")         # read-only copies, see its SOURCE.md
+SOLE_CFG = EXT / "assets/config/solefoot_cfg.py"
+SF_VARIANTS = LOCO / "robots/limx_solefoot_env_cfg.py"
+PROJ_EVENTS, PROJ_OBS, PROJ_CURR = LOCO / "mdp/events.py", LOCO / "mdp/observations.py", LOCO / "mdp/curriculums.py"
+EV_MGR = ISAAC / "isaaclab/isaaclab/managers/event_manager.py"
+REW_MGR = ISAAC / "isaaclab/isaaclab/managers/reward_manager.py"
+ISAAC_EVENTS = ISAAC / "isaaclab/isaaclab/envs/mdp/events.py"
+ARTIC = ISAAC / "isaaclab/isaaclab/assets/articulation/articulation.py"
+MLP_CFG = EXT / "utils/wrappers/rsl_rl/rl_mlp_cfg.py"
+
+
+def probe():
+    return json.loads(PROBE.read_text(encoding="utf-8")) if PROBE.exists() else None
+
+
+def wide_cell(shift=0.05, ahat=None, sigma_new=SIG):
+    """The 8-joint widening of cell e0 t0 (glossary 8.6, toy_answer_key.mu8/eps8) pushed through the whole line:
+    sample -> log-density per joint -> sum -> new bell at mu + shift -> rho -> L_i -> dL_i/dmu_j."""
+    ahat = cells[(0, 0)]["Ahat"] if ahat is None else ahat
+    mu, eps = toy.mu8, toy.eps8
+    a = [m + SIG * e for m, e in zip(mu, eps)]
+    lp_old = [toy.logpi(x, m) for x, m in zip(a, mu)]
+    mu_n = [m + shift for m in mu]
+    lp_new = [-0.5 * math.log(2 * math.pi) - math.log(sigma_new) - (x - m) ** 2 / (2 * sigma_new ** 2) for x, m in zip(a, mu_n)]
+    rho = math.exp(sum(lp_new) - sum(lp_old))
+    rc = clipf(rho, 1 - EPS, 1 + EPS)
+    raw, cl = -ahat * rho, -ahat * rc
+    g = [0.0 if cl > raw else -ahat * rho * (x - m) / sigma_new ** 2 for x, m in zip(a, mu_n)]
+    kl = sum(math.log(sigma_new / SIG) + (SIG ** 2 + (mo - mn) ** 2) / (2 * sigma_new ** 2) - 0.5 for mo, mn in zip(mu, mu_n))
+    return dict(mu=mu, eps=eps, a=a, lp_old=lp_old, mu_n=mu_n, lp_new=lp_new, S_old=sum(lp_old), S_new=sum(lp_new), rho=rho,
+                rho_i=[math.exp(n - o) for n, o in zip(lp_new, lp_old)], raw=raw, cl=cl, L=max(raw, cl), clipped=cl > raw, g=g, kl=kl,
+                H=8 * H_gauss(sigma_new), ahat=ahat)
+
+
+def ch28():
+    print("=== chapter 28 — the value line E1-E15, with shapes ===")
+    sf = sf_ppo()
+    T_, ep, mb = sf["num_steps_per_env"][0], sf["num_learning_epochs"][0], sf["num_mini_batches"][0]
+    B = 2048
+    N = T_ * B // mb
+    a_n, c_n, e_n = mlp_count([42, 512, 256, 128, 8]), mlp_count([230, 512, 256, 128, 1]), mlp_count([360, 256, 128, 3])
+    print(f"B = {B}   table {T_} x {B} = {T_*B:,} cells   N = {N:,} per mini-batch   gradient steps {ep} x {mb} = {ep*mb}")
+    print(f"knobs the main optimizer holds: actor {a_n:,} + logstd 8 + critic {c_n:,} = {a_n + 8 + c_n:,};  encoder {e_n:,} (its own optimizer)")
+    print("-- the fifteen stations: the lines the chapter cites")
+    for label, path, a, b in (("E1 encoder", PPO_PY, 136, None), ("   encode()", ENC_PY, 95, 100), ("E2 concat", PPO_PY, 137, 139),
+                              ("E3-E5 mean, sigma, bell", AC_PY, 155, 157), ("   logstd", AC_PY, 118, None), ("E6 sample", AC_PY, 159, 161),
+                              ("   sample()", TORCH_NORMAL, 70, 73), ("E7-E8 log_prob()", TORCH_NORMAL, 84, 92), ("E9 sum over joints", AC_PY, 163, 164),
+                              ("E10 store", PPO_PY, 147, 151), ("   add_transitions", STORE_PY, 140, 146), ("E11 new bell", PPO_PY, 203, 210),
+                              ("E12 new log-prob", PPO_PY, 212, 219), ("E13 ratio", PPO_PY, 252, 254), ("E14 loss", PPO_PY, 256, 260),
+                              ("   value loss, entropy, total", PPO_PY, 264, 278), ("E15 backward and step", PPO_PY, 287, 290),
+                              ("critic branch", PPO_PY, 144, None), ("   evaluate", AC_PY, 170, 172), ("   GAE", STORE_PY, 187, 207),
+                              ("entropy sum", AC_PY, 151, 153), ("KL sum over joints", PPO_PY, 223, 233), ("storage shapes", STORE_PY, 92, 120),
+                              ("flatten", STORE_PY, 236, 249), ("yield (12 values)", STORE_PY, 287, None), ("loop header", PPO_PY, 190, 202),
+                              ("runner: history flatten", RUN_PY, 180, None), ("runner: sizes", RUN_PY, 56, 63), ("runner: inference_mode", RUN_PY, 173, 175)):
+        print(f"  {label}")
+        show(path, a, b)
+    print("-- shapes at Tron1 scale")
+    for name, shp in (("h", (B, 360)), ("v_hat", (B, 3)), ("s", (B, 42)), ("mu", (B, 8)), ("ell / sigma", (8,)), ("a", (B, 8)),
+                      ("log-density per joint", (B, 8)), ("log pi", (B,)), ("stored log pi", (T_, B, 1)), ("V", (B, 1)),
+                      ("mini-batch: s", (N, 42)), ("mini-batch: new log pi", (N,)), ("mini-batch: old log pi, A_hat, R, V_old", (N, 1)),
+                      ("rho", (N,)), ("entropy, kl", (N,)), ("old mu, old sigma", (N, 8))):
+        print(f"    {name:42s} {shp}   numbers: {math.prod(shp):,}")
+    print(f"    encoder input per collection step {B} x 360 = {B*360:,};  per-joint log-densities in one gradient step {N} x 8 = {N*8:,}")
+    print(f"    cells through E1-E10 per iteration {T_*B:,};  cell-visits through E11-E15 per iteration {ep*mb} x {N:,} = {ep*mb*N:,} = {ep} per cell")
+    print(f"    with 4096 envs: N = {T_*4096//mb:,};  with 64 envs: N = {T_*64//mb:,}")
+
+    w = wide_cell()
+    print("-- example: e0 t0 widened to 8 joints (glossary 8.6), A_hat = %+.4f" % w["ahat"])
+    print("   j   mu    eps     a    a-mu  log-density   mu_new  a-mu_new  log-density_new   rho_j    dL_i/dmu_j")
+    for j in range(8):
+        print(f"   {j+1}  {w['mu'][j]:+.2f}  {w['eps'][j]:+.2f}  {w['a'][j]:+.2f}  {w['a'][j]-w['mu'][j]:+.2f}   {w['lp_old'][j]:+.4f}     {w['mu_n'][j]:+.2f}   {w['a'][j]-w['mu_n'][j]:+.2f}     {w['lp_new'][j]:+.4f}       {w['rho_i'][j]:.4f}   {w['g'][j]:+.4f}")
+    print(f"   sum log pi_old = {w['S_old']:.4f}  pi_old = {math.exp(w['S_old']):.4f}   sum log pi_new = {w['S_new']:.4f}   difference {w['S_new']-w['S_old']:+.4f}   rho = {w['rho']:.4f}")
+    print(f"   product of rho_j = {math.prod(w['rho_i']):.4f};  raw {w['raw']:+.4f}  clipped {w['cl']:+.4f}  L_i = {w['L']:+.4f}  picks clipped: {w['clipped']}")
+    print(f"   one joint alone (e0 t0 of the table): log pi {cells[(0,0)]['logpi_old']:.4f}, density {math.exp(cells[(0,0)]['logpi_old']):.4f}, rho {surr_cell(cells[(0,0)], 0.05)['rho']:.4f}")
+    print(f"   peak log-density {toy.C:.4f} = log {math.exp(toy.C):.4f};  8 x peak = {8*toy.C:.4f}")
+    print(f"   H = 8 x {H_gauss(SIG):.4f} = {w['H']:.4f};  KL = 8 x {0.05**2/(2*SIG**2):.4f} = {w['kl']:.4f}  -> rule: {lr_rule(1e-3, w['kl'])}")
+    print(f"   sum of dL_i/dmu_j = {sum(w['g']):+.4f};  largest |.| at joint {max(range(8), key=lambda j: abs(w['g'][j])) + 1}")
+
+    print("-- exercises")
+    for label, kw in (("A_hat = e1 t1's", dict(ahat=cells[(1, 1)]["Ahat"])), ("shift -0.05", dict(shift=-0.05)), ("shift +0.10", dict(shift=0.10)),
+                      ("shift +0.20", dict(shift=0.20)), ("shift +0.20, A_hat = e1 t1's", dict(shift=0.20, ahat=cells[(1, 1)]["Ahat"]))):
+        v = wide_cell(**kw)
+        print(f"   {label}: A_hat {v['ahat']:+.4f}  S_new {v['S_new']:.4f}  rho {v['rho']:.4f}  raw {v['raw']:+.4f}  clipped {v['cl']:+.4f}  L_i {v['L']:+.4f}  picks clipped {v['clipped']}  KL {v['kl']:.4f}")
+        print(f"       dL_i/dmu_j = {[round(x, 4) for x in v['g']]}")
+    half = wide_cell(shift=0.05)
+    first4 = sum(half["lp_new"][:4]) - sum(half["lp_old"][:4])
+    print(f"   joints 1-4 only: sum log pi_old {sum(half['lp_old'][:4]):.4f}  new {sum(half['lp_new'][:4]):.4f}  rho {math.exp(first4):.4f};  joints 5-8: rho {math.exp(sum(half['lp_new'][4:]) - sum(half['lp_old'][4:])):.4f}")
+    print("   -- the squeeze trap on mini-batch 1 with mu + 0.05 (ppo.py:253, :256-257): (N,) against (N,1) broadcasts to (N,N)")
+    rows = [surr_cell(cells[k], 0.05) for k in SET1]
+    ah = [cells[k]["Ahat"] for k in SET1]
+    rho, rc = [r["rho"] for r in rows], [r["rc"] for r in rows]
+    n = len(ah)
+    right = sum(max(-ah[i] * rho[i], -ah[i] * rc[i]) for i in range(n)) / n
+    # both squeezes missing: surrogate[i][j] = -A_i rho_j and clipped[i][j] = -A_i clip(rho_j)
+    both = sum(max(-ah[i] * rho[j], -ah[i] * rc[j]) for i in range(n) for j in range(n)) / n ** 2
+    # only :256 missing: surrogate is (N,N), the clipped term stays (N,) and broadcasts along the rows as -A_j clip(rho_j)
+    only256 = sum(max(-ah[i] * rho[j], -ah[j] * rc[j]) for i in range(n) for j in range(n)) / n ** 2
+    print(f"      A_hat {[round(x, 4) for x in ah]}  rho {[round(x, 4) for x in rho]}")
+    print(f"      right (both squeezed): {right:+.4f};  :256 and :257 both unsqueezed: {both:+.4f} = -mean(A_hat) x mean(rho) = {-sum(ah)/n * sum(rho)/n:+.4f};  only :256 unsqueezed: {only256:+.4f}")
+    print("      (all three agree with torch 2.5.1: -0.2958, -0.3013, +0.1140 - checked 2026-11-26, not part of this script)")
+    print(f"   element counts: a 16 x 8 batch -> log-densities {16*8}, log pi {16}, loss 1")
+
+
+def _event_terms():
+    """[(name, line, mode, func name, params dict, interval)] of EventsCfg; SceneEntityCfg values become their keyword dict."""
+    out = []
+    for name, ln, call in cfg_terms("EventsCfg"):
+        params = {}
+        node = _kw(call, "params")
+        for k, v in zip(node.keys, node.values) if node is not None else ():
+            try:
+                params[k.value] = ast.literal_eval(v)
+            except Exception:
+                params[k.value] = {kk.arg: ast.literal_eval(kk.value) for kk in v.keywords} | {"_entity": ast.literal_eval(v.args[0])}
+        iv = _kw(call, "interval_range_s")
+        out.append((name, ln, ast.literal_eval(_kw(call, "mode")), _kw(call, "func").attr, params, ast.literal_eval(iv) if iv is not None else None))
+    return out
+
+
+def _ppo_defaults():
+    """Default values in the signature of PPO.__init__ (ppo.py), with their line numbers."""
+    fn = next(n for n in ast.walk(ast.parse(PPO_PY.read_text())) if isinstance(n, ast.FunctionDef) and n.name == "__init__")
+    args = fn.args.args[-len(fn.args.defaults):]
+    return {a.arg: (ast.literal_eval(d), a.lineno) for a, d in zip(args, fn.args.defaults)}
+
+
+def ch29():
+    print("=== chapter 29 — the whole SF task: every config class, and from the toy table to full size ===")
+    print("-- the config classes of limx_base_env_cfg.py and how many entries each holds")
+    for cls in ("CommandsCfg", "ActionsCfg", "EventsCfg", "RewardsCfg", "TerminationsCfg", "CurriculumCfg"):
+        t = cfg_terms(cls)
+        print(f"   {cls} at :{cfg_class(cls).lineno}  {len(t)} entries: {[n for n, *_ in t]}")
+    for grp in ("PolicyCfg", "HistoryObsCfg", "CriticCfg", "CommandsObsCfg"):
+        t = cfg_terms("ObservarionsCfg", grp)
+        print(f"   ObservarionsCfg.{grp} at :{cfg_class('ObservarionsCfg', grp).lineno}  {len(t)} entries")
+    show(BASE, 484); show(BASE, 495, 502)
+
+    print("-- EventsCfg: the eleven entries")
+    ev = _event_terms()
+    for name, ln, mode, fn, params, iv in ev:
+        short = {k: v for k, v in params.items() if k != "asset_cfg"}
+        ent = params.get("asset_cfg", {})
+        print(f"   :{ln:<3d} {mode:8s} {name:34s} func={fn}  bodies/joints={ {k: v for k, v in ent.items() if k != '_entity'} }  {short}{'  interval=' + str(iv) if iv else ''}")
+    modes = {m: [n for n, _, mm, *_ in ev if mm == m] for m in ("startup", "reset", "interval")}
+    print(f"   count by mode: { {m: len(v) for m, v in modes.items()} }  total {len(ev)}")
+    print("   overrides in the task variant, and what the play variant switches off")
+    show(SF_VARIANTS, 41, 42); show(SF_VARIANTS, 56, 63); show(SF_VARIANTS, 76, 80)
+    print("   when each mode runs")
+    show(RL_ENV, 134, 135); show(RL_ENV, 235, 236); show(RL_ENV, 360)
+    print("   interval mode with a zero range")
+    show(EV_MGR, 207, 209); show(EV_MGR, 222, 229); show(EV_MGR, 405, 407)
+    print("   the push function")
+    show(PROJ_EVENTS, 37, 50); show(PROJ_EVENTS, 65)
+
+    p = probe()
+    d0 = dict(zip(p["body_names"], p["mass"]["default_per_body"])) if p else {}
+    print("-- derived ranges")
+    base = d0.get("base_Link", float("nan"))
+    lo, hi = next(pp for n, *_, pp, _ in ev if n == "add_base_mass")["mass_distribution_params"]
+    print(f"   add_base_mass in the base file: {lo, hi};  the SF variant overrides it to (-1.0, 2.0)")
+    s_lo, s_hi = next(pp for n, *_, pp, _ in ev if n == "radomize_rigid_body_mass_inertia")["mass_inertia_distribution_params"]
+    l_lo, l_hi = next(pp for n, *_, pp, _ in ev if n == "add_link_mass")["mass_distribution_params"]
+    print(f"   base_Link: default {base} kg;  after add (-1, 2): [{base-1:.3f}, {base+2:.3f}];  after the x[{s_lo}, {s_hi}] of all bodies: [{(base-1)*s_lo:.3f}, {(base+2)*s_hi:.3f}] kg")
+    print(f"   a leg link: default x [{l_lo}, {l_hi}] x [{s_lo}, {s_hi}] = x [{l_lo*s_lo:.2f}, {l_hi*s_hi:.2f}];  knee_L_Link {d0.get('knee_L_Link')} kg -> [{d0.get('knee_L_Link', 0)*l_lo*s_lo:.4f}, {d0.get('knee_L_Link', 0)*l_hi*s_hi:.4f}]")
+    tot_lo = (base - 1) * s_lo + sum(v * l_lo * s_lo for k, v in d0.items() if k.endswith(("_L_Link", "_R_Link"))) + d0.get("limx_imu", 0) * s_lo
+    tot_hi = (base + 2) * s_hi + sum(v * l_hi * s_hi for k, v in d0.items() if k.endswith(("_L_Link", "_R_Link"))) + d0.get("limx_imu", 0) * s_hi
+    print(f"   whole robot: default {sum(d0.values()):.3f} kg;  possible range [{tot_lo:.3f}, {tot_hi:.3f}] kg")
+    g_st = next(pp for n, *_, pp, _ in ev if n == "robot_joint_stiffness_and_damping")
+    g_re = next(pp for n, *_, pp, _ in ev if n == "randomize_actuator_gains")
+    show(SOLE_CFG, 48, 51); show(SOLE_CFG, 59, 62)
+    a, b = g_re["stiffness_distribution_params"]
+    print(f"   startup gains: operation {g_st['operation']}  stiffness {g_st['stiffness_distribution_params']}  damping {g_st['damping_distribution_params']}")
+    print(f"   reset gains:   operation {g_re['operation']} ({g_re['distribution']})  x {a, b}:  stiffness 45 -> [{45*a}, {45*b}];  damping 1.5 -> [{1.5*a}, {1.5*b}];  0.8 -> [{0.8*a}, {0.8*b}]")
+    print(f"   log-uniform on [0.5, 2]: median factor = sqrt(0.5 x 2) = {math.sqrt(a*b):.1f};  P(factor > 1) = {math.log(b/1)/math.log(b/a):.2f}")
+    print("   both gain events start from the default buffers, which they never write")
+    show(ISAAC_EVENTS, 510, 516); show(ISAAC_EVENTS, 323); show(ISAAC_EVENTS, 327, 331)
+    show(ARTIC, 1239, 1240); show(ARTIC, 1379, 1380)
+
+    push = next(pp for n, *_, pp, _ in ev if n == "push_robot")
+    pr, F, tq = push["probability"], push["force_range"]["x"][1], push["torque_range"]["x"][1]
+    dec, dt, step_dt, ep_s = timing()
+    n_ep = int(ep_s / step_dt)
+    m_def = sum(d0.values()) if d0 else float("nan")
+    print(f"-- push_robot: probability {pr} per env per step -> one push every {1/pr:.0f} steps = {step_dt/pr:.0f} s on average")
+    print(f"   expected pushes in a full {n_ep}-step episode = {n_ep*pr:.1f};  P(no push in a full episode) = {(1-pr)**n_ep:.4f};  P(no push in 24 steps) = {(1-pr)**24:.4f}")
+    print(f"   with 2048 envs: {2048*pr:.3f} pushes per step, {2048*24*pr:.1f} per table;  with 16 envs x 2000 steps: {16*2000*pr:.0f} expected")
+    print(f"   force up to {F:.0f} N on x and on y for one step ({step_dt} s): impulse {F*step_dt:.0f} N s per axis;  on the default {m_def:.3f} kg that is {F*step_dt/m_def:.3f} m/s per axis, {math.hypot(F, F)*step_dt/m_def:.3f} m/s diagonal;  torque up to {tq:.0f} N m")
+    if p:
+        print(f"-- measured on the real task ({p['date']}, {p['num_envs']} envs, {p['steps']} steps): scripts/{PROBE.name}")
+        print(f"   bodies {len(p['body_names'])}: {p['body_names']}")
+        print(f"   joints {p['joint_names']}")
+        print(f"   bodies matching ankle_.* : {p['ankle_bodies']};  matching .*_[LR]_Link : {len(p['LR_link_bodies'])}")
+        print(f"   events {p['events']};  curriculum terms {p['curriculum_terms']}")
+        print(f"   push: {p['push']}")
+        print(f"   gains after startup only {p['gains']['after_startup']}")
+        print(f"   gains after first reset  {p['gains']['after_first_reset']}")
+        print(f"   gains over the run       { {k: v for k, v in p['gains']['over_run'].items()} }")
+        print(f"   mass {p['mass']}")
+        print(f"   material {p['material']}")
+        print(f"   history {p['history']}")
+        print("   critic terms: name, width, first column, spread (max - min over every env and step)")
+        for c in p["critic_terms"]:
+            print(f"      {c['name']:28s} {c['width']:3d}  col {c['start']:3d}  spread {c['spread']:<12}  {'CONSTANT ' + str(c['first_values']) if c['spread'] == 0.0 else ''}")
+        const = [c for c in p["critic_terms"] if c["spread"] == 0.0]
+        cw = sum(c["width"] for c in const)
+        print(f"   constant terms {[c['name'] for c in const]}: {' + '.join(str(c['width']) for c in const)} = {cw} of {p['critic_total']} ({100*cw/p['critic_total']:.1f}%);  varying {p['critic_total']-cw};  with the 3 commands the critic reads {p['critic_total']-cw+3} varying numbers of 230")
+        w3 = {c["name"]: c["width"] for c in p["critic_terms"]}
+        print(f"   the three model-dependent widths: robot_mass {w3['robot_mass']} + robot_inertia {w3['robot_inertia']} + robot_material_properties {w3['robot_material_properties']} = {w3['robot_mass']+w3['robot_inertia']+w3['robot_material_properties']};  inertia = {len(p['body_names'])} bodies x 9;  material = {p['material']['shape'][1]} shapes x 3")
+    print("   where the critic's terms read from")
+    for a_ in (43, 50, 58, 65, 72, 95):
+        show(PROJ_OBS, a_)
+
+    print("-- noise on the policy's observations (order: noise, clip, scale)")
+    show(OBS_MGR, 313, 318)
+    for name, ln, call in cfg_terms("ObservarionsCfg", "PolicyCfg"):
+        nz, sc = _kw(call, "noise"), _kw(call, "scale")
+        std = ast.literal_eval(_kw(nz, "std")) if nz is not None else None
+        scale = ast.literal_eval(sc) if sc is not None else None
+        crit = next((c for n, _, c in cfg_terms("ObservarionsCfg", "CriticCfg") if n == name), None)
+        cs = ast.literal_eval(_kw(crit, "scale")) if crit is not None and _kw(crit, "scale") is not None else None
+        print(f"   :{ln} {name:14s} noise std {std}  scale {scale}  -> std after scale {None if std is None else round(std*scale, 5)}   critic scale {cs}")
+
+    print("-- curriculum")
+    show(BASE, 461); show(BASE, 463, 472); show(SF_VARIANTS, 80)
+    print(f"   functions in the project's curriculums.py: {[n.name for n in ast.parse(PROJ_CURR.read_text()).body if isinstance(n, ast.FunctionDef)]}")
+
+    print("-- hyperparameter table: the SF block")
+    sf, dflt = sf_ppo(), _ppo_defaults()
+    for k, (v, ln) in sorted(sf.items(), key=lambda kv: kv[1][1]):
+        dv = dflt.get(k)
+        print(f"   cfg:{ln:<4d} {k:24s} = {v!r:18}  {'class default ' + repr(dv[0]) + ' at ppo.py:' + str(dv[1]) + ('  (overridden)' if dv[0] != v else '  (same)') if dv else ''}")
+    print(f"   PPO.__init__ defaults that the SF block does not set: { {k: v for k, v in dflt.items() if k not in sf} }")
+    show(AC_PY, 117, 118); show(PPO_PY, 238, 241)
+    print("-- from the toy table to full size")
+    T_, ep, mb, it = sf["num_steps_per_env"][0], sf["num_learning_epochs"][0], sf["num_mini_batches"][0], sf["max_iterations"][0]
+    B = 2048
+    a_n, c_n, e_n = mlp_count([42, 512, 256, 128, 8]), mlp_count([230, 512, 256, 128, 1]), mlp_count([360, 256, 128, 3])
+    print(f"   cells 2 x 4 = 8  vs  {B} x {T_} = {B*T_:,};  mini-batch 4 vs {B*T_//mb:,};  gradient steps 2 x 2 = 4 vs {ep} x {mb} = {ep*mb}")
+    print(f"   gamma*lambda 0.72 vs {sf['gamma'][0]*sf['lam'][0]:.4f};  1/(1-gl) {1/(1-0.72):.2f} vs {1/(1-sf['gamma'][0]*sf['lam'][0]):.2f};  1/(1-gamma) 10 vs {1/(1-sf['gamma'][0]):.0f}")
+    print(f"   knobs: toy 3 (b, ell, b_V)  vs  actor {a_n:,} + 8 + critic {c_n:,} = {a_n+8+c_n:,} and encoder {e_n:,}; all {a_n+8+c_n+e_n:,}")
+    trans = it * B * T_
+    print(f"   whole run: {it:,} iterations, {trans:,} transitions, {it*ep*mb:,} gradient steps;  simulated time {trans*step_dt:,.0f} s = {trans*step_dt/3600:,.0f} robot-hours = {trans*step_dt/86400:.1f} robot-days")
+    print(f"   one env: {it*T_:,} steps = {it*T_*step_dt:,.0f} s = {it*T_*step_dt/3600:.0f} h;  at least {it*T_/n_ep:.0f} full episodes;  checkpoints {it//sf['save_interval'][0]} + the first = {it//sf['save_interval'][0] + 1}")
+    print(f"   table memory {2777*B*T_/1e6:.1f} MB (chapter 27)")
+    for n_ in (1024, 4096, 8192):
+        print(f"   {n_} envs: table {n_*T_:,} cells, mini-batch {n_*T_//mb:,}, transitions over the run {it*n_*T_:,}, table memory {2777*n_*T_/1e6:.1f} MB")
+
+    runs = training_runs()
+    if runs:
+        name, n_env, _, sc = runs[1]
+        wts = {n: w for n, _, _, w in reward_terms()}
+        n_it = len(sc["Loss/learning_rate"])
+        rows = sorted((statistics.mean(v for _, v in sc[t][-20:]), t.split("/")[-1]) for t in sc if "Episode_Reward" in t)
+        print(f"-- per-term episode reward, run {name}: {n_env} envs, {n_it} iterations; mean of the last 20 iterations (unit: episode sum / {ep_s:.0f} s)")
+        show(REW_MGR, 118, 119)
+        for m, t in rows:
+            print(f"   {t:36s} weight {wts[t]:>9}   {m:+.6f}  -> {m:+.4f}")
+        print(f"   sum {sum(m for m, _ in rows):+.5f}   positive terms {sum(m for m, _ in rows if m > 0):+.5f}   negative terms {sum(m for m, _ in rows if m < 0):+.5f}")
+        d = dict((t, m) for m, t in rows)
+        print(f"   pen_joint_accel / pen_feet_distance = {d['pen_joint_accel']/d['pen_feet_distance']:.1f} while |weights| are 1e-6 and 100")
+        print(f"   mean episode length, last 20 iterations: {statistics.mean(v for _, v in sc['Train/mean_episode_length'][-20:]):.2f} steps;  mean reward {statistics.mean(v for _, v in sc['Train/mean_reward'][-20:]):.3f}")
+    print("-- exercises")
+    print(f"   push with probability 0.01: every {1/0.01:.0f} steps = {step_dt/0.01:.0f} s; per full episode {n_ep*0.01:.0f}; per table at 2048 envs {2048*24*0.01:.1f}")
+    print(f"   damping factor needed for 3.0 from 1.5: {3.0/1.5};  for 1.5 from 0.8: {1.5/0.8:.3f} (inside [0.5, 2]: {0.5 <= 1.5/0.8 <= 2})")
+    print(f"   friction buckets 48, shapes {p['material']['shape'][1] if p else '?'} per robot")
+    print(f"   2000 x 16 x 0.002 = {2000*16*0.002:.0f} expected pushes; measured {p['push']['pushes'] if p else '?'}; sd of a binomial = {math.sqrt(2000*16*0.002*0.998):.2f}")
+    print(f"   max_iterations 2000 at 2048 envs: {2000*B*T_:,} transitions = {2000*B*T_*step_dt/3600:.0f} robot-hours;  ratio to 15000 = {2000/15000:.4f}")
+
+
+def _yaml(path):
+    """The small subset of YAML that params.yaml uses: nested maps by indentation, `- item` lists, numbers, quoted strings, # comments."""
+    root, stack = {}, [(-1, None)]
+    stack = [(-1, root)]
+    for raw in pathlib.Path(path).read_text().splitlines():
+        line = raw.split("#")[0].rstrip()
+        if not line.strip():
+            continue
+        ind = len(line) - len(line.lstrip())
+        while stack[-1][0] >= ind:
+            stack.pop()
+        cur = stack[-1][1]
+        s = line.strip()
+        if s.startswith("- "):
+            cur.setdefault("_list", []).append(s[2:].strip().strip('"'))
+            continue
+        k, _, v = s.partition(":")
+        v = v.strip()
+        if not v:
+            cur[k] = {}
+            stack.append((ind, cur[k]))
+        else:
+            try:
+                cur[k] = float(v) if any(c in v for c in ".e") else int(v)
+            except ValueError:
+                cur[k] = v.strip('"')
+    return root
+
+
+def torque_clamp(q_rel, dq, kp, kd, tau_max, scale):
+    """SolefootController.py:234-243 — the action range inside which |kp (q_des - q) - kd dq| <= tau_max."""
+    return ((q_rel + (kd * dq - tau_max) / kp) / scale, (q_rel + (kd * dq + tau_max) / kp) / scale)
+
+
+def ch30():
+    print("=== chapter 30 — from training to the real robot ===")
+    print("-- act and act_inference; who calls which")
+    show(AC_PY, 155, 168); show(RUN_PY, 376, 386); show(RUN_PY, 175); show(PLAY_PY, 101, 102); show(PLAY_PY, 131, 139)
+    print("-- what a checkpoint holds, and what play.py exports")
+    show(RUN_PY, 355, 374); show(PLAY_PY, 104, 122); show(MLP_CFG, 35, 62); show(TRAIN_PY, 136)
+    show(SF_VARIANTS, 50, 63)
+    print("-- toy table: act (a) and act_inference (mu) side by side; scale 0.25 of chapter 15")
+    for (e, t), c in cells.items():
+        print(f"   e{e}t{t}  mu {c['mu']:+.2f}  a {c['a']:+.2f}  a - mu = sigma*eps = {c['a']-c['mu']:+.2f}   target angle from a {0.25*c['a']:+.4f} rad, from mu {0.25*c['mu']:+.4f} rad, difference {0.25*(c['a']-c['mu']):+.4f} rad = {math.degrees(0.25*(c['a']-c['mu'])):+.2f} deg")
+    sd = math.sqrt(sum((c["a"] - c["mu"]) ** 2 for c in cells.values()) / 8)
+    print(f"   rms of a - mu over the 8 cells {sd:.4f};  at sigma 1.0 (start of training) one sigma moves the target by {0.25*1.0:.2f} rad = {math.degrees(0.25):.1f} deg; at sigma 0.5: {math.degrees(0.125):.1f} deg")
+
+    shp = json.loads((DEPLOY / "onnx_shapes.json").read_text())
+    print(f"-- the .onnx files LimX ships for SF_TRON1A (commit {shp['commit']}, read {shp['date']})")
+    for kind in ("isaaclab", "isaacgym"):
+        for net in ("policy", "encoder"):
+            s = shp[kind][net]
+            n = sum(a * b for a, b in s["weights"]) + sum(s["biases"])
+            print(f"   {kind:9s} {net:8s} in {s['input']:3d} out {s['output']}  layers {s['weights']}  parameters {n:,}  x4 bytes = {4*n:,} of {s['bytes']:,} ({s['bytes']-4*n:,} bytes of structure)  ops {'-'.join(s['ops'])}")
+    a_n, e_n, c_n = mlp_count([42, 512, 256, 128, 8]), mlp_count([360, 256, 128, 3]), mlp_count([230, 512, 256, 128, 1])
+    print(f"   this book's counts: actor {a_n:,}  encoder {e_n:,}  -> on the robot {a_n + e_n:,};  left behind: critic {c_n:,} + logstd 8 = {c_n + 8:,};  all {a_n+e_n+c_n+8:,}  share on the robot {100*(a_n+e_n)/(a_n+e_n+c_n+8):.1f}%")
+    print(f"   isaacgym policy input 44 = 3 + 36 + 5;  isaacgym encoder input 180 = 5 x 36;  isaaclab 42 = 3 + 36 + 3;  360 = 10 x 36")
+
+    y = _yaml(DEPLOY / "params.yaml")["PointfootCfg"]
+    ctl, size = y["control"], y["size"]
+    print(f"-- params.yaml of SF_TRON1A (snapshot {DEPLOY.name})")
+    print(f"   loop_frequency {y['loop_frequency']}  decimation {ctl['decimation']}  -> policy every {ctl['decimation']/y['loop_frequency']:.3f} s = {y['loop_frequency']/ctl['decimation']:.0f} Hz;  command sent every {1000/y['loop_frequency']:.0f} ms")
+    print(f"   joint order {y['joint_names']['_list']}")
+    print(f"   default angles {y['init_state']['default_joint_angle']}")
+    print(f"   control {ctl}")
+    print(f"   obs_scales {y['normalization']['obs_scales']}  clip {y['normalization']['clip_scales']}")
+    print(f"   size {size}  gait {y['gait']}  stand {y['stand_mode']}  user_cmd_scales {y['user_cmd_scales']}")
+    for a, b in ((1, 12), (17, 34), (38, 60)):
+        show(DEPLOY / "params.yaml", a, b)
+    print("-- main.py and the controller: the lines the chapter cites")
+    for path, a, b in (("main.py", 9, 9), ("main.py", 16, 16), ("main.py", 25, 39), ("SolefootController.py", 24, 26), ("SolefootController.py", 35, 41),
+                       ("SolefootController.py", 60, 68), ("SolefootController.py", 100, 104), ("SolefootController.py", 136, 136), ("SolefootController.py", 180, 191),
+                       ("SolefootController.py", 195, 205), ("SolefootController.py", 213, 225), ("SolefootController.py", 231, 247), ("SolefootController.py", 252, 262),
+                       ("SolefootController.py", 264, 272), ("SolefootController.py", 285, 285), ("SolefootController.py", 295, 299), ("SolefootController.py", 313, 323),
+                       ("SolefootController.py", 333, 341), ("SolefootController.py", 344, 362), ("SolefootController.py", 379, 389), ("SolefootController.py", 401, 411),
+                       ("SolefootController.py", 427, 431), ("SolefootController.py", 443, 446), ("SolefootController.py", 479, 481), ("SolefootController.py", 488, 500),
+                       ("simulator.py", 55, 55), ("simulator.py", 70, 87), ("simulator.py", 108, 108), ("simulator.py", 126, 136)):
+        show(DEPLOY / path, a, b)
+    p = probe()
+    lab = p["joint_names"] if p else ["abad_L_Joint", "abad_R_Joint", "hip_L_Joint", "hip_R_Joint", "knee_L_Joint", "knee_R_Joint", "ankle_L_Joint", "ankle_R_Joint"]
+    sdk = y["joint_names"]["_list"]
+    idx = [0, 4, 1, 5, 2, 6, 3, 7]
+    print(f"-- joint order: Isaac Lab {lab}")
+    print(f"   SDK {sdk}")
+    print(f"   swap_positions: lab[i] = sdk[idx[i]] with idx {idx}: {[sdk[i] for i in idx] == lab};  ankle joints in SDK order are indices {[i for i, n in enumerate(sdk) if n.startswith('ankle')]} ((i+1) % 4 == 0)")
+    print("-- observation layout on the robot vs PolicyCfg")
+    pol = obs_dims("ObservarionsCfg", "PolicyCfg")
+    print(f"   PolicyCfg {[(n, w) for n, _, _, w in pol]} = {sum(w for *_, w in pol)}")
+    print(f"   controller: gyro x {y['normalization']['obs_scales']['ang_vel']} (3), gravity (3), q - default x {y['normalization']['obs_scales']['dof_pos']} (8), dq x {y['normalization']['obs_scales']['dof_vel']} (8), last actions (8), clock (2), gait (4) = {3+3+8+8+8+2+4}")
+    print(f"   policy input: encoder {size['encoder_output_size']} + obs {size['observations_size']} + commands 3 = {size['encoder_output_size']+size['observations_size']+3}")
+    print(f"   history: buffer {shp['isaaclab']['encoder']['input']} numbers = {shp['isaaclab']['encoder']['input']//36} observations; first fill writes obs_history_length {size['obs_history_length']} x 36 = {size['obs_history_length']*36}; "
+          f"after the first shift {size['obs_history_length']-1} copies + {shp['isaaclab']['encoder']['input']//36 - size['obs_history_length']} zero rows + 1 newest; real observations fill it after {shp['isaaclab']['encoder']['input']//36} policy steps = {shp['isaaclab']['encoder']['input']//36 * 0.02:.1f} s")
+    if p:
+        print(f"   training side (probe): {p['history']}")
+    print("-- training config vs deploy file")
+    dec, dt, step_dt, _ = timing()
+    ev = {n: pp for n, _, _, _, pp, _ in _event_terms()}
+    a, b = ev["randomize_actuator_gains"]["damping_distribution_params"]
+    cmd = next(c for n, _, c in cfg_terms("CommandsCfg") if n == "base_velocity")
+    rng = {k.arg: ast.literal_eval(k.value) if not isinstance(k.value, ast.Tuple) or all(isinstance(e, ast.Constant) or isinstance(e, ast.UnaryOp) and isinstance(e.operand, ast.Constant) for e in k.value.elts) else "(-pi, pi)" for k in _kw(cmd, "ranges").keywords}
+    gait = next(c for n, _, c in cfg_terms("CommandsCfg") if n == "gait_command")
+    grng = {k.arg: ast.literal_eval(k.value) for k in _kw(gait, "ranges").keywords}
+    us = y["user_cmd_scales"]
+    rows = [("policy rate", f"{1/step_dt:.0f} Hz (decimation {dec} x {dt} s)", f"{y['loop_frequency']/ctl['decimation']:.0f} Hz ({y['loop_frequency']} Hz / {ctl['decimation']})"),
+            ("PD update", f"every physics step, {1/dt:.0f} Hz", f"command sent at {y['loop_frequency']} Hz"),
+            ("stiffness", f"45 default, reset draws 45 x [{a}, {b}] = [{45*a}, {45*b}]", f"{ctl['stiffness']}"),
+            ("damping, legs", f"1.5 default, [{1.5*a}, {1.5*b}]", f"{ctl['damping']}"),
+            ("damping, ankles", f"0.8 default, [{0.8*a}, {0.8*b}]", f"{ctl['ankle_joint_damping']}"),
+            ("torque limit", "80 on all 8 joints", f"{ctl['user_torque_limit']} legs, {ctl['ankle_joint_torque_limit']} ankles (as an action clamp)"),
+            ("action scale", "0.25", f"{ctl['action_scale_pos']}"),
+            ("default hip angle", "0.0", f"{y['init_state']['default_joint_angle']['hip_L_Joint']} / {y['init_state']['default_joint_angle']['hip_R_Joint']}"),
+            ("command range", f"{rng}", f"joystick x 0.5 x scales -> vx +-{0.5*us['lin_vel_x']}, vy +-{0.5*us['lin_vel_y']}, wz +-{0.5*us['ang_vel_yaw']}"),
+            ("gait", f"{grng}", f"frequency {y['gait']['frequencies']}, offset 0.5, duration 0.5, swing height {y['gait']['swing_height']}"),
+            ("history length", "10", f"yaml {size['obs_history_length']}; buffer from the encoder file: {shp['isaaclab']['encoder']['input']//36}")]
+    for r in rows:
+        print(f"   {r[0]:18s} | {r[1]:62s} | {r[2]}")
+    print(f"   deploy damping inside the training range: legs {1.5*a <= ctl['damping'] <= 1.5*b} ({ctl['damping']} vs upper edge {1.5*b});  ankles {0.8*a <= ctl['ankle_joint_damping'] <= 0.8*b} ({ctl['ankle_joint_damping']} vs upper edge {0.8*b})")
+    print("-- the torque clamp as an action range (SolefootController.py:234-243)")
+    kp, kd, kda, tl, ta, sc = ctl["stiffness"], ctl["damping"], ctl["ankle_joint_damping"], ctl["user_torque_limit"], ctl["ankle_joint_torque_limit"], ctl["action_scale_pos"]
+    for label, args_ in (("leg, q-q0 = 0.1, dq = 2", (0.1, 2.0, kp, kd, tl, sc)), ("ankle, q-q0 = 0.1, dq = 2", (0.1, 2.0, kp, kda, ta, sc)),
+                         ("leg at rest, q-q0 = 0", (0.0, 0.0, kp, kd, tl, sc)), ("ankle at rest, q-q0 = 0", (0.0, 0.0, kp, kda, ta, sc)),
+                         ("leg, q-q0 = -0.2, dq = -3", (-0.2, -3.0, kp, kd, tl, sc)), ("ankle, q-q0 = -0.2, dq = -3", (-0.2, -3.0, kp, kda, ta, sc))):
+        lo, hi = torque_clamp(*args_)
+        print(f"   {label:28s} action in [{lo:+.4f}, {hi:+.4f}]  width {hi-lo:.4f} = 2 tau_max / (kp scale) = {2*args_[4]/(args_[2]*args_[5]):.4f}")
+    print(f"   at rest: leg target may differ from q by tau/kp = {tl/kp:.4f} rad ({math.degrees(tl/kp):.1f} deg); ankle {ta/kp:.4f} rad ({math.degrees(ta/kp):.1f} deg)")
+    print(f"   check: leg, a at the upper edge -> torque {kp*(sc*torque_clamp(0.1, 2.0, kp, kd, tl, sc)[1] - 0.1) - kd*2.0:.4f}")
+    print("-- PD: the simulator's line against equation (18)")
+    q_t, q, dq = 0.25 * 0.40, 0.0, 0.0
+    print(f"   e0 t0 with mu (act_inference): target 0.25 x 0.20 = {0.25*0.20:.3f} rad; at q = 0, dq = 0: tau = 45 x {0.25*0.20:.3f} = {45*0.25*0.20:.2f} N m (chapter 15 used a = 0.40: {45*q_t:.2f} N m)")
+    print(f"   with dq = 1 rad/s: training default kd 1.5 -> {45*0.05 - 1.5*1:.2f};  deploy kd 3.0 -> {45*0.05 - 3.0*1:.2f}")
+    print("-- exercises")
+    print(f"   loop 1000 Hz and 50 Hz policy -> decimation {1000//50};  decimation 10 at 500 Hz: commands per policy step {ctl['decimation']}, per second {y['loop_frequency']}")
+    print(f"   joystick axis 0.6 on x: command {0.6*0.5*us['lin_vel_x']:.2f} m/s; on y: {0.6*0.5*us['lin_vel_y']:.2f} m/s")
+    g, resets = 0.0, []
+    for tick in range(1, 200):                      # SolefootController.py:296-298: add, then reset to 0.0 (not wrap) above 1.0
+        g += 0.02 * y["gait"]["frequencies"]
+        if g > 1.0:
+            g = 0.0
+            resets.append(tick)
+    per = resets[1] - resets[0]
+    print(f"   gait clock: +0.02 x {y['gait']['frequencies']} = {0.02*y['gait']['frequencies']:.3f} per policy step; nominal cycle {1/(0.02*y['gait']['frequencies']):.2f} steps = {1/y['gait']['frequencies']:.3f} s;"
+          f" with the reset at :297-298 the clock restarts at ticks {resets[:3]}: {per} steps = {per*0.02:.2f} s = {1/(per*0.02):.2f} Hz  (38 x 0.026 = {38*0.026:.3f}, 39 x 0.026 = {39*0.026:.3f})")
+    print(f"   stand mode: {y['stand_mode']['stand_duration']} s x {y['loop_frequency']} Hz = {y['stand_mode']['stand_duration']*y['loop_frequency']:.0f} loop iterations")
+    print(f"   sdk order of lab vector [1..8]: {[ [1,2,3,4,5,6,7,8][idx.index(i)] for i in range(8)]}")
+
+
+
 CHAPTERS = {"01": ch01, "02": ch02, "03": ch03, "04": ch04, "05": ch05, "06": ch06, "07": ch07, "08": ch08, "09": ch09,
             "10": ch10, "11": ch11, "12": ch12, "13": ch13, "14": ch14, "15": ch15, "16": ch16, "17": ch17, "18": ch18,
-            "19": ch19, "20": ch20, "21": ch21, "22": ch22, "23": ch23, "24": ch24, "25": ch25, "26": ch26, "27": ch27}
+            "19": ch19, "20": ch20, "21": ch21, "22": ch22, "23": ch23, "24": ch24, "25": ch25, "26": ch26, "27": ch27, "28": ch28, "29": ch29, "30": ch30}
 
 if __name__ == "__main__":
     for key in sys.argv[1:] or CHAPTERS:

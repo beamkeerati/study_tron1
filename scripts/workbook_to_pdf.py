@@ -13,6 +13,8 @@ What Chrome lacks, and how this script supplies it:
                                  finds each marker's page, pass 2 prints the numbers
 
 Content conventions (see notes/workbook/_STYLE.md):
+  The table of contents is clickable (each row links to its part page or chapter title) and the PDF carries
+  bookmarks built by Chrome from the headings.
   `# ...`  part title page (its own file NN-0-part.md, NN = first chapter of the part)
   `## บทที่ N · ชื่อ — คำขยาย`  chapter (new page, running head); a `## ` without บทที่ N is an unnumbered
   chapter (00-preface.md): no section numbers, no INTRO/SUMMARY check
@@ -143,7 +145,7 @@ hr { border: none; border-top: 1px solid var(--rule); margin: 1.4em 0; }
 .cover .cfoot { position: absolute; bottom: 0; right: 0; text-align: right; color: var(--muted); font-size: 0.92em; }
 .toc { break-after: page; }
 .toc h2 { font-size: 22px; color: var(--accent); margin: 0 0 14px; }
-.toc a { display: flex; align-items: baseline; margin: 3px 0; }
+.toc a { display: flex; align-items: baseline; margin: 3px 0; color: inherit; text-decoration: none; }
 .toc a.part { font-weight: bold; margin-top: 12px; }
 .toc .dots { flex: 1; border-bottom: 1px dotted #8c959f; margin: 0 6px; transform: translateY(-4px); }
 .toc .pg { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 2.2em; text-align: right; }
@@ -312,7 +314,7 @@ def structure(h):
         if chunk.startswith('<h1>'):
             title = re.match(r'<h1>(.*?)</h1>', chunk, re.S).group(1)
             toc.append((mark, plain(title), 'part'))
-            out.append(re.sub(r'<h1>(.*?)</h1>', rf'<h1 class="part" style="position:relative"><span class="pm">{mark}</span>\1</h1>',
+            out.append(re.sub(r'<h1>(.*?)</h1>', rf'<h1 class="part" id="c{n:03d}" style="position:relative"><span class="pm">{mark}</span>\1</h1>',
                               chunk, count=1, flags=re.S))
             continue
         title = re.match(r'<h2>(.*?)</h2>', chunk, re.S).group(1)
@@ -322,7 +324,7 @@ def structure(h):
         toc.append((mark, (f'{label} · ' if label else '') + plain(rest), 'ch'))
         pages.append(f'@page ch{n} {{ @top-left {{ content: "{css_str((label + " · ") if label else "")}{css_str(short)}"; font-family: \'WB Thai\'; '
                      f'font-size: 10.5px; color: #6e7781; vertical-align: bottom; padding-bottom: 6px; }} }}')
-        head = (f'<div class="chno">{label}</div>' if label else '') + f'<h2 class="chapter"><span class="pm">{mark}</span>{rest}</h2>'
+        head = (f'<div class="chno">{label}</div>' if label else '') + f'<h2 class="chapter" id="c{n:03d}"><span class="pm">{mark}</span>{rest}</h2>'
         chunk = re.sub(r'<h2>.*?</h2>', lambda _: head, chunk, count=1, flags=re.S)
         k, is_answers = 0, 'เฉลย' in plain(title)[:12]
 
@@ -360,14 +362,14 @@ def cover_html(text, store):
 
 
 def toc_html(toc, page_of):
-    rows = ''.join(f'<a class="{kind}"><span>{html.escape(t)}</span><span class="dots"></span>'
+    rows = ''.join(f'<a class="{kind}" href="#{mark.strip("@")}"><span>{html.escape(t)}</span><span class="dots"></span>'
                    f'<span class="pg">{page_of.get(mark, "")}</span></a>' for mark, t, kind in toc)
     return f'<div class="toc"><h2>สารบัญ</h2>{rows}</div>'
 
 
 def chrome(*args):
     return subprocess.run(['google-chrome', '--headless=new', '--disable-gpu', '--no-sandbox',
-                           '--virtual-time-budget=180000', *args], capture_output=True, text=True)
+                           '--virtual-time-budget=180000', '--generate-pdf-document-outline', *args], capture_output=True, text=True)
 
 
 def main():
@@ -383,8 +385,8 @@ def main():
     htmlp, pdf = OUT / f'{NAME}.html', OUT / f'{NAME}.pdf'
 
     def write(page_of, cls=''):
-        doc = (HEAD % dict(title=html.escape(book_title), css=css, mj=MATHJAX, cls=cls) + cover + toc_html(toc, page_of) + body
-               + (MEASURE if cls else '') + '</body></html>')
+        doc = (HEAD % dict(title=html.escape(book_title), css=css, mj=MATHJAX, cls=cls) + cover + toc_html(toc, page_of)
+               + (re.sub(r'@@c\d{3}@@', '', body) if page_of else body) + (MEASURE if cls else '') + '</body></html>')
         htmlp.write_text(restore(doc, store), encoding='utf-8')
 
     write({})                                                           # pass 1: find the pages

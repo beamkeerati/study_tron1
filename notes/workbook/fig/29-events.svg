@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 240" width="700" font-family="inherit" font-size="14">
+  <defs><marker id="f29a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#6e7781"/></marker></defs>
+  <text x="150" y="20" text-anchor="start" font-size="12.5" fill="#37474f">เวลาของหุ่นจำลองหนึ่งตัว</text>
+  <path d="M 150 30 L 690 30" fill="none" stroke="#6e7781" stroke-width="1.4" marker-end="url(#f29a)"/>
+  <line x1="150" y1="24" x2="150" y2="210" stroke="#8c959f" stroke-width="1" stroke-dasharray="3 3"/>
+  <text x="225.0" y="48" text-anchor="middle" font-size="12.5" fill="#37474f">episode ที่ 1</text>
+  <line x1="300" y1="24" x2="300" y2="210" stroke="#8c959f" stroke-width="1" stroke-dasharray="3 3"/>
+  <text x="410.0" y="48" text-anchor="middle" font-size="12.5" fill="#37474f">episode ที่ 2</text>
+  <line x1="520" y1="24" x2="520" y2="210" stroke="#8c959f" stroke-width="1" stroke-dasharray="3 3"/>
+  <text x="601.0" y="48" text-anchor="middle" font-size="12.5" fill="#37474f">episode ที่ 3</text>
+  <text x="8" y="80" text-anchor="start" font-size="14" font-weight="bold" fill="#37474f">startup</text>
+  <text x="8" y="98" text-anchor="start" font-size="12.5" fill="#6e7781">ครั้งเดียวตอนเริ่มโปรแกรม</text>
+  <text x="8" y="138" text-anchor="start" font-size="14" font-weight="bold" fill="#37474f">reset</text>
+  <text x="8" y="156" text-anchor="start" font-size="12.5" fill="#6e7781">ทุกครั้งที่ episode เริ่ม</text>
+  <text x="8" y="196" text-anchor="start" font-size="14" font-weight="bold" fill="#37474f">interval</text>
+  <text x="8" y="214" text-anchor="start" font-size="12.5" fill="#6e7781">ถูกเรียกทุก step</text>
+  <rect x="150" y="64" width="532" height="38" fill="#cfe9e9" stroke="#0f6e6e" stroke-width="1.5"/>
+  <text x="420.0" y="88" text-anchor="middle" font-size="12.5" fill="#37474f">มวล · ความเฉื่อย · จุดศูนย์กลางมวล · แรงเสียดทาน: ค่าเดิมตลอดการเทรน</text>
+  <rect x="150" y="122" width="150" height="38" fill="#ffffff" stroke="#8c959f" stroke-width="1.5"/>
+  <text x="225.0" y="146" text-anchor="middle" font-size="12.5" fill="#37474f">Kp, Kd ชุดที่ 1</text>
+  <rect x="300" y="122" width="220" height="38" fill="#eef1f4" stroke="#8c959f" stroke-width="1.5"/>
+  <text x="410.0" y="146" text-anchor="middle" font-size="12.5" fill="#37474f">Kp, Kd ชุดที่ 2</text>
+  <rect x="520" y="122" width="162" height="38" fill="#ffffff" stroke="#8c959f" stroke-width="1.5"/>
+  <text x="601.0" y="146" text-anchor="middle" font-size="12.5" fill="#37474f">Kp, Kd ชุดที่ 3</text>
+  <line x1="154" y1="186" x2="154" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="163" y1="186" x2="163" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="172" y1="186" x2="172" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="181" y1="186" x2="181" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="190" y1="186" x2="190" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="199" y1="186" x2="199" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="208" y1="186" x2="208" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="217" y1="186" x2="217" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="226" y1="186" x2="226" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="235" y1="186" x2="235" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="244" y1="186" x2="244" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="253" y1="186" x2="253" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="262" y1="186" x2="262" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="271" y1="186" x2="271" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="280" y1="186" x2="280" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="289" y1="186" x2="289" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="298" y1="186" x2="298" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="307" y1="186" x2="307" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="316" y1="186" x2="316" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="325" y1="186" x2="325" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="334" y1="186" x2="334" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="343" y1="186" x2="343" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="352" y1="186" x2="352" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="361" y1="186" x2="361" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="370" y1="186" x2="370" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="379" y1="186" x2="379" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="388" y1="186" x2="388" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="397" y1="186" x2="397" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="406" y1="186" x2="406" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="415" y1="186" x2="415" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="424" y1="186" x2="424" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="433" y1="186" x2="433" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="442" y1="186" x2="442" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="451" y1="186" x2="451" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="460" y1="186" x2="460" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="469" y1="186" x2="469" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="478" y1="186" x2="478" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="487" y1="186" x2="487" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="496" y1="186" x2="496" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="505" y1="186" x2="505" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="514" y1="186" x2="514" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="523" y1="186" x2="523" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="532" y1="186" x2="532" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="541" y1="186" x2="541" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="550" y1="186" x2="550" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="559" y1="186" x2="559" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="568" y1="186" x2="568" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="577" y1="186" x2="577" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="586" y1="186" x2="586" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="595" y1="186" x2="595" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="604" y1="186" x2="604" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="613" y1="186" x2="613" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="622" y1="186" x2="622" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="631" y1="186" x2="631" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="640" y1="186" x2="640" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="649" y1="186" x2="649" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="658" y1="186" x2="658" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="667" y1="186" x2="667" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <line x1="676" y1="186" x2="676" y2="200" stroke="#8c959f" stroke-width="1"/>
+  <rect x="268" y="180" width="6" height="26" fill="#9a6700"/>
+  <rect x="430" y="180" width="6" height="26" fill="#9a6700"/>
+  <rect x="601" y="180" width="6" height="26" fill="#9a6700"/>
+  <text x="420.0" y="226" text-anchor="middle" font-size="12.5" fill="#37474f">แถบสีเข้มคือ step ที่การผลักเกิดจริง โอกาส 0.002 ต่อ step คือเฉลี่ย 10 วินาทีต่อครั้ง</text>
+</svg>

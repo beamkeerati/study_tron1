@@ -1,0 +1,17 @@
+{
+ "commit": "f15f783",
+ "date": "2026-11-26",
+ "robot": "SF_TRON1A",
+ "isaaclab": {
+  "policy": {"input": 42, "output": 8, "bytes": 777052, "weights": [[42, 512], [512, 256], [256, 128], [128, 8]], "biases": [512, 256, 128, 8],
+             "ops": ["MatMul", "Add", "Elu", "MatMul", "Add", "Elu", "MatMul", "Add", "Elu", "MatMul", "Add"]},
+  "encoder": {"input": 360, "output": 3, "bytes": 527194, "weights": [[360, 256], [256, 128], [128, 3]], "biases": [256, 128, 3],
+              "ops": ["MatMul", "Add", "Elu", "MatMul", "Add", "Elu", "MatMul", "Add"]}
+ },
+ "isaacgym": {
+  "policy": {"input": 44, "output": 8, "bytes": 778692, "weights": [[44, 512], [512, 256], [256, 128], [128, 8]], "biases": [512, 256, 128, 8],
+             "ops": ["MatMul", "Add", "Elu", "MatMul", "Add", "Elu", "MatMul", "Add", "Elu", "MatMul", "Add"]},
+  "encoder": {"input": 180, "output": 3, "bytes": 341144, "weights": [[180, 256], [256, 128], [128, 3]], "biases": [256, 128, 3],
+              "ops": ["MatMul", "Add", "Elu", "MatMul", "Add", "Elu", "MatMul", "Add"]}
+ }
+}

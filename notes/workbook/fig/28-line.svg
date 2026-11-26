@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 472" width="700" font-family="inherit" font-size="14">
+  <defs><marker id="f28a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#6e7781"/></marker></defs>
+  <text x="8" y="22" text-anchor="start" font-size="12.5" fill="#37474f">ช่วง ก ของ iteration: เก็บข้อมูล ทำ 24 ครั้งต่อ iteration โดยไม่บันทึกการคำนวณ</text>
+  <text x="147" y="282" text-anchor="start" font-size="12.5" fill="#0f6e6e">ช่วง ค ของ iteration: ปรับลูกบิด ทำ 20 ครั้งต่อ iteration กับ mini-batch ละ N ช่อง</text>
+  <rect x="8" y="34" width="122" height="62" fill="#ffffff" stroke="#8c959f" stroke-width="1.5"/>
+  <text x="69.0" y="51.5" text-anchor="middle" font-weight="bold" fill="#37474f">E1 encoder</text>
+  <text x="69.0" y="69.5" text-anchor="middle" font-size="12.5" fill="#37474f">h → v̂</text>
+  <text x="69.0" y="87.5" text-anchor="middle" font-size="12.5" fill="#37474f">(B, 360) → (B, 3)</text>
+  <path d="M 132 65.0 L 145 65.0" fill="none" stroke="#6e7781" stroke-width="1.4" marker-end="url(#f28a)"/>
+  <rect x="147" y="34" width="122" height="62" fill="#ffffff" stroke="#8c959f" stroke-width="1.5"/>
+  <text x="208.0" y="51.5" text-anchor="middle" font-weight="bold" fill="#37474f">E2 ต่อ input</text>
+  <text x="208.0" y="69.5" text-anchor="middle" font-size="12.5" fill="#37474f">[v̂ ; o ; c] = s</text>
+  <text x="208.0" y="87.5" text-anchor="middle" font-size="12.5" fill="#37474f">(B, 42)</text>
+  <path d="M 271 65.0 L 284 65.0" fill="none" stroke="#6e7781" stroke-width="1.4" marker-end="url(#f28a)"/>
+  <rect x="286" y="34" width="122" height="62" fill="#ffffff" stroke="#8c959f" stroke-width="1.5"/>
+  <text x="347.0" y="51.5" text-anchor="middle" font-weight="bold" fill="#37474f">E3 actor</text>
+  <text x="347.0" y="69.5" text-anchor="middle" font-size="12.5" fill="#37474f">s → μ</text>
+  <text x="347.0" y="87.5" text-anchor="middle" font-size="12.5" fill="#37474f">(B, 42) → (B, 8)</text>
+  <path d="M 410 65.0 L 423 65.0" fill="none" stroke="#6e7781" stroke-width="1.4" marker-end="url(#f28a)"/>
+  <rect x="425" y="34" width="122" height="62" fill="#ffffff" stroke="#8c959f" stroke-width="1.5"/>
+  <text x="486.0" y="51.5" text-anchor="middle" font-weight="bold" fill="#37474f">E4 ความกว้าง</text>
+  <text x="486.0" y="69.5" text-anchor="middle" font-size="12.5" fill="#37474f">ℓ → σ</text>
+  <text x="486.0" y="87.5" text-anchor="middle" font-size="12.5" fill="#37474f">(8,)</text>
+  <path d="M 549 65.0 L 562 65.0" fill="none" stroke="#6e7781" stroke-width="1.4" marker-end="url(#f28a)"/>
+  <rect x="564" y="34" width="122" height="62" fill="#ffffff" stroke="#8c959f" stroke-width="1.5"/>
+  <text x="625.0" y="51.5" text-anchor="middle" font-weight="bold" fill="#37474f">E5 ระฆัง</text>
+  <text x="625.0" y="69.5" text-anchor="middle" font-size="12.5" fill="#37474f">μ, σ → π(·|s)</text>
+  <text x="625.0" y="87.5" text-anchor="middle" font-size="12.5" fill="#37474f">อ็อบเจกต์</text>
+  <rect x="8" y="150" width="122" height="62" fill="#ffffff" stroke="#8c959f" stroke-width="1.5"/>
+  <text x="69.0" y="167.5" text-anchor="middle" font-weight="bold" fill="#37474f">E6 สุ่ม</text>
+  <text x="69.0" y="185.5" text-anchor="middle" font-size="12.5" fill="#37474f">ระฆัง → a</text>
+  <text x="69.0" y="203.5" text-anchor="middle" font-size="12.5" fill="#37474f">(B, 8)</text>
+  <path d="M 132 181.0 L 145 181.0" fill="none" stroke="#6e7781" stroke-width="1.4" marker-end="url(#f28a)"/>
+  <rect x="147" y="150" width="122" height="62" fill="#ffffff" stroke="#8c959f" stroke-width="1.5"/>
+  <text x="208.0" y="167.5" text-anchor="middle" font-weight="bold" fill="#37474f">E7 ความหนาแน่น</text>
+  <text x="208.0" y="185.5" text-anchor="middle" font-size="12.5" fill="#37474f">ของ a ต่อข้อต่อ</text>
+  <text x="208.0" y="203.5" text-anchor="middle" font-size="12.5" fill="#37474f">(B, 8)</text>
+  <path d="M 271 181.0 L 284 181.0" fill="none" stroke="#6e7781" stroke-width="1.4" marker-end="url(#f28a)"/>
+  <rect x="286" y="150" width="122" height="62" fill="#ffffff" stroke="#8c959f" stroke-width="1.5"/>
+  <text x="347.0" y="167.5" text-anchor="middle" font-weight="bold" fill="#37474f">E8 เข้า log</text>
+  <text x="347.0" y="185.5" text-anchor="middle" font-size="12.5" fill="#37474f">สามพจน์ต่อข้อต่อ</text>
+  <text x="347.0" y="203.5" text-anchor="middle" font-size="12.5" fill="#37474f">(B, 8)</text>
+  <path d="M 410 181.0 L 423 181.0" fill="none" stroke="#6e7781" stroke-width="1.4" marker-end="url(#f28a)"/>
+  <rect x="425" y="150" width="122" height="62" fill="#ffffff" stroke="#8c959f" stroke-width="1.5"/>
+  <text x="486.0" y="167.5" text-anchor="middle" font-weight="bold" fill="#37474f">E9 รวมข้อต่อ</text>
+  <text x="486.0" y="185.5" text-anchor="middle" font-size="12.5" fill="#37474f">log π(a|s)</text>
+  <text x="486.0" y="203.5" text-anchor="middle" font-size="12.5" fill="#37474f">(B, 8) → (B,)</text>
+  <path d="M 549 181.0 L 562 181.0" fill="none" stroke="#6e7781" stroke-width="1.4" marker-end="url(#f28a)"/>
+  <rect x="564" y="150" width="122" height="62" fill="#eef1f4" stroke="#8c959f" stroke-width="1.5"/>
+  <text x="625.0" y="167.5" text-anchor="middle" font-weight="bold" fill="#37474f">E10 เก็บลงตาราง</text>
+  <text x="625.0" y="185.5" text-anchor="middle" font-size="12.5" fill="#37474f">log π เก่า, μ, σ, a</text>
+  <text x="625.0" y="203.5" text-anchor="middle" font-size="12.5" fill="#37474f">(24, B, ·)</text>
+  <rect x="8" y="292" width="122" height="62" fill="#cfe9e9" stroke="#0f6e6e" stroke-width="1.5"/>
+  <text x="69.0" y="309.5" text-anchor="middle" font-weight="bold" fill="#37474f">E11 ระฆังใหม่</text>
+  <text x="69.0" y="327.5" text-anchor="middle" font-size="12.5" fill="#37474f">ทำ E1–E5 ซ้ำ</text>
+  <text x="69.0" y="345.5" text-anchor="middle" font-size="12.5" fill="#37474f">(N, 42) → (N, 8)</text>
+  <path d="M 132 323.0 L 145 323.0" fill="none" stroke="#6e7781" stroke-width="1.4" marker-end="url(#f28a)"/>
+  <rect x="147" y="292" width="122" height="62" fill="#cfe9e9" stroke="#0f6e6e" stroke-width="1.5"/>
+  <text x="208.0" y="309.5" text-anchor="middle" font-weight="bold" fill="#37474f">E12 ถาม a เดิม</text>
+  <text x="208.0" y="327.5" text-anchor="middle" font-size="12.5" fill="#37474f">log π ใหม่</text>
+  <text x="208.0" y="345.5" text-anchor="middle" font-size="12.5" fill="#37474f">(N,)</text>
+  <path d="M 271 323.0 L 284 323.0" fill="none" stroke="#6e7781" stroke-width="1.4" marker-end="url(#f28a)"/>
+  <rect x="286" y="292" width="122" height="62" fill="#cfe9e9" stroke="#0f6e6e" stroke-width="1.5"/>
+  <text x="347.0" y="309.5" text-anchor="middle" font-weight="bold" fill="#37474f">E13 อัตราส่วน</text>
+  <text x="347.0" y="327.5" text-anchor="middle" font-size="12.5" fill="#37474f">ρ</text>
+  <text x="347.0" y="345.5" text-anchor="middle" font-size="12.5" fill="#37474f">(N,)</text>
+  <path d="M 410 323.0 L 423 323.0" fill="none" stroke="#6e7781" stroke-width="1.4" marker-end="url(#f28a)"/>
+  <rect x="425" y="292" width="122" height="62" fill="#cfe9e9" stroke="#0f6e6e" stroke-width="1.5"/>
+  <text x="486.0" y="309.5" text-anchor="middle" font-weight="bold" fill="#37474f">E14 loss</text>
+  <text x="486.0" y="327.5" text-anchor="middle" font-size="12.5" fill="#37474f">ρ กับ Â → L</text>
+  <text x="486.0" y="345.5" text-anchor="middle" font-size="12.5" fill="#37474f">(N,) → scalar</text>
+  <path d="M 549 323.0 L 562 323.0" fill="none" stroke="#6e7781" stroke-width="1.4" marker-end="url(#f28a)"/>
+  <rect x="564" y="292" width="122" height="62" fill="#cfe9e9" stroke="#0f6e6e" stroke-width="1.5"/>
+  <text x="625.0" y="309.5" text-anchor="middle" font-weight="bold" fill="#37474f">E15 เดินย้อน</text>
+  <text x="625.0" y="327.5" text-anchor="middle" font-size="12.5" fill="#37474f">L → .grad → ก้าว</text>
+  <text x="625.0" y="345.5" text-anchor="middle" font-size="12.5" fill="#37474f">469,905 ลูกบิด</text>
+  <path d="M 625.0 98 L 625.0 114 L 69.0 114 L 69.0 148" fill="none" stroke="#6e7781" stroke-width="1.4" marker-end="url(#f28a)"/>
+  <path d="M 38 214 L 38 246" fill="none" stroke="#6e7781" stroke-width="1.4" marker-end="url(#f28a)"/>
+  <text x="48" y="244" text-anchor="start" font-size="12.5" fill="#6e7781">a ไป environment ตามบทที่ 15</text>
+  <path d="M 625.0 214 L 625.0 258 L 100 258 L 100 290" fill="none" stroke="#6e7781" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#f28a)"/>
+  <text x="377.0" y="252" text-anchor="middle" font-size="12.5" fill="#6e7781">อ่านแถวของตารางกลับมาใช้</text>
+  <rect x="8" y="396" width="122" height="50" fill="#ffffff" stroke="#8c959f" stroke-width="1.5"/>
+  <text x="69.0" y="416.5" text-anchor="middle" font-weight="bold" fill="#37474f">critic</text>
+  <text x="69.0" y="434.5" text-anchor="middle" font-size="12.5" fill="#37474f">input ของ critic → V</text>
+  <rect x="147" y="396" width="122" height="50" fill="#ffffff" stroke="#8c959f" stroke-width="1.5"/>
+  <text x="208.0" y="416.5" text-anchor="middle" font-weight="bold" fill="#37474f">GAE ช่วง ข</text>
+  <text x="208.0" y="434.5" text-anchor="middle" font-size="12.5" fill="#37474f">δ<tspan dy="4" font-size="10">t</tspan><tspan dy="-4"> </tspan>→ A<tspan dy="4" font-size="10">t</tspan><tspan dy="-4"> </tspan>→ Â<tspan dy="4" font-size="10">t</tspan><tspan dy="-4"> </tspan></text>
+  <path d="M 132 421 L 145 421" fill="none" stroke="#6e7781" stroke-width="1.4" marker-end="url(#f28a)"/>
+  <path d="M 271 421 L 486.0 421 L 486.0 356" fill="none" stroke="#6e7781" stroke-width="1.4" marker-end="url(#f28a)"/>
+  <text x="357.0" y="414" text-anchor="middle" font-size="12.5" fill="#6e7781">advantage รูป (N, 1)</text>
+  <text x="692" y="460" text-anchor="end" font-size="12.5" fill="#6e7781">ลูกบิดที่ E15 ปรับแล้ว ถูกใช้ใน E3, E4 และ E11 ครั้งถัดไป</text>
+</svg>

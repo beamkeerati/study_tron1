@@ -1,0 +1,700 @@
+{
+ "date": "2026-11-26",
+ "task": "Isaac-Limx-SF-Blind-Flat-v0",
+ "num_envs": 16,
+ "steps": 2000,
+ "step_dt": 0.02,
+ "physics_dt": 0.005,
+ "max_episode_length": 1000,
+ "body_names": [
+  "base_Link",
+  "abad_L_Link",
+  "abad_R_Link",
+  "limx_imu",
+  "hip_L_Link",
+  "hip_R_Link",
+  "knee_L_Link",
+  "knee_R_Link",
+  "ankle_L_Link",
+  "ankle_R_Link"
+ ],
+ "joint_names": [
+  "abad_L_Joint",
+  "abad_R_Joint",
+  "hip_L_Joint",
+  "hip_R_Joint",
+  "knee_L_Joint",
+  "knee_R_Joint",
+  "ankle_L_Joint",
+  "ankle_R_Joint"
+ ],
+ "ankle_bodies": [
+  "ankle_L_Link",
+  "ankle_R_Link"
+ ],
+ "LR_link_bodies": [
+  "abad_L_Link",
+  "abad_R_Link",
+  "hip_L_Link",
+  "hip_R_Link",
+  "knee_L_Link",
+  "knee_R_Link",
+  "ankle_L_Link",
+  "ankle_R_Link"
+ ],
+ "default_joint_pos": [
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0
+ ],
+ "events": {
+  "startup": [
+   "prepare_quantity_for_tron1_piper",
+   "add_base_mass",
+   "add_link_mass",
+   "radomize_rigid_body_mass_inertia",
+   "robot_physics_material",
+   "robot_joint_stiffness_and_damping",
+   "robot_center_of_mass"
+  ],
+  "reset": [
+   "reset_robot_base",
+   "reset_robot_joints",
+   "randomize_actuator_gains"
+  ],
+  "interval": [
+   "push_robot"
+  ]
+ },
+ "curriculum_terms": [],
+ "termination_terms": [
+  "time_out",
+  "base_contact"
+ ],
+ "command_terms": [
+  "gait_command",
+  "base_velocity"
+ ],
+ "reward_terms": 20,
+ "obs_shapes": {
+  "policy": [
+   36
+  ],
+  "critic": [
+   227
+  ],
+  "commands": [
+   3
+  ],
+  "obsHistory": [
+   10,
+   36
+  ]
+ },
+ "obs_terms": {
+  "policy": [
+   [
+    "base_ang_vel",
+    [
+     3
+    ]
+   ],
+   [
+    "proj_gravity",
+    [
+     3
+    ]
+   ],
+   [
+    "joint_pos",
+    [
+     8
+    ]
+   ],
+   [
+    "joint_vel",
+    [
+     8
+    ]
+   ],
+   [
+    "last_action",
+    [
+     8
+    ]
+   ],
+   [
+    "gait_phase",
+    [
+     2
+    ]
+   ],
+   [
+    "gait_command",
+    [
+     4
+    ]
+   ]
+  ],
+  "critic": [
+   [
+    "base_lin_vel",
+    [
+     3
+    ]
+   ],
+   [
+    "base_ang_vel",
+    [
+     3
+    ]
+   ],
+   [
+    "proj_gravity",
+    [
+     3
+    ]
+   ],
+   [
+    "joint_pos",
+    [
+     8
+    ]
+   ],
+   [
+    "joint_vel",
+    [
+     8
+    ]
+   ],
+   [
+    "last_action",
+    [
+     8
+    ]
+   ],
+   [
+    "gait_phase",
+    [
+     2
+    ]
+   ],
+   [
+    "gait_command",
+    [
+     4
+    ]
+   ],
+   [
+    "robot_joint_torque",
+    [
+     8
+    ]
+   ],
+   [
+    "robot_joint_acc",
+    [
+     8
+    ]
+   ],
+   [
+    "feet_lin_vel",
+    [
+     6
+    ]
+   ],
+   [
+    "robot_mass",
+    [
+     10
+    ]
+   ],
+   [
+    "robot_inertia",
+    [
+     90
+    ]
+   ],
+   [
+    "robot_joint_pos",
+    [
+     8
+    ]
+   ],
+   [
+    "robot_joint_stiffness",
+    [
+     8
+    ]
+   ],
+   [
+    "robot_joint_damping",
+    [
+     8
+    ]
+   ],
+   [
+    "robot_pos",
+    [
+     3
+    ]
+   ],
+   [
+    "robot_vel",
+    [
+     6
+    ]
+   ],
+   [
+    "robot_material_properties",
+    [
+     27
+    ]
+   ],
+   [
+    "feet_contact_force",
+    [
+     6
+    ]
+   ]
+  ],
+  "commands": [
+   [
+    "velocity_commands",
+    [
+     3
+    ]
+   ]
+  ],
+  "obsHistory": [
+   [
+    "base_ang_vel",
+    [
+     10,
+     3
+    ]
+   ],
+   [
+    "proj_gravity",
+    [
+     10,
+     3
+    ]
+   ],
+   [
+    "joint_pos",
+    [
+     10,
+     8
+    ]
+   ],
+   [
+    "joint_vel",
+    [
+     10,
+     8
+    ]
+   ],
+   [
+    "last_action",
+    [
+     10,
+     8
+    ]
+   ],
+   [
+    "gait_phase",
+    [
+     10,
+     2
+    ]
+   ],
+   [
+    "gait_command",
+    [
+     10,
+     4
+    ]
+   ]
+  ]
+ },
+ "history": {
+  "rows_identical_at_reset": true,
+  "newest_row_is_last": true,
+  "oldest_row_is_first": true
+ },
+ "mass": {
+  "default_per_body": [
+   9.585,
+   1.469,
+   1.469,
+   0.01,
+   2.3,
+   2.3,
+   1.22,
+   1.22,
+   0.62,
+   0.62
+  ],
+  "default_total": 20.813,
+  "default_identical_across_envs": true,
+  "physx_total_range": [
+   18.1262,
+   23.6417
+  ],
+  "physx_base_range": [
+   8.0677,
+   12.7871
+  ]
+ },
+ "material": {
+  "shape": [
+   16,
+   9,
+   3
+  ],
+  "static_friction_range": [
+   0.448,
+   1.1849
+  ],
+  "dynamic_friction_range": [
+   0.7151,
+   0.8899
+  ],
+  "restitution_range": [
+   0.0029,
+   0.9998
+  ]
+ },
+ "critic_terms": [
+  {
+   "name": "base_lin_vel",
+   "width": 3,
+   "start": 0,
+   "spread": 6.634617,
+   "first_values": [
+    -0.0499,
+    -0.2826,
+    -0.0636
+   ]
+  },
+  {
+   "name": "base_ang_vel",
+   "width": 3,
+   "start": 3,
+   "spread": 28.015427,
+   "first_values": [
+    0.4185,
+    0.1189,
+    0.4806
+   ]
+  },
+  {
+   "name": "proj_gravity",
+   "width": 3,
+   "start": 6,
+   "spread": 1.999492,
+   "first_values": [
+    -0.0,
+    0.0,
+    -1.0
+   ]
+  },
+  {
+   "name": "joint_pos",
+   "width": 8,
+   "start": 9,
+   "spread": 1.870214,
+   "first_values": [
+    -0.0567,
+    -0.0805,
+    -0.0683,
+    -0.0412
+   ]
+  },
+  {
+   "name": "joint_vel",
+   "width": 8,
+   "start": 17,
+   "spread": 34.738697,
+   "first_values": [
+    0.0,
+    0.0,
+    -0.0,
+    0.0
+   ]
+  },
+  {
+   "name": "last_action",
+   "width": 8,
+   "start": 25,
+   "spread": 0.84182,
+   "first_values": [
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "name": "gait_phase",
+   "width": 2,
+   "start": 33,
+   "spread": 2.0,
+   "first_values": [
+    0.0,
+    1.0
+   ]
+  },
+  {
+   "name": "gait_command",
+   "width": 4,
+   "start": 35,
+   "spread": 0.79916,
+   "first_values": [
+    1.0072,
+    0.5,
+    0.5,
+    0.1097
+   ]
+  },
+  {
+   "name": "robot_joint_torque",
+   "width": 8,
+   "start": 39,
+   "spread": 98.476791,
+   "first_values": [
+    1.8441,
+    2.0115,
+    2.3075,
+    1.8612
+   ]
+  },
+  {
+   "name": "robot_joint_acc",
+   "width": 8,
+   "start": 47,
+   "spread": 11457.896484,
+   "first_values": [
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "name": "feet_lin_vel",
+   "width": 6,
+   "start": 55,
+   "spread": 6.602215,
+   "first_values": [
+    0.0002,
+    0.1622,
+    -0.032,
+    -0.0389
+   ]
+  },
+  {
+   "name": "robot_mass",
+   "width": 10,
+   "start": 61,
+   "spread": 0.0,
+   "first_values": [
+    9.585,
+    1.469,
+    1.469,
+    0.01
+   ]
+  },
+  {
+   "name": "robot_inertia",
+   "width": 90,
+   "start": 71,
+   "spread": 0.0,
+   "first_values": [
+    0.1401,
+    0.0005,
+    0.0282,
+    0.0005
+   ]
+  },
+  {
+   "name": "robot_joint_pos",
+   "width": 8,
+   "start": 161,
+   "spread": 0.0,
+   "first_values": [
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "name": "robot_joint_stiffness",
+   "width": 8,
+   "start": 169,
+   "spread": 0.0,
+   "first_values": [
+    45.0,
+    45.0,
+    45.0,
+    45.0
+   ]
+  },
+  {
+   "name": "robot_joint_damping",
+   "width": 8,
+   "start": 177,
+   "spread": 0.0,
+   "first_values": [
+    1.5,
+    1.5,
+    1.5,
+    1.5
+   ]
+  },
+  {
+   "name": "robot_pos",
+   "width": 3,
+   "start": 185,
+   "spread": 10.273329,
+   "first_values": [
+    3.5648,
+    -3.9429,
+    0.8
+   ]
+  },
+  {
+   "name": "robot_vel",
+   "width": 6,
+   "start": 188,
+   "spread": 27.278053,
+   "first_values": [
+    -0.2745,
+    0.0835,
+    -0.0636,
+    0.0677
+   ]
+  },
+  {
+   "name": "robot_material_properties",
+   "width": 27,
+   "start": 194,
+   "spread": 0.996885,
+   "first_values": [
+    1.1318,
+    0.7407,
+    0.2018,
+    0.6622
+   ]
+  },
+  {
+   "name": "feet_contact_force",
+   "width": 6,
+   "start": 221,
+   "spread": 2254.743652,
+   "first_values": [
+    0.0,
+    0.0,
+    25.2921,
+    0.0
+   ]
+  }
+ ],
+ "critic_total": 227,
+ "critic_constant_width": 124,
+ "gains": {
+  "default_stiffness": [
+   45.0,
+   45.0,
+   45.0,
+   45.0,
+   45.0,
+   45.0,
+   45.0,
+   45.0
+  ],
+  "default_damping": [
+   1.5,
+   1.5,
+   1.5,
+   1.5,
+   1.5,
+   1.5,
+   0.8,
+   0.8
+  ],
+  "after_startup": {
+   "stiffness": [
+    32.2264,
+    47.8773
+   ],
+   "damping_legs": [
+    2.0057,
+    2.9978
+   ],
+   "damping_ankles": [
+    2.0118,
+    2.9967
+   ]
+  },
+  "after_first_reset": {
+   "stiffness": [
+    22.9824,
+    89.295
+   ],
+   "damping_legs": [
+    0.7561,
+    2.9992
+   ],
+   "damping_ankles": [
+    0.4022,
+    1.4277
+   ]
+  },
+  "over_run": {
+   "resets": 758,
+   "stiffness": [
+    22.5026,
+    89.984
+   ],
+   "damping_legs": [
+    0.7505,
+    2.9992
+   ],
+   "damping_ankles": [
+    0.4004,
+    1.5991
+   ],
+   "default_stiffness_after_run": [
+    45.0,
+    45.0,
+    45.0,
+    45.0,
+    45.0,
+    45.0,
+    45.0,
+    45.0
+   ]
+  }
+ },
+ "push": {
+  "calls": 2000,
+  "env_ids_per_call": [
+   16
+  ],
+  "pushes": 75,
+  "expected_pushes": 64.0,
+  "probability": 0.002,
+  "interval_range_s": [
+   0.0,
+   0.0
+  ]
+ }
+}

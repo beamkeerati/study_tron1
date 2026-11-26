@@ -49,14 +49,28 @@ An IMU plus joint encoders can produce every one of these on real hardware.
 ### `critic` — 227 dims (privileged, simulation only)
 
 Adds `base_lin_vel`, joint torque/acceleration, foot linear velocity and contact
-force, and — the interesting part — the randomised system parameters themselves:
-`robot_mass` (10), `robot_inertia` (90), `robot_joint_stiffness` (8),
-`robot_joint_damping` (8), `robot_material_properties` (27).
+force, and five terms named after the robot's physical parameters: `robot_mass`
+(10), `robot_inertia` (90), `robot_joint_pos` (8), `robot_joint_stiffness` (8),
+`robot_joint_damping` (8), plus `robot_material_properties` (27).
 
-This is **asymmetric actor-critic**: the value function is allowed to see the
-ground truth of a randomised world so its advantage estimates have lower
-variance, while the actor is forced to cope with only what a real robot senses.
-The critic is discarded at deployment.
+**Those names are misleading.** The first five read Isaac Lab's `default_*`
+buffers (`observations.py:43`, `:50`, `:58`, `:65`, `:72`), which are set once at
+load: mass and inertia from the USD (`articulation.py:1239-1240`), gains from the
+actuator config (`:1379-1380`, i.e. `solefoot_cfg.py:50-51`, `:61-62`) and joint
+positions from `init_state` (`:1286-1289`). The
+randomisation events read those buffers and write the sampled values into PhysX
+(`envs/mdp/events.py:323`/`:333` for mass, `:512`/`:516` for stiffness); they
+never write the buffers back. So the critic gets the *nominal* mass, inertia and
+gains — the same 124 numbers in every env at every step — not the randomised
+ones. Only `robot_material_properties` (27) reads PhysX directly
+(`observations.py:95`) and really differs per env. Measured on the running task,
+16 envs × 2000 steps, 2026-11-26 (`scripts/workbook_env_probe.py`): the spread of
+those 124 columns is exactly 0 while the simulated total mass ranges 18.1–23.6 kg.
+
+This is still **asymmetric actor-critic** — the value function sees
+`base_lin_vel`, contact forces and the other true state the actor cannot — but
+of the randomised world it sees only friction and restitution, not mass or
+gains. The critic is discarded at deployment.
 
 ### `obsHistory` — 10 × 36
 
@@ -79,11 +93,21 @@ observe directly.
 
 | Group | Terms |
 |---|---|
-| Task | `keep_balance` 1.0, `rew_lin_vel_xy` 2.5, `rew_ang_vel_z` 1.0, `rew_keep_ankle_pitch_zero_in_air` 0.5, `test_gait_reward` 1.0 |
+| Task | `keep_balance` 1.0, `rew_lin_vel_xy` 2.5, `rew_ang_vel_z` 1.0, `rew_keep_ankle_pitch_zero_in_air` 0.5 |
+| Gait (positive weight, **penalty in effect**) | `test_gait_reward` 1.0 |
 | Posture | `pen_base_height` −50, `pen_flat_orientation` −5.0, `pen_feet_distance` −100 |
 | Regularity | `pen_lin_vel_z` −10, `pen_ang_vel_xy` −0.05, `pen_action_rate` −0.5, `pen_action_smoothness` −0.15 |
 | Effort | `pen_joint_torque` −8e−5, `pen_joint_accel` −1e−6, `pen_joint_power_l1` −2e−5, `pen_joint_vel_l2` −5e−5 |
 | Safety | `pen_joint_pos_limits` −2.0, `pen_undesired_contacts` −0.5, `pen_feet_regulation` −0.2, `pen_foot_landing_vel` −0.15 |
+
+`test_gait_reward` does not belong with the task rewards even though its weight
+is +1.0: the config sets both of its internal scales to −2.0
+(`limx_base_env_cfg.py:434-435`), and with a negative scale each branch returns
+a non-negative quantity times that scale (`rewards.py:466`, `:478`). The term is
+therefore never above zero — it penalises feet that are off the commanded gait,
+and the best it can give is 0. In the 64-env × 218-iteration run of 2026-09-04
+its logged episode value is negative (−0.013 in the logger's unit, episode sum
+÷ 20 s, mean of the last 20 iterations).
 
 The effort group is the natural hook for energy-efficiency work: `pen_joint_power_l1`
 is a mechanical-power L1 penalty, and its weight is three orders of magnitude
@@ -100,12 +124,29 @@ The gait is commanded, not emergent.
 
 | Mode | Terms |
 |---|---|
-| `startup` | base mass, link mass, rigid-body mass & inertia, physics material, joint stiffness & damping, centre of mass |
-| `reset` | base pose, joint states, actuator gains |
-| `interval` | `push_robot` — **interval `(0.0, 0.0)`, so it is effectively off** |
+| `startup` | base mass (−1…+2 kg — `limx_solefoot_env_cfg.py:42` overrides the ±5 of the base file), link mass ×0.8–1.2, rigid-body mass & inertia ×0.8–1.2, physics material, joint stiffness & damping, centre of mass ±0.075 m |
+| `reset` | base pose, joint states, actuator gains ×0.5–2.0 (log-uniform) |
+| `interval` | `push_robot` — `interval_range_s=(0.0, 0.0)`, **which means "every step", not "off"** |
 
-Whatever `startup` randomises is exactly what shows up in the critic's privileged
-observation. Note the disabled push: enabling it is a cheap first experiment.
+Three things here are not what they look like.
+
+- **The push is on.** With a zero interval the event manager's countdown is
+  below zero on every step, so it calls the term on every step for every env
+  (`event_manager.py:207-209`, `:222-229`). The real rate is the term's own
+  `probability=0.002` (`events.py:45-47`): one push per env every 500 steps
+  (10 s) on average, lasting one policy step, up to ±500 N in x and y. Measured:
+  2000 calls in 2000 steps, 75 pushes over 16 envs (64 expected). The `_PLAY`
+  variant removes it (`limx_solefoot_env_cfg.py:61`). An earlier version of this
+  note called the push "effectively off"; that was wrong.
+- **The startup gains never reach a rollout.** `randomize_actuator_gains` always
+  starts from the default gains (`envs/mdp/events.py:512`, `:520`), and the
+  `reset` term runs for every env before its first step, so the `startup` draw
+  (kp 32–48, kd 2–3) is overwritten. What the policy trains on is
+  kp 45 × [0.5, 2] = 22.5–90 and kd 1.5 × [0.5, 2] = 0.75–3.0 (legs),
+  0.8 × [0.5, 2] = 0.4–1.6 (ankles). Measured after the first reset:
+  kp 22.98–89.30.
+- **The critic does not see most of it** — see the `critic` section above: only
+  the material properties are observed; mass, inertia and gains are nominal.
 
 ## Terminations
 

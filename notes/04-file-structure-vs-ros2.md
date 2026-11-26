@@ -144,7 +144,7 @@ parameterises it. Change a weight → config. Change what is computed → `mdp/`
 | Reward weight | `cfg/SF/limx_base_env_cfg.py` → `RewardsCfg` |
 | New reward function | write in `mdp/rewards.py`, wire up in `RewardsCfg` |
 | Add/remove an observation | `ObservarionsCfg` (+ `mdp/observations.py` if new) |
-| Domain randomisation, enable `push_robot` | `EventsCfg` |
+| Domain randomisation, tune or disable `push_robot` (it is already on — see note 03) | `EventsCfg` |
 | Episode length, `sim.dt`, decimation | `SFEnvCfg.__post_init__` |
 | Terrain | `cfg/SF/terrains_cfg.py` + the env variant class |
 | Robot PD gains, joint limits, initial pose | `assets/config/solefoot_cfg.py` |

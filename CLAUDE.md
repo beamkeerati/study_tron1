@@ -100,12 +100,15 @@ for code identifiers and established technical terms.
 
 ### The workbook (`notes/workbook/`)
 
-One chapter per file, built with `python3 scripts/workbook_to_pdf.py` (Chrome + MathJax;
+One chapter per file, built with `python3 scripts/workbook_backmatter.py` (regenerates the two
+back-matter files `91-formulas.md` / `92-symbols.md` from the chapters — never edit those by hand) and
+then `python3 scripts/workbook_to_pdf.py` (Chrome + MathJax;
 it fails on a MathJax error, on anything wider than the text block, and on Thai inside
 math). Everything above applies — glossary wording, global equation numbers, verified
 citations, the reviewer — plus two things of its own: a chapter may use only terms
 taught by an earlier chapter (`_OUTLINE.md` lists them), and every exercise answer
-comes from `scripts/workbook_answer_key.py`.
+comes from `scripts/workbook_answer_key.py`. The groups of chapters are called **ส่วนที่ 1–6**, never
+"ภาค", and the book uses Arabic digits only, no Thai numerals (owner's instruction, 2026-11-26).
 
 ### Diagrams
 

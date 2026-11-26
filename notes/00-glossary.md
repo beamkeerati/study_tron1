@@ -68,8 +68,10 @@ $$\text{ฟังก์ชัน} \;\longrightarrow\; \text{การแจก�
 | --- | --- | --- |
 | **ADC** | Analog-to-Digital Converter | ตัวแปลงสัญญาณเซนเซอร์เป็นตัวเลข — ใช้เป็นอุปมาในโน้ต 05 §2.5 |
 | **Adam** | *ไม่ใช่ตัวย่อ* — ชื่อเรียกของ optimizer (มีที่มาจาก adaptive moment estimation) | กฎอัปเดต weight ที่ Tron1 ใช้ (`ppo.py:85`) · หัวข้อ 5 |
+| **curriculum** | *ไม่ใช่ตัวย่อ* — หลักสูตร | การปรับความยากของงานระหว่างเทรน ตามจำนวน step หรือตามผลงานของ policy · หมวด `CurriculumCfg` (`limx_base_env_cfg.py:458`) ซึ่งงาน Blind-Flat ปิดรายการเดียวที่มี (`limx_solefoot_env_cfg.py:80`) จึงไม่มี curriculum · แบบเรียนบทที่ 29 |
 | **DDPG** · **TD3** | Deep Deterministic Policy Gradient · Twin Delayed DDPG | อัลกอริทึม policy แบบกำหนดแน่ (deterministic) · โน้ตอ้างเพื่อ**เทียบ**เท่านั้น |
 | **CLI** | Command-Line Interface | บรรทัดคำสั่ง — ที่ที่ `--num_envs 2048` ถูกพิมพ์ทับค่าปริยายของ cfg |
+| **domain randomisation** | *ไม่ใช่ตัวย่อ* | การสุ่มค่าทางฟิสิกส์ของตัวจำลองให้ต่างกันในแต่ละ env แต่ละ episode หรือแต่ละ step เพื่อให้ policy ทำงานได้ทั้งช่วง ไม่ใช่กับหุ่นจำลองแบบเดียว · หมวด `EventsCfg` (`limx_base_env_cfg.py:237`) 11 รายการในสาม mode: `startup` 7 (หนึ่งในนั้นไม่ได้สุ่มอะไร) · `reset` 3 · `interval` 1 · แบบเรียนบทที่ 29 |
 | **DP** | Dynamic Programming | วิธีแก้ MDP แบบตารางที่รู้แบบจำลองของโลกครบ · ทางตันข้อแรกในโน้ต 05 ภาค 3 |
 | **EKF** · **KF** | (Extended) Kalman Filter | ตัวประมาณสถานะสาย control · โน้ต 05 §4.4 เทียบกับ encoder |
 | **ELU** | Exponential Linear Unit | ฟังก์ชันกระตุ้นที่ Tron1 ใช้ทุกชั้นซ่อน (`activation="elu"`, `cfg:90`) · สมการ (11) |
@@ -84,7 +86,7 @@ $$\text{ฟังก์ชัน} \;\longrightarrow\; \text{การแจก�
 | **MLP** | Multi-Layer Perceptron | โครงข่ายประสาทแบบชั้นซ้อนธรรมดา (`nn.Linear` สลับกับ activation) — actor, critic, encoder ของ Tron1 ล้วนเป็น MLP |
 | **MSE** | Mean Squared Error | ค่าเฉลี่ยของกำลังสองของส่วนต่าง — โครงของ value loss และ loss ของ encoder |
 | **NN** | Neural Network | โครงข่ายประสาทเทียม |
-| **ONNX** | Open Neural Network Exchange | รูปแบบไฟล์กลางสำหรับ export โมเดล (`play.py:111-121`) |
+| **ONNX** | Open Neural Network Exchange | รูปแบบไฟล์กลางสำหรับ export โมเดล (`play.py:111-122`) · เก็บรายการของการคำนวณกับตัวเลขของ weight · actor 42 → 8 และ encoder 360 → 3 เป็นคนละไฟล์ · แบบเรียนบทที่ 30 |
 | **PD** | Proportional–Derivative controller | ตัวคุมมอเตอร์ชั้นล่างสุด แปลงมุมเป้าหมายเป็นแรงบิด · สมการ (18) |
 | **PDF** | Probability Density Function | ฟังก์ชันความหนาแน่นความน่าจะเป็น · สมการ (13) |
 | **PPO** | Proximal Policy Optimization | อัลกอริทึมที่ Tron1 ใช้เทรน · "proximal" = ห้ามขยับไกลจากของเดิม · Schulman et al. 2017, arXiv:1707.06347 |
@@ -92,7 +94,8 @@ $$\text{ฟังก์ชัน} \;\longrightarrow\; \text{การแจก�
 | **RL** | Reinforcement Learning | การเรียนรู้แบบเสริมกำลัง — เรียนจากรางวัล ไม่ใช่จากเฉลย |
 | **RNG** | Random Number Generator | ตัวสร้างเลขสุ่มของเครื่อง — ที่มาของ $\varepsilon$ |
 | **SAC** | Soft Actor-Critic | อัลกอริทึมตระกูล off-policy · อ้างเพื่อ**เทียบ** (`.rsample()`) เท่านั้น |
-| **SDK** | Software Development Kit | ชุดโค้ดของ LimX สำหรับคุยกับหุ่นจริง — อยู่นอกขอบเขตโน้ตชุดนี้ |
+| **SDK** | Software Development Kit | ชุดโค้ดของ LimX สำหรับคุยกับหุ่นจริง หรือกับตัวจำลองที่เปิด server mode · คำสั่งหนึ่งชุดมี `q`, `dq`, `tau`, `Kp`, `Kd`, `mode` ต่อข้อต่อ และ PD ถูกคำนวณที่ฝั่งรับ · อยู่นอกขอบเขตโน้ต 05–07 · แบบเรียนบทที่ 30 |
+| **server mode** | *ไม่ใช่ตัวย่อ* | การเปิด SDK ในฝั่งที่ทำตัวเป็นหุ่น คือรับคำสั่งและส่งสถานะ · `Robot(RobotType.PointFoot, True)` ที่ `simulator.py:126` ของ `tron1-mujoco-sim` (สำเนาใน `scripts/deploy_snapshot_2026-11-26/`) · แบบเรียนบทที่ 30 |
 | **PF** · **WF** | PointFoot · WheelFoot | รุ่นเท้าอื่นของ Tron1 — โน้ตชุดนี้ไม่ใช้ แต่ไฟล์ cfg ของมันชื่อซ้ำกับของ SF (หัวข้อ 0, 6) |
 | **SF** | SoleFoot | รุ่นเท้าแบนของ Tron1 ที่ task `Isaac-Limx-SF-Blind-Flat-v0` ใช้ · config ของมันคือ `SF_TRON1AFlatPPORunnerCfg` (`limx_rsl_rl_ppo_cfg.py:80`) |
 | **SGD** | Stochastic Gradient Descent | กฎอัปเดตแบบง่ายสุด "ไถลลงเนิน" · สมการ (12) |
