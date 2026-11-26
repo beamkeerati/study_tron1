@@ -28,7 +28,7 @@ import workbook_backmatter as bm  # noqa: E402  (chapters(), equations(), symbol
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 SRC = REPO / "notes/workbook"
-PDF = REPO / "notes/pdf/08-workbook.pdf"
+PDF = REPO / "notes/pdf/tron1-ppo-workbook.pdf"
 ANSWER_MARK = "<!-- เฉลย -->"
 PARTS = [(1, 1, 2), (2, 3, 9), (3, 10, 15), (4, 16, 18), (5, 19, 27), (6, 28, 30)]   # (part, first, last chapter)
 

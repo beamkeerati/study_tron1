@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build notes/workbook/NN-*.md into one textbook-style PDF: notes/pdf/08-workbook.pdf
+"""Build notes/workbook/NN-*.md into one textbook-style PDF: notes/pdf/tron1-ppo-workbook.pdf
 
 Book design ported from KMU_Korean/scripts/make_pdf.py (cover, TOC with page numbers, running
 head per chapter, page x / y, callout boxes, keep-together paging rules, Laksaman type).
@@ -43,7 +43,7 @@ import markdown
 REPO = pathlib.Path(__file__).resolve().parents[1]
 SRC = REPO / 'notes/workbook'
 OUT = REPO / 'notes/pdf'
-NAME = '08-workbook'
+NAME = 'tron1-ppo-workbook'
 MATHJAX = (REPO / 'notes/diagrams/mathjax/tex-svg.js').as_uri()
 TLWG = 'file:///usr/share/fonts/truetype/tlwg'
 ANSWER_MARK = '<!-- เฉลย -->'

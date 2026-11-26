@@ -13,7 +13,7 @@ Treat `notes/` as the primary artifact. Everything else is source material.
 | --- | --- | --- |
 | `notes/` | Study notes 00–07 (00 and 05–07 in Thai, 01–04 in English) + `diagrams/` | **Yes — this is the work** |
 | `notes/sources/` | The Gemini walkthrough that notes 05–07 mined — external, known to contain errors | **No** |
-| `notes/workbook/` | The textbook rewrite of notes 00–07 → `notes/pdf/08-workbook.pdf` | **Yes** — read `_STYLE.md` and `_OUTLINE.md` there first; `_HISTORY.md` is the log of what happened while writing — grep it, do not read it whole |
+| `notes/workbook/` | The textbook rewrite of notes 00–07 → `notes/pdf/tron1-ppo-workbook.pdf` | **Yes** — read `_STYLE.md` and `_OUTLINE.md` there first; `_HISTORY.md` is the log of what happened while writing — grep it, do not read it whole |
 | `experiments/` | One markdown log per training run | Yes |
 | `tron1-rl-isaaclab/` | The real training code (`rsl_rl/`, `exts/`, `scripts/`) | **No — read-only reference** |
 | `IsaacLab/` | Upstream Isaac Lab | **No — read-only reference** |
