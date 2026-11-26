@@ -2,7 +2,7 @@
 """Work group 8 of the workbook: the checks that only make sense on the whole book at once.
 
 Nothing here edits a chapter. Every section prints candidates with `file:line`; a human (or the notes-reviewer)
-decides which are defects. The sections follow the task list in notes/workbook/_OUTLINE.md:
+decides which are defects. The sections follow the task list of work group 8 (now in notes/workbook/_HISTORY.md):
 
   terms        (1) a term from the outline's "คำใหม่ที่สอน" column used by an EARLIER chapter than the one that
                    teaches it, + numbered equations used before their owner, + the outline column vs the symbol tables
@@ -11,7 +11,7 @@ decides which are defects. The sections follow the task list in notes/workbook/_
                    figure / exercise number exists.  The list is what the reviewer reads.
   numbers      (4) every number that appears in two or more chapters: is it printed by the answer key, and is there
                    a near-twin (same value, different rounding) elsewhere in the book
-  conventions  (5) the word agreements of every "ข้อตกลงที่…ตั้งไว้" list, as (pattern, chapters where it must not be)
+  conventions  (5) the word agreements of _OUTLINE.md ("ข้อตกลงเรื่องคำ"), as (pattern, chapters where it must not be)
                    + (7) no "ภาค" + (8) no Thai digits
   dots         (6) stray ink in the bottom margin of the built PDF (the tone-mark that leaked across a page break)
 
@@ -344,7 +344,7 @@ def numbers():
                 where[norm(m.group(0)).lstrip("-")][n].append(i)
     name = {n: f.name for n, f, _ in fs}
 
-    print("=" * 100, "\n(4a) the watch list of _OUTLINE.md (task 4): where each number appears\n" + "=" * 100)
+    print("=" * 100, "\n(4a) the watch list of work group 8 (task 4, _HISTORY.md): where each number appears\n" + "=" * 100)
     for w in WATCH:
         hit = collections.defaultdict(list)
         pat = re.compile(r"(?<![\d.,])" + re.escape(w) + r"(?![\d]|,\d|\.\d)")
