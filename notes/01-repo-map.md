@@ -17,7 +17,7 @@ task ID (`Isaac-Limx-SF-Blind-Flat-v0`, registered at `robots/__init__.py:74`).
 | `PF` | Point foot — no ankle, the leg ends in a point |
 | `SF` | Sole foot — has a foot plate and an ankle pitch joint |
 | `WF` | Wheel foot — the leg ends in a driven wheel |
-| `WL` | Wheel-legged quadruped, 16 actuated joints (models `WL_P311D`, `WL_P311E`). It appears in `tron1-robot-description` (URDF + SRDF) and in `robot-visualization` (wheel-legged launch files) — READMEs read 2026-11-26 — and is not a `ROBOT_TYPE` value of the simulate, deploy or training repos |
+| `WL` | Wheel-legged quadruped, 16 actuated joints (models `WL_P311D`, `WL_P311E`). It appears in `tron1-robot-description` (URDF + SRDF) and in `robot-visualization` (wheel-legged launch files) — READMEs read 2026-11-26, copies in `scripts/limx_external_2026-11-26/` — and is not a `ROBOT_TYPE` value of the simulate, deploy or training repos |
 
 Model names: `PF_TRON1A`, `PF_TRON1B`, `SF_TRON1A`, `SF_TRON1B`, `WF_TRON1A`,
 `WF_TRON1B`, plus `PF_P441A/B/C/C2`.

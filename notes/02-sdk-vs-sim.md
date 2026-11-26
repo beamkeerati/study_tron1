@@ -38,7 +38,8 @@ description of the wire format, which is not published. The joint count and the
 fields are those of the SF deploy program (`params.yaml:3-11`,
 `SolefootController.py:36-41` in `scripts/deploy_snapshot_2026-11-26/`). That
 program runs its loop at 500 Hz with the policy at 50 Hz (`params.yaml:2`, `:33`);
-the SDK's own README says commands are "typically" sent at 1 kHz (read 2026-11-26).
+the SDK's own README says commands are "typically" sent at 1 kHz (read 2026-11-26; the READMEs and wheel
+metadata this note quotes are copied in `scripts/limx_external_2026-11-26/`).
 
 ## The trick: the simulator answers the same protocol
 

@@ -415,7 +415,7 @@ RULES = [
 ]
 # (label, regex over a math chunk, chapters where it must not appear, source)
 MATH_RULES = [
-    ("bare A, no hat and no subscript (glossary §7)", r"(?<![a-zA-Z\\_^{}])(?<!hat )(?<!hat\{)A(?![a-zA-Z_^({\\}])\s*(?:$|[=,+)\-])", range(0, 31), "อภิธานศัพท์ §7: ห้ามเขียน A ลอย ๆ"),
+    ("bare A, no hat and no subscript (glossary §7)", r"(?<![a-zA-Z\\_^{}])(?<!hat )(?<!hat\{)(?<!bar )(?<!bar\{)A(?![a-zA-Z_^({\\}])\s*(?:$|[=,+)\-])", range(0, 31), "อภิธานศัพท์ §7: ห้ามเขียน A ลอย ๆ (\\bar A และ sd_A ของสมการ (28) เป็นสัญลักษณ์ที่มีนิยาม)"),
     ("bare R (glossary §7)", r"(?<![a-zA-Z\\_^{])R(?![a-zA-Z_^({\\])\s*(?:$|[=,+)\-])", range(0, 31), "อภิธานศัพท์ §7: ห้ามเขียน R ลอย ๆ"),
     ("\\epsilon before ch 12 / as noise", r"\\epsilon\s*\\sim|\\epsilon_t|\\mu\s*\+\s*\\sigma\s*\\epsilon", range(0, 31), "อภิธานศัพท์ §7: noise คือ \\varepsilon"),
     ("\\varepsilon as the clip range", r"1\s*[-+]\s*\\varepsilon|\\varepsilon\s*=\s*0\.2", range(0, 31), "อภิธานศัพท์ §7: ขอบ clip คือ \\epsilon"),

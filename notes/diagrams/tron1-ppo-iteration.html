@@ -139,7 +139,7 @@
       <text x="338" y="289" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">B</text>
       <text x="500" y="308" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans Thai', sans-serif" text-anchor="middle">GAE · คำนวณ advantage ย้อนหลัง</text>
       <foreignObject x="320" y="311.76" width="360" height="18"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:9px;color:#4f5d75;line-height:18px;">\(\mathrm{bootstrap}\ V(s_{24})\)<span class="tx">&#160;·&#160;</span>\(t=23 \to 0\)<span class="tx">&#160;·&#160;</span>\(\delta_t = r_t + (1-\mathrm{done}_t)\gamma V_{t+1} - V_t\)</div></foreignObject>
-      <foreignObject x="320" y="327.76" width="360" height="18"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:9px;color:#7a8399;line-height:18px;">\(A_t=\delta_t+(1-\mathrm{done}_t)\gamma\lambda A_{t+1}\)<span class="tx">&#160;·&#160;</span>\(R_t=A_t+V_t\)<span class="tx">&#160;·&#160;</span>\(\hat A_t=(A_t-\mathrm{mean})/\mathrm{std}\)</div></foreignObject>
+      <foreignObject x="320" y="327.76" width="360" height="18"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:8px;color:#7a8399;line-height:18px;">\(A_t=\delta_t+(1-\mathrm{done}_t)\gamma\lambda A_{t+1}\)<span class="tx">&#160;·&#160;</span>\(R_t=A_t+V_t\)<span class="tx">&#160;·&#160;</span>\(\hat A_t=(A_t-\bar A)/(\mathrm{sd}_A+10^{-8})\)</div></foreignObject>
 
       <!-- C · PPO update — FOCAL -->
       <rect x="320" y="392" width="360" height="80" rx="6" fill="#f5f5f5"/>
@@ -148,7 +148,7 @@
       <text x="338" y="409" fill="#eb6c36" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">C</text>
       <text x="500" y="428" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans Thai', sans-serif" text-anchor="middle">Update · ปรับ weight — ตรงนี้คือการเรียนรู้</text>
       <foreignObject x="320" y="431.76" width="360" height="18"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:9px;color:#4f5d75;line-height:18px;">\(5\ \mathrm{epochs} \times 4\ \mathrm{minibatch}\ (12{,}288) = 20 \times \mathrm{Adam\ step}\)</div></foreignObject>
-      <foreignObject x="320" y="447.76" width="360" height="18"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:9px;color:#7a8399;line-height:18px;">\(L = L^{\mathrm{CLIP}}(\rho, A) + 1.0\,L^{V} - 0.01\,H\)<span class="tx">&#160;·&#160;KL →&#160;</span><span class="th">ปรับ</span>&#160;<span class="tx">lr</span></div></foreignObject>
+      <foreignObject x="320" y="447.76" width="360" height="18"><div xmlns="http://www.w3.org/1999/xhtml" class="fo" style="font-size:9px;color:#7a8399;line-height:18px;">\(L = L^{\mathrm{CLIP}}(\rho,\hat A) + 1.0\,L^{V} - 0.01\,H\)<span class="tx">&#160;·&#160;KL →&#160;</span><span class="th">ปรับ</span>&#160;<span class="tx">lr</span></div></foreignObject>
 
       <!-- D · Log & checkpoint -->
       <rect x="320" y="512" width="360" height="80" rx="6" fill="#f5f5f5"/>

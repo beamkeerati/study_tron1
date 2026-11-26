@@ -67,9 +67,9 @@ def build(name):
     src = (NOTES / f'{name}.md').read_text(encoding='utf-8')
     p, store = protect(src)
     # Thai inside math is typeset with its vowel and tone marks detached (MathJax places each character on its own;
-    # svg.mtextInheritFont does not help - tested 2026-11-26). The builder cannot repair it, so it says where it is.
-    thai = [m for m in store if not m.startswith('```') and re.search(r'\\(?:text|textbf|texttt|mathrm|mathbf|operatorname|mbox)\{[^}]*[\u0E00-\u0E7F]', m)]
-    if thai: print(f'  {name}: {len(thai)} formulas have Thai inside \\text{{}}-like commands - their marks will be misplaced in the PDF')
+    # svg.mtextInheritFont does not help - tested 2026-11-26). The notes were cleaned on 2026-11-26; this keeps them clean.
+    thai = [m for m in store if not m.startswith('```') and re.search(r'[\u0E00-\u0E7F]', m)]
+    if thai: sys.exit(f'{name}: {len(thai)} formulas have Thai inside the math - move it out, e.g. ' + thai[0][:80])
     h = markdown.markdown(p, extensions=['tables', 'fenced_code', 'sane_lists'])
     h = restore(h, store)
     h = h.replace('<h1>', '<h1 class="top">', 1)

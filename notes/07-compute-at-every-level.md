@@ -192,7 +192,7 @@ env 1 มี 2 episode ในตารางนี้: $\{t_0, t_1, t_2\}$ (จ�
 
 ## 4. ระดับ ITERATION (ส่วนที่ทำครั้งเดียว) — GAE ทั้งตาราง
 
-ตอนนี้ตารางเต็มแล้ว ก่อนจะเรียนรู้ ต้องแปลง $(r, V)$ ทุกช่องให้เป็น "เครดิต" $A$
+ตอนนี้ตารางเต็มแล้ว ก่อนจะเรียนรู้ ต้องแปลง $(r, V)$ ทุกช่องให้เป็น "เครดิต" $A_t$
 ทำ**ครั้งเดียว** ทุกคอลัมน์พร้อมกัน ไล่จากแถวล่างขึ้นบน
 
 ### 4.1 Bootstrap — ค่าที่ "ขอบตาราง"
@@ -203,7 +203,7 @@ env 1 มี 2 episode ในตารางนี้: $\{t_0, t_1, t_2\}$ (จ�
 
 ### 4.2 TD-error $\delta_t$ — derive จากสมการ Bellman
 
-สมการ (4): $V(s_t) = \mathbb{E}[r_t + \gamma V(s_{t+1}) \mid s_t]$ บอกว่า *ถ้า critic แม่น*
+สมการ (4): $V(s_t) = \mathbb{E}_\pi[r_t + \gamma V(s_{t+1}) \mid s_t]$ บอกว่า *ถ้า critic แม่น*
 ข้างซ้ายเท่าข้างขวา · **ส่วนต่าง**ระหว่างสองข้างจึงวัดว่า critic เดาพลาดเท่าไหร่:
 
 $$\boxed{\;\delta_t = r_t + \underbrace{(1-\text{done}_t)}_{\text{mask}}\,\gamma\, V(s_{t+1}) - V(s_t)\;} \tag{19}$$
@@ -265,7 +265,7 @@ recursion จึงเป็นแค่วิธี*คำนวณ*ผลร�
 $$A_0^{(e0)} = \delta_0 + 0.72\,\delta_1 + 0.72^2\,\delta_2 + 0.72^3\,\delta_3
 = 0.05 - 0.288 + 0.0778 - 0.1120 = \mathbf{-0.2722}\ \checkmark$$
 
-$$A_0^{(e1)} = \delta_0 + 0.72\,\delta_1 + 0.72^2\,\delta_2 + \underbrace{0\cdot\delta_3}_{\text{mask ตัด}}
+$$A_0^{(e1)} = \delta_0 + 0.72\,\delta_1 + 0.72^2\,\delta_2 + \underbrace{0\cdot\delta_3}_{\text{mask}\,=\,0}
 = -0.70 - 0.072 - 1.5552 = \mathbf{-2.3272}\ \checkmark$$
 
 > สังเกต e1: $\delta_3 = -0.85$ **ไม่ถูกนับ**ใน $A_0$ เพราะเป็นคนละ episode — ถ้าไม่มี
@@ -291,19 +291,21 @@ $$R_t = A_t + V_t \tag{27}$$
 
 ### 4.5 Normalize advantage — ทำครั้งเดียวทั้งตาราง
 
-$$\hat A = \frac{A - \text{mean}(A)}{\text{std}(A) + 10^{-8}} \tag{28}$$
+$$\hat A_t = \frac{A_t - \bar A}{\mathrm{sd}_A + 10^{-8}} \tag{28}$$
+
+โดย $\bar A$ คือค่าเฉลี่ยของ $A_t$ ทุกช่องในตาราง และ $\mathrm{sd}_A$ คือส่วนเบี่ยงเบนมาตรฐานของ $A_t$ ทุกช่อง แบบหารด้วย $n-1$ โดย $n$ คือจำนวนช่องของตาราง
 
 ทำไม: ทำให้ขนาดของ advantage ที่เข้า loss อยู่ราว ๆ $\pm 1$ เสมอไม่ว่า reward จะใหญ่หรือเล็ก → พจน์
 $L^{CLIP}$ ไม่ขึ้นกับสเกลของ reward (ส่วน $L_V$ ยังขึ้น เพราะ $R_t$ ใช้ $A_t$ ก่อน normalize) · คำนวณจาก**ทั้ง 8 ค่า**พร้อมกัน (ทั้ง 49,152 ใน Tron1):
 
-$$\text{mean} = \frac{-0.2722-0.4475-0.0660-0.3000-2.3272-2.2600-3.0000-0.8500}{8} = -1.1904$$
+$$\bar A = \frac{-0.2722-0.4475-0.0660-0.3000-2.3272-2.2600-3.0000-0.8500}{8} = -1.1904$$
 
-$$\text{std} = \sqrt{\frac{\sum (A_i - \text{mean})^2}{8-1}} = 1.1513$$
+$$\mathrm{sd}_A = \sqrt{\frac{\sum_t (A_t - \bar A)^2}{8-1}} = 1.1513$$
 
 > **กับดัก:** `torch.std()` หารด้วย $n-1$ (unbiased) ไม่ใช่ $n$ — ถ้าคุณคำนวณด้วยมือ
 > แล้วได้ 1.077 แปลว่าหารด้วย 8 ต้องหารด้วย 7 ถึงจะตรงกับโค้ด
 
-| ช่อง | $A$ | $\hat A = (A + 1.1904)/1.1513$ |
+| ช่อง | $A_t$ | $\hat A_t = (A_t + 1.1904)/1.1513$ |
 | --- | --- | --- |
 | e0 t0 | −0.2722 | **+0.7975** |
 | e0 t1 | −0.4475 | **+0.6452** |
@@ -315,11 +317,11 @@ $$\text{std} = \sqrt{\frac{\sum (A_i - \text{mean})^2}{8-1}} = 1.1513$$
 | e1 t3 | −0.8500 | **+0.2956** |
 
 **อ่านผล:** ทุก action ของ e0 กลายเป็น "ดีกว่าค่าเฉลี่ย" (บวก) และ e1 t0–t2 เป็น
-"แย่กว่า" (ลบ) — แม้ $A$ ดิบของ e0 จะติดลบทั้งหมด! เพราะ normalize วัด**เทียบกับ
+"แย่กว่า" (ลบ) — แม้ $A_t$ ดิบของ e0 จะติดลบทั้งหมด! เพราะ normalize วัด**เทียบกับ
 เพื่อนในตารางเดียวกัน** ไม่ใช่เทียบกับศูนย์ นี่คือเหตุผลที่โน้ต 05 หัวข้อ 4.5 เตือนว่า
 PPO ไม่ได้ดู reward ดิบ
 
-**สรุประดับ iteration (ครั้งเดียว):** ตารางตอนนี้มี $\hat A$ และ $R$ ครบทุกช่อง พร้อม
+**สรุประดับ iteration (ครั้งเดียว):** ตารางตอนนี้มี $\hat A_t$ และ $R_t$ ครบทุกช่อง พร้อม
 สำหรับการเรียนรู้ — ในโค้ดคือ [rollout_storage.py:187-207](../tron1-rl-isaaclab/rsl_rl/rsl_rl/storage/rollout_storage.py#L187-L207)
 
 ---
@@ -339,7 +341,7 @@ epoch 2:        mb₀ → gradient step #3            mb₁ → gradient step #4
                                                   (Tron1: 5 × 4 = 20 steps)
 ```
 
-**จุดสำคัญ:** ข้อมูล $(a, \log\pi_{old}, \hat A, R)$ ในตาราง**ไม่เปลี่ยน**ตลอด 4 steps
+**จุดสำคัญ:** ข้อมูล $(a_t, \log\pi_{old}, \hat A_t, R_t)$ ในตาราง**ไม่เปลี่ยน**ตลอด 4 steps
 สิ่งที่เปลี่ยนคือ $\theta$ → $\mu_{new}$ → $\log\pi_{new}$ → $\rho$ ที่คำนวณใหม่ทุก step
 
 ### 5.2 หนึ่ง gradient step บน mb₀ — ไล่ทุกสูตร
@@ -404,7 +406,7 @@ $$L^{CLIP}_{mb_1} = \frac{-0.6293 - 0.7695 + 0.9253 + 1.5955}{4} = \mathbf{+0.28
 $L^{CLIP}$ เป็น**บวก** เพราะสองช่องของ env 1 ที่ $\hat A < 0$ มี $|\hat A|$ ใหญ่ — loss บวกแปลว่า
 "ตอนนี้ policy ยังชอบ action แย่พวกนั้นอยู่" gradient จะดันออก
 
-**(ค) Gradient $\partial L/\partial\mu$ — derive ด้วยมือ: หัวใจของ "ทำไม policy ถึงเรียนรู้"**
+**(ค) Gradient $\partial L_i/\partial\mu$ — derive ด้วยมือ: หัวใจของ "ทำไม policy ถึงเรียนรู้"**
 
 เมื่อ $\rho$ อยู่ในช่วง clip พจน์ที่ใช้คือ $-\rho\hat A$ · หาอนุพันธ์เทียบ $\mu_{new}$
 (ค่าที่ actor คาย) ผ่าน chain rule:
@@ -413,15 +415,15 @@ $L^{CLIP}$ เป็น**บวก** เพราะสองช่องขอ�
 | --- | --- |
 | $\dfrac{\partial \log\pi}{\partial\mu} = \dfrac{\partial}{\partial\mu}\Big[-\dfrac{(a-\mu)^2}{2\sigma^2}\Big] = \dfrac{a-\mu}{\sigma^2}$ | จาก (14) พจน์เดียวที่มี $\mu$ — นี่คือสมการ (24) ของโน้ต 05 · อนุพันธ์ของ $-(a-\mu)^2$ คือ $+2(a-\mu)$ |
 | $\dfrac{\partial\rho}{\partial\mu} = \rho\cdot\dfrac{\partial\log\pi}{\partial\mu} = \rho\,\dfrac{a-\mu}{\sigma^2}$ | เพราะ $\rho = e^{\log\pi_{new} - c}$ และ $\frac{d}{dx}e^{f} = e^{f}f'$ |
-| $\dfrac{\partial L}{\partial\mu} = -\hat A\,\dfrac{\partial\rho}{\partial\mu}$ | $\hat A$ เป็นค่าคงที่ (มาจาก buffer) |
+| $\dfrac{\partial L_i}{\partial\mu} = -\hat A\,\dfrac{\partial\rho}{\partial\mu}$ | $L_i = -\rho\hat A$ คือพจน์ของช่องนี้ และ $\hat A$ เป็นค่าคงที่ (มาจาก buffer) |
 
-$$\boxed{\;\frac{\partial L}{\partial\mu} = -\hat A\;\rho\;\frac{a-\mu_{new}}{\sigma^2}\;} \tag{G}$$
+$$\boxed{\;\frac{\partial L_i}{\partial\mu} = -\hat A\;\rho\;\frac{a-\mu_{new}}{\sigma^2}\;} \tag{G}$$
 
-($L$ ในบรรทัดนี้คือพจน์ของช่องเดียวก่อน `.mean()` ซึ่งอภิธานศัพท์เรียก $L_i$)
+($L_i$ คือพจน์ของช่องเดียวก่อน `.mean()` ตามอภิธานศัพท์ · $L^{CLIP}$ ซึ่งเป็นค่าเฉลี่ยของมัน หารด้วยจำนวนช่องอีกชั้น)
 
-**อ่านสมการ (G) ให้ได้ความหมาย** — gradient descent ทำ $\mu \leftarrow \mu - \alpha\,\partial L/\partial\mu$:
+**อ่านสมการ (G) ให้ได้ความหมาย** — gradient descent ทำ $\mu \leftarrow \mu - \alpha\,\partial L_i/\partial\mu$:
 
-| กรณี | $\hat A$ | $a - \mu$ | $\partial L/\partial\mu$ | $\mu$ เคลื่อนไป | แปลว่า |
+| กรณี | $\hat A$ | $a - \mu$ | $\partial L_i/\partial\mu$ | $\mu$ เคลื่อนไป | แปลว่า |
 | --- | --- | --- | --- | --- | --- |
 | action ดี, $a$ อยู่ขวาของ $\mu$ | + | + | **−** | **ขวา** (เข้าหา $a$) | "ทำแบบนั้นอีก" |
 | action ดี, $a$ อยู่ซ้ายของ $\mu$ | + | − | + | ซ้าย (เข้าหา $a$) | "ทำแบบนั้นอีก" |
@@ -433,7 +435,7 @@ $$\boxed{\;\frac{\partial L}{\partial\mu} = -\hat A\;\rho\;\frac{a-\mu_{new}}{\s
 
 ตัวเลขจริง ($\sigma^2 = 0.25$):
 
-| ช่อง | $\hat A$ | $\rho$ | $a - \mu_{new}$ | $\partial L/\partial\mu = -\hat A\rho(a-\mu)/0.25$ | SGD $\alpha=0.1$: $\mu \leftarrow \mu - 0.1\,\partial L/\partial\mu$ |
+| ช่อง | $\hat A$ | $\rho$ | $a - \mu_{new}$ | $\partial L_i/\partial\mu = -\hat A\rho(a-\mu)/0.25$ | SGD $\alpha=0.1$: $\mu \leftarrow \mu - 0.1\,\partial L_i/\partial\mu$ |
 | --- | --- | --- | --- | --- | --- |
 | e0 t0 | +0.7975 | 1.0356 | +0.15 | **−0.4955** | 0.25 → **0.2996** (เข้าหา a=0.40 ✓) |
 | e0 t2 | +0.9766 | 1.0779 | +0.35 | **−1.4737** | 0.15 → **0.2974** (เข้าหา a=0.50 ✓) |
@@ -461,7 +463,7 @@ $$\boxed{\;\frac{\partial L}{\partial\mu} = -\hat A\;\rho\;\frac{a-\mu_{new}}{\s
 มี $a > \mu_{old}$ ตัวคูณ $\operatorname{sign}(a-\mu_{old})$ จึงเป็น $+1$ ทั้งคู่ และ "ถูกทาง" ของ e0 t2 คือ
 $+0.15$ ส่วนของ e1 t1 คือ $-0.15$ · แล้วลองกลับทิศดูด้วยว่าถ้า "เดินผิดทาง" ไกลเท่ากัน clip จะทำอะไร
 
-| ช่อง | $\hat A$ | ขยับ | $\mu_{new}$ | $\rho$ | ในช่วง? | $-\rho\hat A$ | $-\text{clip}(\rho)\hat A$ | $L = \max$ | $\partial L/\partial\mu$ |
+| ช่อง | $\hat A$ | ขยับ | $\mu_{new}$ | $\rho$ | ในช่วง? | $-\rho\hat A$ | $-\text{clip}(\rho)\hat A$ | $L_i = \max$ | $\partial L_i/\partial\mu$ |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | e0 t2 | +0.9766 | ถูกทาง +0.15 | 0.25 | **1.2153** | ✗ > 1.2 | −1.1869 | **−1.1719** | **−1.1719 (คงที่)** | **0** |
 | e1 t1 | −0.9290 | ถูกทาง −0.15 | −0.15 | **0.7520** | ✗ < 0.8 | +0.6987 | **+0.7432** | **+0.7432 (คงที่)** | **0** |
@@ -491,27 +493,27 @@ clip ปิด gradient เฉพาะ**ทิศที่เคลื่อน
 
 ### 5.4 Value loss — สอน critic
 
-เป้าคือ $R$ จาก §4.4 · critic คายค่าใหม่ $V_{new}$ (weight $\phi$ เปลี่ยนไปแล้ว):
+เป้าคือ $R_t$ จาก §4.4 · critic คายค่าใหม่ $V_{new}$ (weight $\phi$ เปลี่ยนไปแล้ว):
 
-$$L_V = \text{mean}\Big[\max\big((V_{new} - R)^2,\; (V_{clip} - R)^2\big)\Big],
+$$L_V = \text{mean}\Big[\max\big((V_{new} - R_t)^2,\; (V_{clip} - R_t)^2\big)\Big],
 \quad V_{clip} = V_{old} + \text{clip}(V_{new} - V_{old}, -0.2, 0.2) \tag{32}$$
 
-ตัวอย่างช่อง e0 t0 ($V_{old} = 5.0$, $R = 4.7278$):
+ตัวอย่างช่อง e0 t0 ($V_{old} = 5.0$, $R_t = 4.7278$):
 
-| $V_{new}$ | $(V_{new}-R)^2$ | $V_{clip}$ | $(V_{clip}-R)^2$ | $L_V$ ช่องนี้ = max |
+| $V_{new}$ | $(V_{new}-R_t)^2$ | $V_{clip}$ | $(V_{clip}-R_t)^2$ | $L_V$ ช่องนี้ = max |
 | --- | --- | --- | --- | --- |
 | 4.9 | 0.0297 | 5.0 + clip(−0.1) = 4.9 | 0.0297 | 0.0297 |
 | 4.5 | 0.0519 | 5.0 + clip(−0.5) = **4.8** | 0.0052 | **0.0519** (เลือกตัวใหญ่) |
 
 $\max$ เลือกตัวที่**แย่กว่า** เหมือน (29): แถว 4.5 วิ่งเลยเป้าไปจนไกลเป้ากว่าที่ขอบ 4.8 อยู่ พจน์ดิบจึงชนะ
 และยังโดนคิดตามที่กระโดดจริง · แต่ถ้า $V_{new}$ เลยขอบไป**ทางเป้า**และยังใกล้เป้ากว่าขอบ (เช่น 4.75:
-$\max(0.0005, 0.0052)$) พจน์ที่ถูกหนีบซึ่งเป็นค่าคงที่ชนะ → gradient 0 · gradient ของพจน์ดิบ $\partial L_V/\partial V = 2(V - R)$ → ดัน $V$ เข้าหา $R$
+$\max(0.0005, 0.0052)$) พจน์ที่ถูกหนีบซึ่งเป็นค่าคงที่ชนะ → gradient 0 · อนุพันธ์ของพจน์ดิบของช่องนี้ $\partial (V_{new} - R_t)^2/\partial V_{new} = 2(V_{new} - R_t)$ → ดัน $V_{new}$ เข้าหา $R_t$
 
 ### 5.5 Entropy — derive สำหรับ Gaussian
 
-นิยาม $H = -\mathbb{E}[\log p(a)]$ · แทน (14) แล้วใช้ $\mathbb{E}[(a-\mu)^2] = \sigma^2$:
+นิยาม $H = -\mathbb{E}_{a\sim p}[\log p(a)]$ · แทน (14) แล้วใช้ $\mathbb{E}_{a\sim p}[(a-\mu)^2] = \sigma^2$:
 
-$$H = -\mathbb{E}\Big[-\tfrac12\ln 2\pi - \ln\sigma - \tfrac{(a-\mu)^2}{2\sigma^2}\Big]
+$$H = -\mathbb{E}_{a\sim p}\Big[-\tfrac12\ln 2\pi - \ln\sigma - \tfrac{(a-\mu)^2}{2\sigma^2}\Big]
 = \tfrac12\ln 2\pi + \ln\sigma + \frac{\sigma^2}{2\sigma^2}
 = \boxed{\tfrac12 + \tfrac12\ln 2\pi + \ln\sigma} \tag{31}$$
 
@@ -523,8 +525,9 @@ $$H = -\mathbb{E}\Big[-\tfrac12\ln 2\pi - \ln\sigma - \tfrac{(a-\mu)^2}{2\sigma^
 
 $$L = L^{CLIP} + 1.0\,L_V - 0.01\,H \tag{33}$$
 
-`loss.backward()` → gradient ทุก weight ($\theta$ ของ actor, $\phi$ ของ critic,
-logstd) · `clip_grad_norm_(1.0)` (norm ก้อนเดียวของ gradient ทั้ง 469,905 ตัว ถ้าเกิน 1.0 ย่อทุกตัวด้วยตัวคูณเดียวกัน — gradient ของ critic จึงมีผลต่อ actor ตรงนี้ `ppo.py:289`) · `optimizer.step()` → **จบ 1 gradient step** ·
+(`value_loss_coef = 1.0` `cfg:94` · `entropy_coef = 0.01` `cfg:97` · โค้ด `ppo.py:274-278`)
+
+`loss.backward()` → gradient ทุก weight ($\theta$ คือ actor กับ `logstd` และ $\phi$ ของ critic) · `clip_grad_norm_(1.0)` (norm ก้อนเดียวของ gradient ทั้ง 469,905 ตัว ถ้าเกิน 1.0 ย่อทุกตัวด้วยตัวคูณเดียวกัน — gradient ของ critic จึงมีผลต่อ actor ตรงนี้ `ppo.py:289`) · `optimizer.step()` → **จบ 1 gradient step** ·
 ทำอีก 3 ครั้ง (mb₁, แล้ว epoch 2) = จบช่วง C
 
 ### 5.7 KL → ปรับ lr — derive สำหรับ Gaussian
@@ -537,7 +540,7 @@ $$KL = \ln\frac{\sigma_n}{\sigma_o} + \frac{\sigma_o^2 + (\mu_o - \mu_n)^2}{2\si
 กรณี $\sigma$ เท่ากัน สองพจน์ตัดกันเหลือ $\dfrac{(\Delta\mu)^2}{2\sigma^2}$ · ที่ $\Delta\mu = 0.05$:
 $KL = 0.0025/0.5 = \mathbf{0.0050}$
 
-เทียบ `desired_kl = 0.01`: $0.005 < 0.02$ (ไม่ต้องลด lr) และ $0.005 = 0.005$ (พอดีขอบ
+เทียบ `desired_kl = 0.01` (`cfg:104`): $0.005 < 0.02$ (ไม่ต้องลด lr) และ $0.005 = 0.005$ (พอดีขอบ
 ล่าง ไม่เพิ่ม) → lr คงเดิม · แต่ถ้าใช้กฎ $\pm 0.15$ ของ §5.3: $KL = 0.0225/0.5 = \mathbf{0.045} > 0.02$
 → **lr ÷ 1.5** — ในช่องนี้ ก้าวที่ใหญ่พอให้ clip ทำงาน ก็ใหญ่พอให้กฎลด lr ทำงานด้วย (กฎนี้ลด lr ที่ก้าวของ minibatch นั้นจะใช้ ไม่ได้ดึง policy กลับและไม่ได้หยุดลูป) ·
 แต่**ไม่เสมอไป**: clip ดูรายช่องและขึ้นกับ $|a-\mu|$ ส่วน KL ดูค่าเฉลี่ยของ minibatch (`ppo.py:233`) และเมื่อ $\sigma$ ไม่เปลี่ยน ขึ้นกับ
@@ -561,7 +564,7 @@ $\Delta\mu/\sigma$ อย่างเดียว — action ที่สุ่�
 | $\partial L/\partial\mu$ | 1 ตัวเลขต่อช่อง | 8 ตัวเลขต่อช่อง | ต่อข้อต่อ |
 | $\partial L/\partial\theta$ | — | **187,280** ตัวเลข (actor 187,272 + $\ell$ 8) · ทั้ง optimizer หลัก 469,905 | backprop ผ่าน MLP |
 | ขนาดของ $V$, $\delta$, $L_V$ ต่อช่อง | 1–5 · ±3 · ~0.05 | ~650 · ~28 · ~781 | **ตัวเลขประกอบ**จากเอกสารต้นทาง (`sources/`) ไม่ใช่ค่าวัดจริง (เอกสารนั้นเรียกมันว่าตัวเลขสมมติเอง) · เหตุผลที่โน้ตนี้เคยให้ คือ reward รวม 20 พจน์ต่อ step และ episode ยาว 1000 step ใช้ไม่ได้: $V$ มีขนาดราว reward เฉลี่ยต่อ step คูณระยะมอง $1/(1-\gamma) = 100$ step ความยาว 1000 step ของ episode แทบไม่เพิ่มอะไร |
-| iterations | 1 | 15,000 | ตารางใหม่ 15,000 ใบ |
+| iterations | 1 | 15,000 (`max_iterations` `cfg:82`) | ตารางใหม่ 15,000 ใบ |
 | เวลาจริงต่อ iteration | — | ~0.6 s (collection 0.42 + learning 0.18) | **ตัวอย่างรูปแบบล็อก**ของ `train.py` — ยังไม่ได้วัดจริง (exp_001 ยังไม่รัน) |
 
 ---
@@ -582,13 +585,13 @@ $\Delta\mu/\sigma$ อย่างเดียว — action ที่สุ่�
 | 5 | iteration | $\delta_t = r_t + (1-d_t)\gamma V_{t+1} - V_t$ | (19) | critic พลาดเท่าไหร่ |
 | 6 | iteration | $A_t = \delta_t + (1-d_t)\gamma\lambda A_{t+1}$ | (26) ≡ (25) | เครดิตสะสม ย้อนหลัง |
 | 7 | iteration | $R_t = A_t + V_t$ | (27) | เป้าของ critic |
-| 8 | iteration | $\hat A = (A - \bar A)/\text{std}_{n-1}(A)$ | (28) | เทียบกับเพื่อนในตาราง |
+| 8 | iteration | $\hat A_t = (A_t - \bar A)/(\mathrm{sd}_A + 10^{-8})$ | (28) | เทียบกับเพื่อนในตาราง |
 | 9 | minibatch | $\rho = \exp(\log\pi_{new} - \log\pi_{old})$ | (21) | ชอบมากขึ้นกี่เท่า |
 | 10 | minibatch | $L^{CLIP} = \text{mean}\max(-\rho\hat A, -\text{clip}(\rho)\hat A)$ | (29) | ให้รางวัล · ช่องที่ ρ เลยขอบ ±20% ไปทางที่ได้กำไรหยุดออกแรง |
-| 11 | minibatch | $L_V = \text{mean}\max((V-R)^2, (V_{clip}-R)^2)$ | (32) | สอน critic |
+| 11 | minibatch | $L_V = \text{mean}\max((V_{new}-R_t)^2, (V_{clip}-R_t)^2)$ | (32) | สอน critic |
 | 12 | minibatch | $H = \tfrac12 + \tfrac12\ln2\pi + \ln\sigma$ | (31) | ยังสำรวจอยู่ไหม |
 | 13 | minibatch | $L = L^{CLIP} + L_V - 0.01H$ · $\theta \leftarrow \theta - \alpha\nabla_\theta L$ | (33) · โค้ดก้าวด้วย (36) Adam · (12) ใช้อ่านทิศ | ก้าวหนึ่งก้าว |
-| 14 | minibatch | $\partial L/\partial\mu = -\hat A\rho(a-\mu)/\sigma^2$ | (G) จาก (24) · (35) สำหรับ $\ell$ | **ทิศทางการเรียนรู้** |
+| 14 | minibatch | $\partial L_i/\partial\mu = -\hat A\rho(a-\mu)/\sigma^2$ | (G) จาก (24) · (35) สำหรับ $\ell$ | **ทิศทางการเรียนรู้** |
 | 15 | minibatch | $KL = \ln\frac{\sigma_n}{\sigma_o} + \frac{\sigma_o^2+(\Delta\mu)^2}{2\sigma_n^2} - \tfrac12$ → lr ×/÷ 1.5 | (30) (37) | ปรับ lr ก่อนก้าวของ minibatch นั้น |
 | — | episode | *(ไม่มี)* — แค่ $d_t$ ในสูตร 5–6 | — | reset + วัดผล |
 

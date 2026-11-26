@@ -68,8 +68,8 @@ mb0 = [(0, 0), (0, 2), (1, 1), (1, 3)]
 mb1 = [(0, 1), (0, 3), (1, 0), (1, 2)]
 
 print(f"sigma={SIGMA} gamma={GAMMA} lam={LAM} gl={GL:.2f}  const C={C:.4f}")
-print(f"mean(A)={meanA:.4f}  std_n-1(A)={stdA:.4f}\n")
-hdr = "cell   mu     eps    a      logpi_old  delta    A        R        Ahat     | +0.05: logpi_new  rho     L_i      dL/dmu"
+print(f"A-bar (mean of all A_t)={meanA:.4f}  sd_A (std of all A_t, n-1)={stdA:.4f}\n")
+hdr = "cell   mu     eps    a      logpi_old  delta    A        R        Ahat     | +0.05: logpi_new  rho     L_i      dL_i/dmu"
 print(hdr)
 for (e, t), c in cells.items():
     print(f"e{e}t{t}  {c['mu']:+.2f}  {c['eps']:+.2f}  {c['a']:+.2f}  {c['logpi_old']:+.4f}   "
@@ -85,7 +85,7 @@ for key in [(0, 2), (1, 1)]:
     for shift in (+0.15, -0.15):
         s = step(c, shift)
         print(f"e{key[0]}t{key[1]} Ahat={c['Ahat']:+.4f} shift={shift:+.2f} -> rho={s['rho']:.4f} "
-              f"{'CLIPPED grad=0' if s['clipped'] else 'raw   grad flows'}  L={s['L']:+.4f}  dL/dmu={s['dLdmu']:+.4f}")
+              f"{'CLIPPED grad=0' if s['clipped'] else 'raw   grad flows'}  L={s['L']:+.4f}  dL_i/dmu={s['dLdmu']:+.4f}")
 
 print("\n--- KL (equal sigma): (dmu)^2/(2 sigma^2) ---")
 for dm in (0.05, 0.15):

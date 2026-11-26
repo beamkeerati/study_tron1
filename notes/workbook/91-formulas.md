@@ -24,7 +24,7 @@
 | (19) | $\delta_t = r_t + (1 - \text{done}_t)\,\gamma\,V(s_{t+1}) - V(s_t)$ | critic ทำนายพลาดเท่าไรในหนึ่ง step | 17 |
 | (26) | $A_t = \delta_t + (1-\text{done}_t)\,\gamma\lambda\,A_{t+1}, \qquad A_T = 0$ | เดินย้อนจากแถวล่างขึ้นบน สะสมเป็น $A_t$ | 22 |
 | (27) | $R_t = A_t + V_t$ | เป้าที่ใช้สอน critic | 22 |
-| (28) | $\hat A_t = \frac{A_t - \text{mean}(A)}{\text{std}(A) + 10^{-8}}$ | ปรับ $A_t$ ให้เทียบกันได้ทั้งตาราง | 22 |
+| (28) | $\hat A_t = \frac{A_t - \bar A}{\mathrm{sd}_A + 10^{-8}}$ | ปรับ $A_t$ ให้เทียบกันได้ทั้งตาราง | 22 |
 
 **ทุก gradient step**
 
@@ -51,7 +51,7 @@ $$P(s_{t+1} \mid s_t, a_t) = P(s_{t+1} \mid s_t, a_t, s_{t-1}, a_{t-1}, \dots, s
 
 **(2)** โจทย์ของ RL · บทที่ 8
 
-$$\pi^* = \arg\max_{\pi}\ \mathbb{E}\Big[\sum_{t=0}^{T} \gamma^t\,r_t\Big]$$
+$$\pi^* = \arg\max_{\pi}\ \mathbb{E}_{\pi}\Big[\sum_{t=0}^{T} \gamma^t\,r_t\Big]$$
 
 **(3)** นิยามของ value function · บทที่ 9
 
@@ -59,7 +59,7 @@ $$V^{\pi}(s) = \mathbb{E}_{\pi}\Big[\sum_{k \ge 0} \gamma^{k}\,r_{t+k} \ \Big|\ 
 
 **(4)** สมการ Bellman · บทที่ 9
 
-$$V^{\pi}(s) = \mathbb{E}\big[r_t + \gamma\,V^{\pi}(s_{t+1}) \mid s_t = s\big]$$
+$$V^{\pi}(s) = \mathbb{E}_{\pi}\big[r_t + \gamma\,V^{\pi}(s_{t+1}) \mid s_t = s\big]$$
 
 **(5)** นิยามของ action-value · บทที่ 9
 
@@ -71,7 +71,7 @@ $$Q^{\pi}(s, a) = \mathbb{E}\big[r_t + \gamma\,V^{\pi}(s_{t+1}) \mid s_t = s,\ a
 
 **(7)** value function ในรูปของ return · บทที่ 9
 
-$$V^{\pi}(s) = \mathbb{E}\big[G_t \mid s_t = s\big]$$
+$$V^{\pi}(s) = \mathbb{E}_{\pi}\big[G_t \mid s_t = s\big]$$
 
 **(8)** นิยามของ advantage · บทที่ 9
 
@@ -135,7 +135,7 @@ $$\nabla_\theta\,\pi_\theta(a \mid s) = \pi_\theta(a \mid s)\ \nabla_\theta \log
 
 **(23)** policy gradient · บทที่ 19
 
-$$\nabla_\theta J(\theta) = \mathbb{E}\Big[\nabla_\theta \log\pi_\theta(a_t \mid s_t)\ A^{\pi}(s_t, a_t)\Big]$$
+$$\nabla_\theta J(\theta) = \mathbb{E}_{\pi}\Big[\nabla_\theta \log\pi_\theta(a_t \mid s_t)\ A^{\pi}(s_t, a_t)\Big]$$
 
 **(24)** ทิศของ $\mu$ · บทที่ 19
 
@@ -155,7 +155,7 @@ $$R_t = A_t + V_t$$
 
 **(28)** สมการ advantage ที่ normalize แล้ว · บทที่ 22
 
-$$\hat A_t = \frac{A_t - \text{mean}(A)}{\text{std}(A) + 10^{-8}}$$
+$$\hat A_t = \frac{A_t - \bar A}{\mathrm{sd}_A + 10^{-8}}$$
 
 **(29)** clipped surrogate loss · บทที่ 23
 

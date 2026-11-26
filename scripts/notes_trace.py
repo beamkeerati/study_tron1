@@ -274,7 +274,7 @@ def glossary():
     print("=" * 110, "\n(4b) A and R without a subscript or brackets (glossary §7 forbids 'A ลอย ๆ', 'R ลอย ๆ'): count per file\n"
           "     A, R = the letter alone · hat A = normalised advantage without t · agg(A) = inside mean()/std() · bar A\n" + "=" * 110)
     import collections
-    pat = re.compile(r"(\\hat\s*\{?\s*|\\bar\s*\{?\s*|\\mathcal\s*\{?\s*|\\mathbb\s*\{?\s*|\\mathbf\s*\{?\s*)?(?<![A-Za-z\\])([AR])\}?(?![A-Za-z])")
+    pat = re.compile(r"(\\hat\s*\{?\s*|\\bar\s*\{?\s*|\\mathcal\s*\{?\s*|\\mathbb\s*\{?\s*|\\mathbf\s*\{?\s*)?(?<![A-Za-z\\_])([AR])\}?(?![A-Za-z])")
     cnt, ex = collections.Counter(), collections.defaultdict(list)
     for p in [q for q in NOTES if q.suffix == ".md"] + sorted(BOOK.glob("[0-9]*.md")):
         fence = False

@@ -112,7 +112,7 @@ $$\text{actor input} = 3 + 36 + 3 = 42 \qquad \text{critic input} = 227 + 3 = 23
 | --- | --- | --- | --- | --- | --- |
 | 2.1 | bootstrap $V(s_{24})$ | `(B,1)` | 3.2 bootstrapping · 4.5 · 4.7 ช่วง B | (4) | [on_policy_runner.py:221-225](../tron1-rl-isaaclab/rsl_rl/rsl_rl/runner/on_policy_runner.py#L221-L225) → [ppo.py:176](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L176) → [rollout_storage.py:187](../tron1-rl-isaaclab/rsl_rl/rsl_rl/storage/rollout_storage.py#L187) |
 | 2.2 | ไล่ย้อน $t=23\to0$: $\delta_t$, $A_t$, $R_t$ | `(24,B,1)` | 3.2 (δ) · 4.5 | (19) (26) (27) | [rollout_storage.py:187-201](../tron1-rl-isaaclab/rsl_rl/rsl_rl/storage/rollout_storage.py#L187-L201) |
-| 2.3 | normalize $\hat A_t = (A_t - \bar A)/\text{std}(A)$ | `(24,B,1)` | 4.5 | (28) | [rollout_storage.py:205-207](../tron1-rl-isaaclab/rsl_rl/rsl_rl/storage/rollout_storage.py#L205-L207) |
+| 2.3 | normalize $\hat A_t = (A_t - \bar A)/(\mathrm{sd}_A + 10^{-8})$ | `(24,B,1)` | 4.5 | (28) | [rollout_storage.py:205-207](../tron1-rl-isaaclab/rsl_rl/rsl_rl/storage/rollout_storage.py#L205-L207) |
 
 ### ช่วง C — อัปเดต (โน้ต 07 §5 · sources §3)
 
@@ -144,13 +144,13 @@ $$\text{actor input} = 3 + 36 + 3 = 42 \qquad \text{critic input} = 227 + 3 = 23
 | # | เห็นอะไร | อ่านว่า | ตัวอย่าง |
 | --- | --- | --- | --- |
 | 1 | **ตัวห้อย $t$** | "ณ step ที่ $t$" — ไม่ใช่ตัวแปรคนละตัว แค่ตัวเดิมคนละเวลา | $s_t, a_t, r_t$ = state/action/reward ที่ step $t$ |
-| 2 | **ตัวห้อยกรีก $\theta, \phi$** | "ขึ้นกับ weight ชุดนี้" = **สิ่งนี้เป็น neural network ที่ฝึกได้** | $\pi_\theta$ = actor ที่มี weight $\theta$ · $V_\phi$ = critic ที่มี weight $\phi$ |
+| 2 | **ตัวห้อยกรีก $\theta, \phi$** | "ขึ้นกับ weight ชุดนี้" = **สิ่งนี้เป็น neural network ที่ฝึกได้** | $\pi_\theta$ = policy ที่มีพารามิเตอร์ $\theta$ (actor กับ `logstd`) · $V_\phi$ = critic ที่มี weight $\phi$ |
 | 3 | **วงเล็บ** $f(x)$ | "ป้อน $x$ เข้าไป ได้ค่าออกมา" — ฟังก์ชัน | $V(s)$ = ป้อน state ได้ค่าประเมิน |
 | 4 | **ขีดตั้ง** $\mid$ | "**เมื่อรู้ว่า**" — สิ่งขวาขีดคือเงื่อนไข สิ่งซ้ายคือสิ่งที่ถาม | $\pi(a \mid s)$ = ความหนาแน่นของ $a$ *เมื่อรู้ว่า* อยู่ที่ $s$ |
-| 5 | **$\mathbb{E}[\cdot]$** | "ค่าเฉลี่ยถ้าทำซ้ำหลาย ๆ รอบ" → **ในโค้ดคือ `.mean()` บน batch** | $\mathbb{E}[\rho A]$ ↔ `(ratio * adv).mean()` |
+| 5 | **$\mathbb{E}[\cdot]$** | "ค่าเฉลี่ยถ้าทำซ้ำหลาย ๆ รอบ" → **ในโค้ดคือ `.mean()` บน batch** | $\mathbb{E}[\rho_t \hat A_t]$ ↔ `(ratio * adv).mean()` |
 | 6 | **$\sim$** | "**สุ่มจาก**" — ไม่ใช่ "ประมาณเท่ากับ" | $a \sim \pi(\cdot \mid s)$ = $a$ ถูกสุ่มจาก distribution $\pi$ · $\varepsilon \sim \mathcal N(0,1)$ |
-| 7 | **$\nabla_\theta$** | "ความชันเทียบกับ $\theta$" — เวกเตอร์ยาวเท่าจำนวน weight บอกทิศที่ loss เพิ่ม | $\nabla_\theta L$ ↔ `loss.backward()` แล้วดู `.grad` |
-| 8 | **ตัวยก** $X^{\text{ชื่อ}}$ | "แบบ/วิธี ชื่อนี้" — ไม่ใช่ยกกำลัง | $A^{GAE}$ = advantage *แบบ* GAE · $L^{CLIP}$ = loss *แบบ* clip |
+| 7 | **$\nabla_\theta$** | "ความชันเทียบกับ $\theta$" — เวกเตอร์ยาวเท่าจำนวน weight บอกทิศที่ loss เพิ่ม | $\nabla_\theta L$ ↔ ส่วนของ $\theta$ ใน `.grad` หลัง `loss.backward()` (คำสั่งเดียวกันให้ส่วนของ $\phi$ ด้วย) |
+| 8 | **ตัวยก**ที่เป็นชื่อ เช่น $L^{CLIP}$ | "แบบ/วิธี ชื่อนี้" — ไม่ใช่ยกกำลัง | $A^{GAE}$ = advantage *แบบ* GAE · $L^{CLIP}$ = loss *แบบ* clip |
 
 **ลองแกะ $\pi_\theta(a_t \mid s_t)$ ทีละชั้นด้วยกฎข้างบน:**
 
@@ -159,7 +159,7 @@ $$\text{actor input} = 3 + 36 + 3 = 42 \qquad \text{critic input} = 227 + 3 = 23
 │ │  │    │
 │ │  │    └── กฎ 1: state ที่ step t
 │ │  └─────── กฎ 4: "เมื่อรู้ว่า" — เงื่อนไขคือ s_t
-│ └────────── กฎ 2: มี weight θ → เป็น neural network (actor)
+│ └────────── กฎ 2: มี weight θ → มีส่วนที่ฝึกได้ (actor + logstd)
 └──────────── π = policy
 
 อ่านเป็นประโยค: "policy (ที่เป็น network weight θ) บอกว่า ถ้าอยู่ที่ state s_t
@@ -178,12 +178,12 @@ $$\text{actor input} = 3 + 36 + 3 = 42 \qquad \text{critic input} = 227 + 3 = 23
 | $\hat A_t$ | scalar ต่อช่อง (normalize ทั้งตารางแล้ว) | +0.7975 | หัวข้อ 5 | 4.5 สมการ (28) |
 | $\rho_t$ | scalar ต่อช่อง | 1.0356 (หลัง $\mu$ +0.05) | หัวข้อ 5 | 3.3 สมการ (21) |
 | $\ell$ · $\sigma = e^{\ell}$ | เวกเตอร์ `(8,)` — ลูกบิด · ความกว้าง | −0.6931 · 0.5 | หัวข้อ 4 | 2.1 สมการ (9) |
-| $L$ | scalar ตัวเดียวทั้งระบบ — เข็ม | — | หัวข้อ 5 | 4.6 สมการ (33) |
+| $L$ | scalar ตัวเดียวของ optimizer หลัก — เข็ม | — | หัวข้อ 5 | 4.6 สมการ (33) |
 
 ### 3.3 คู่ที่สับสน — และวิธีอ่านสมการยาว ๆ
 
 คู่ที่หน้าตาคล้ายแต่คนละความหมาย ($\theta$/$\phi$/$\psi$, $\pi$/$\pi(a\mid s)$, $V$/$V_\phi$,
-$A$/$A_t$/$\hat A_t$, $R(s,a)$/$R_t$/$G_t$/$r_t$, $\mathbb{E}$/`mean()`, $\sim$/$=$/$\approx$,
+$A^\pi(s,a)$/$A_t$/$\hat A_t$, $R(s,a)$/$R_t$/$G_t$/$r_t$, $\mathbb{E}$/`mean()`, $\sim$/$=$/$\approx$,
 $\epsilon$/$\varepsilon$/`eps`, $L$/$\ell$, $z_i$/$\hat v$, $T$) รวมไว้ที่เดียวใน
 **อภิธานศัพท์หัวข้อ 7** พร้อมกฎของโน้ตชุดนี้สำหรับแต่ละคู่ — เปิดตารางนั้นทุกครั้งที่สะดุด
 
@@ -291,7 +291,7 @@ tensor([0., 0., 0., 0., 0., 0., 0., 0.], device='cuda:0', requires_grad=True)
 > joint_vel $N$ + last_action $N$ + gait_phase 2 + gait_command 4 · แก้สมการ
 > $12 + 3N = 36$ ได้ $N = 8$ พอดี
 
-$$\text{1 ข้อต่อ} \;=\; \text{1 } \mu_i \;=\; \text{1 } \sigma_i \;=\; \text{1 } \ell_i$$
+**1 ข้อต่อ = 1 $\mu_i$ = 1 $\sigma_i$ = 1 $\ell_i$**
 
 **และ $\ell$ อยู่ *ข้างนอก* NN ไม่ใช่ข้างใน**
 
@@ -521,9 +521,9 @@ critic บอกว่าท่านี้ดี $\hat{A} = +0.7975$ (อภิ
 
 *ขั้น 3 · `step()`* — **ตรงนี้คือการเขียนทับ**
 
-$$\ell_{\text{ใหม่}} = \underbrace{-0.693147}_{\ell\ \text{เดิม}} \;-\; \underbrace{10^{-3}}_{lr} \times \underbrace{0.659900}_{\texttt{l.grad}} \;=\; -0.693807$$
+$$\ell_{new} = \underbrace{-0.693147}_{\ell_{old}} \;-\; \underbrace{10^{-3}}_{lr} \times \underbrace{0.659900}_{\texttt{l.grad}} \;=\; -0.693807$$
 
-$$\sigma_{\text{ใหม่}} = e^{-0.693807} = 0.499670 \qquad (\text{เดิม } 0.500000)$$
+$$\sigma_{new} = e^{-0.693807} = 0.499670 \qquad (\sigma_{old} = 0.500000)$$
 
 **ตีความ** — ท่าดี ($\hat{A} > 0$) และอยู่ **ใกล้** จุดกลาง ($|z_i| = 0.40 < 1$) → **หุบแคบลง**
 ตรงกับตารางสี่กรณีในหัวข้อ *"กลไกที่ $\sigma$ เปลี่ยนค่า"* ที่ E4 · ใช้ค่าเริ่มของ lr ของ Tron1
@@ -548,7 +548,7 @@ $$\sigma_{\text{ใหม่}} = e^{-0.693807} = 0.499670 \qquad (\text{เด�
 
 คำถามที่ต้องตอบก่อนหมุนลูกบิดคือ *"หมุนทางไหน"* · gradient คือคำตอบ
 
-$$\frac{\partial L}{\partial \ell_i} \;=\; \text{"ถ้าเพิ่ม } \ell_i \text{ ขึ้นนิดเดียว } L \text{ จะเปลี่ยนไปเท่าไร"}$$
+$\dfrac{\partial L}{\partial \ell_i}$ อ่านว่า **"ถ้าเพิ่ม $\ell_i$ ขึ้นนิดเดียว $L$ จะเปลี่ยนไปเท่าไร"**
 
 อ่านเครื่องหมายอย่างเดียวก็พอ:
 
@@ -567,7 +567,9 @@ $$\frac{\partial L}{\partial \ell_i} \;=\; \text{"ถ้าเพิ่ม } \el
 
 รู้ทิศแล้วก็หมุนสวนทางกับความชัน:
 
-$$\boxed{\;\ell_i \;\leftarrow\; \ell_i \;-\; \alpha\,\frac{\partial L}{\partial \ell_i}\;} \qquad \text{(สมการ (12) ของโน้ต 05 เขียนเฉพาะลูกบิด } \ell_i\text{)}$$
+$$\boxed{\;\ell_i \;\leftarrow\; \ell_i \;-\; \alpha\,\frac{\partial L}{\partial \ell_i}\;}$$
+
+(นี่คือสมการ (12) ของโน้ต 05 เขียนเฉพาะลูกบิด $\ell_i$)
 
 เรียกว่า **gradient descent** — "ไถลลงเนิน" · $\alpha$ คือ **learning rate** = ก้าวยาวแค่ไหน
 
@@ -599,6 +601,8 @@ $$\boxed{\;\ell_i \;\leftarrow\; \ell_i \;-\; \alpha\,\frac{\partial L}{\partial
 **Adam** แก้ด้วยการจำสองอย่างต่อลูกบิดหนึ่งตัว แล้วหารความชันทิ้ง:
 
 $$\boxed{\;\ell_i \;\leftarrow\; \ell_i \;-\; \alpha\,\frac{\hat{m}_i}{\sqrt{\hat{v}_i}+\texttt{eps}}\;} \tag{36}$$
+
+(นี่คือสมการ (36) ของอภิธานศัพท์ เขียนสำหรับลูกบิดตัวเดียว $\ell_i$ โดยละตัวห้อย $k$ ที่นับ gradient step ไว้ · ลูกบิดทุกตัวของ optimizer ก้าวด้วยกฎเดียวกัน)
 
 > **ไม่ใช่ $\varepsilon$ นะ** — โน้ตนี้จอง $\varepsilon$ ไว้ให้ noise มาตรฐาน และ $\epsilon$ ให้ขอบ clip
 > ไปแล้ว (ตาราง "สัญลักษณ์หน้าตาคล้าย" ใน §3) · ตัวกันหารศูนย์ของ Adam จึงเขียนว่า
@@ -699,7 +703,9 @@ $$D_{KL}(p \,\|\, q) = \mathbb{E}_{a \sim p}\big[\log p(a) - \log q(a)\big]$$
 **`lr` ย่อมาจาก *learning rate*** — ตัวเดียวกับ $\alpha$ ในหัวข้อ SGD ข้างบน เขียนสองแบบ
 เพราะโค้ดใช้ชื่อ `lr` ส่วนตำราใช้ $\alpha$ · หน้าที่มันคือ **บอกว่าก้าวยาวแค่ไหน**
 
-$$\ell \;\leftarrow\; \ell - \underbrace{lr}_{\text{ก้าวยาวแค่ไหน}} \times \underbrace{\ell.\text{grad}}_{\text{ที่มาของทิศ}} \qquad \text{(รูป SGD)}$$
+$$\ell \;\leftarrow\; \ell - \underbrace{lr}_{\text{(i)}} \times \underbrace{\ell.\text{grad}}_{\text{(ii)}}$$
+
+(รูป SGD · (i) ก้าวยาวแค่ไหน · (ii) ที่มาของทิศ)
 
 > **นี่คือรูป SGD** — Adam แทน $\ell.\text{grad}$ ด้วย $\hat{m}/(\sqrt{\hat{v}}+\texttt{eps})$ ซึ่ง
 > ปรับสเกลรายลูกบิด ทำให้ *ทิศ* ที่ก้าวจริงไม่เท่ากับทิศของ gradient เป๊ะ ๆ และ `lr`
@@ -716,7 +722,7 @@ learning_rate=1.0e-3,     # limx_rsl_rl_ppo_cfg.py:100
 
 ไม่มีใครคำนวณมันมา · มันคือ **hyperparameter** — ตัวเลขที่คนตั้งเอง จูนเอง ลองผิดลองถูกเอา
 
-| | ลูกบิดทั้งหมด $\theta, \phi, \ell$ (**parameter**) | `lr` (**hyperparameter**) |
+| | ลูกบิดทั้งหมด $\theta$ (ซึ่งรวม $\ell$ แล้ว) กับ $\phi$ (**parameter**) | `lr` (**hyperparameter**) |
 | --- | --- | --- |
 | ค่าแรกมาจาก | โค้ด init (สุ่ม / ศูนย์) | **มนุษย์พิมพ์ลง config** |
 | เปลี่ยนยังไงระหว่างเทรน | `optimizer.step()` จาก gradient | กฎ KL — **ไม่มี gradient เกี่ยวข้องเลย** |
@@ -735,7 +741,7 @@ for param_group in self.optimizer.param_groups:
     param_group["lr"] = self.learning_rate                # ppo.py:236-244
 ```
 
-$$\boxed{\;lr \leftarrow \begin{cases} \max(10^{-5},\ lr / 1.5) & \overline{kl} > 2\,d_{KL} = 0.02 \\[2pt] \min(10^{-2},\ lr \times 1.5) & 0 < \overline{kl} < d_{KL}/2 = 0.005 \\[2pt] lr & \text{อื่น ๆ} \end{cases}\;} \tag{37}$$
+$$\boxed{\;lr \leftarrow \begin{cases} \max(10^{-5},\ lr / 1.5) & \overline{kl} > 2\,d_{KL} = 0.02 \\[2pt] \min(10^{-2},\ lr \times 1.5) & 0 < \overline{kl} < d_{KL}/2 = 0.005 \\[2pt] lr & \text{otherwise} \end{cases}\;} \tag{37}$$
 
 | อ่าน `kl_mean` ได้ | แปลว่า | ทำอะไร |
 | --- | --- | --- |
@@ -747,7 +753,7 @@ $$\boxed{\;lr \leftarrow \begin{cases} \max(10^{-5},\ lr / 1.5) & \overline{kl} 
 โน้ต 07 §5.3 → 0.045 → ÷1.5
 
 `desired_kl = 0.01` ([cfg:104](../tron1-rl-isaaclab/exts/bipedal_locomotion/bipedal_locomotion/tasks/locomotion/agents/limx_rsl_rl_ppo_cfg.py#L104)) คือ **อุณหภูมิเป้าหมาย** · `kl_mean` คือ
-**อุณหภูมิที่วัดได้** · `lr` คือ **วาล์ว**
+**อุณหภูมิที่วัดได้** · `lr` คือ **วาล์ว** · การเทียบนี้ใช้ได้เฉพาะว่ามีเป้าและมีการป้อนกลับ: thermostat ดึงอุณหภูมิกลับเข้าหาเป้า ส่วนกฎนี้ไม่ดึง KL ที่เกิดแล้วกลับ มันเพียงคูณหรือหาร `lr` ก่อนก้าวของ mini-batch นั้น
 
 > **สองข้อที่น่าแปลกใจ** — บล็อกนี้อยู่ **ในลูป minibatch** (ลูปเริ่มที่ `ppo.py:190`
 > บล็อก KL อยู่ที่ `:236` ย่อหน้าลึกกว่าหนึ่งชั้น) แปลว่า `lr` ปรับได้ถึง **20 ครั้งต่อหนึ่ง
@@ -792,7 +798,7 @@ $$\boxed{\;lr \leftarrow \begin{cases} \max(10^{-5},\ lr / 1.5) & \overline{kl} 
 | คำสั่ง | ทำอะไร | ที่ไหน |
 | --- | --- | --- |
 | `optimizer.zero_grad()` | ล้าง `.grad` เก่าทิ้ง | [ppo.py:287](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L287) |
-| `loss.backward()` | คิด $\partial L/\partial(\text{ลูกบิดทุกตัว})$ ไปใส่ `.grad` | [:288](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L288) |
+| `loss.backward()` | คิดอนุพันธ์ของ $L$ เทียบกับลูกบิดทุกตัว ไปใส่ `.grad` | [:288](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L288) |
 | `clip_grad_norm_(...)` | ถ้า norm รวมของ gradient ทั้งก้อน (actor + critic + `logstd` นับเป็นก้อนเดียว) เกิน `max_grad_norm` ให้ย่อลงตามสัดส่วน — **เขียนทับ `.grad`** | [:289](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L289) |
 | `optimizer.step()` | **เขียนทับค่าลูกบิด** ตามกฎข้างบน | [:290](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L290) |
 
@@ -804,7 +810,9 @@ $$\boxed{\;lr \leftarrow \begin{cases} \max(10^{-5},\ lr / 1.5) & \overline{kl} 
 โน้ต 05 §4.6 derive ทั้งสามพจน์แล้ว ((29) surrogate, (32) value loss, (31) entropy → (33) รวม)
 ตรงนี้ทวนเฉพาะสิ่งที่เห็นจากโค้ด:
 
-$$L \;=\; \underbrace{L^{CLIP}}_{\text{actor เรียน}} \;+\; \underbrace{1.0 \cdot L_V}_{\text{critic เรียน}} \;-\; \underbrace{0.01 \cdot H}_{\text{โบนัสความมั่ว}} \qquad \text{(สมการ (33))}$$
+$$L \;=\; \underbrace{L^{CLIP}}_{\text{(i)}} \;+\; \underbrace{1.0 \cdot L_V}_{\text{(ii)}} \;-\; \underbrace{0.01 \cdot H}_{\text{(iii)}}$$
+
+(สมการ (33) · (i) actor เรียน · (ii) critic เรียน · (iii) โบนัสความมั่ว)
 
 ([ppo.py:274-278](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L274-L278) ·
 สัมประสิทธิ์ `1.0` และ `0.01` มาจาก [cfg:94](../tron1-rl-isaaclab/exts/bipedal_locomotion/bipedal_locomotion/tasks/locomotion/agents/limx_rsl_rl_ppo_cfg.py#L94)
@@ -816,7 +824,7 @@ $$L \;=\; \underbrace{L^{CLIP}}_{\text{actor เรียน}} \;+\; \underbrace
 
 > **ระวังเครื่องหมายของ $L^{CLIP}$** — บรรทัดข้างบนใช้ $L^{CLIP}$ แบบที่ **โค้ดเติมลบ
 > ไว้แล้ว** (`surrogate = -advantages * ratio`, [ppo.py:256](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L256))
-> จึงบวกเข้ามาตรง ๆ ได้ · ส่วนสูตร $L^{CLIP} = \mathbb{E}[\min(\rho A, \dots)]$ ที่ §3 เขียนไว้
+> จึงบวกเข้ามาตรง ๆ ได้ · ส่วนสูตร $L^{CLIP} = \mathbb{E}[\min(\rho_t \hat A_t, \dots)]$ ที่ §3 เขียนไว้
 > เป็นแบบของเปเปอร์ ซึ่ง **ไม่มีลบ** และเป็นของที่ต้องทำให้ *ใหญ่* · สองอันนี้คือตัวเดียวกัน
 > ต่างกันแค่เครื่องหมาย
 
@@ -928,8 +936,8 @@ $$\pi_\theta : \mathcal{S} \longrightarrow \Delta(\mathcal{A})$$
 
 **$\mathcal{A}$ หน้าตาเป็นยังไง — ไล่จากง่ายไปยาก**
 
-*ถ้าหุ่นมีแค่ 3 ปุ่ม* — $\mathcal{A} = \{\ \text{เดินหน้า},\ \text{ถอยหลัง},\ \text{หยุด}\ \}$ เขียนออกมา
-ได้ครบ มี 3 สมาชิก · action หนึ่งอันคือหยิบมาหนึ่งตัว เช่น $a = \text{เดินหน้า}$
+*ถ้าหุ่นมีแค่ 3 ปุ่ม* — $\mathcal{A}$ = { เดินหน้า, ถอยหลัง, หยุด } เขียนออกมา
+ได้ครบ มี 3 สมาชิก · action หนึ่งอันคือหยิบมาหนึ่งตัว เช่น $a$ = เดินหน้า
 
 *ถ้าหุ่นมีข้อต่อเดียว หมุนได้ต่อเนื่อง* — $\mathcal{A} = [-1,\ 1]$ · คราวนี้เขียนออกมาให้ครบ
 ไม่ได้ เพราะระหว่าง $-1$ กับ $1$ มีจำนวนจริงอนันต์ตัว ($0.5$, $0.51$, $0.5137$, …) แต่ยัง
@@ -987,7 +995,9 @@ $\mathcal{A}$ คือทุกบรรทัดในตารางนี้
 
 **อ่านบรรทัดประกาศชนิดนี้ยังไง**
 
-$$\underbrace{\pi_\theta}_{\text{ชื่อ}} \underbrace{:}_{\text{"มีชนิดเป็น"}} \underbrace{\mathcal{S}}_{\text{รับ}} \underbrace{\longrightarrow}_{\text{"ฟังก์ชันไปยัง"}} \underbrace{\Delta(\mathcal{A})}_{\text{คืน}}$$
+$$\underbrace{\pi_\theta}_{\text{(i)}} \;\underbrace{:}_{\text{(ii)}}\; \underbrace{\mathcal{S}}_{\text{(iii)}} \;\underbrace{\longrightarrow}_{\text{(iv)}}\; \underbrace{\Delta(\mathcal{A})}_{\text{(v)}}$$
+
+(i) ชื่อ · (ii) อ่านว่า "มีชนิดเป็น" · (iii) สิ่งที่รับ · (iv) อ่านว่า "ฟังก์ชันไปยัง" · (v) สิ่งที่คืน
 
 บรรทัดนี้**ไม่ได้คำนวณอะไรเลย** — มันแค่ประกาศว่าของชิ้นนี้เป็นอะไร เหมือน type
 annotation ในโปรแกรม
@@ -1030,7 +1040,7 @@ annotation ในโปรแกรม
 
 **$\Delta$ หายไปตัวเดียว ความหมายเปลี่ยนทั้งบรรทัด**
 
-$$\mu_\theta : \mathcal{S} \to \mathcal{A} \qquad\text{เทียบกับ}\qquad \pi_\theta : \mathcal{S} \to \Delta(\mathcal{A})$$
+$$\mu_\theta : \mathcal{S} \to \mathcal{A} \qquad\text{vs}\qquad \pi_\theta : \mathcal{S} \to \Delta(\mathcal{A})$$
 
 ไม่มี $\Delta$ → คืน action ตรง ๆ = deterministic policy = ตอน deploy · มี $\Delta$ → คืน
 การแจกแจง ต้องสุ่มอีกขั้น = stochastic policy = ตอนเทรน
@@ -1087,7 +1097,9 @@ $a = [0.40, -0.40, 0.40, \dots]$ ท่าที่สุ่มได้จร�
 $\pi_\theta : \mathcal{S} \to \Delta(\mathcal{A})$ ตัวอักษรเขียนไว้ชัดแล้วว่าเป็น $\mathcal{A}$ ตัวใหญ่
 จึงอ่านว่า **"บน"** อย่างเดียว ไม่มีทางเลือกอื่น
 
-$$\underbrace{\text{"บน } \mathcal{A}\text{"}}_{\text{บรรยาย}\ \textit{ผืนผ้าใบ}} \qquad\qquad \underbrace{\text{"ของ } a\text{"}}_{\text{บรรยาย}\ \textit{สิ่งที่ออกมา}}$$
+| "บน $\mathcal{A}$" | "ของ $a$" |
+| --- | --- |
+| บรรยาย*ผืนผ้าใบ* | บรรยาย*สิ่งที่ออกมา* |
 
 > ภาษาอังกฤษแยกด้วยคำบุพบทเหมือนกัน — ตำรา RL เขียน *"a distribution **over**
 > actions"* ในนิยาม policy เสมอ ส่วน *"the distribution **of** X"* ใช้เมื่อ $X$ เป็นตัวแปรสุ่ม
@@ -1120,7 +1132,9 @@ $$\underbrace{\text{"บน } \mathcal{A}\text{"}}_{\text{บรรยาย}\ \
 
 **policy ของ Tron1 ประกอบด้วยสามชิ้น**
 
-$$\pi_\theta(\cdot\mid s) = \mathcal{N}\Big(\underbrace{\mu_\theta(s)}_{①\ \text{NN } 42\to8},\ \underbrace{\sigma_\theta}_{②\ \texttt{logstd}}\Big) \qquad ③\ \text{รูประฆัง (คนเลือก)}$$
+$$\pi_\theta(\cdot\mid s) = \underbrace{\mathcal{N}}_{③}\Big(\underbrace{\mu_\theta(s)}_{①\ \text{NN } 42\to8},\ \underbrace{\sigma_\theta}_{②\ \texttt{logstd}}\Big)$$
+
+③ คือรูประฆัง ซึ่งคนเป็นผู้เลือก
 
 | ชิ้น | คืออะไร | ขนาด | เรียนไหม |
 | --- | --- | --- | --- |
@@ -1268,7 +1282,9 @@ deterministic** เกณฑ์นี้จึงใช้กับตอนเ�
 $f(a, s)$ กับ $f(a \mid s)$ **รับ input เท่ากันทั้งคู่ (สองตัว) และคืน scalar เหมือนกัน**
 arity ไม่ต่างกันเลย สิ่งที่ต่างคือขีดตั้งประกาศเงื่อนไขเพิ่มหนึ่งข้อที่คอมมาไม่ประกาศ:
 
-$$\int \pi_\theta(a \mid s)\, da = 1 \qquad \text{สำหรับ } s \text{ ทุกค่า}$$
+$$\int \pi_\theta(a \mid s)\, da = 1$$
+
+สำหรับ $s$ ทุกค่า
 
 รวมทางฝั่ง**ซ้าย**ของขีดได้ 1 เสมอ · รวมทางฝั่ง**ขวา**ไม่มีความหมาย ($\sum_s \pi(a\mid s) \ne 1$)
 ขีดตั้งจึงเป็นตัวบอกว่า **ตัวไหนคือตัวแปรสุ่ม ตัวไหนคือสิ่งที่ตรึงไว้** ถ้าเขียน $\pi(a, s)$
@@ -1277,7 +1293,9 @@ state ไหนน่าจะเกิด (นั่นเป็นหน้า
 
 ในวงเล็บนี้มีถึง **สามช่อง คนละชนิด**:
 
-$$\pi_{\underbrace{\theta}_{\text{parameter}}}\big(\ \underbrace{a}_{\text{ตัวแปรสุ่ม}}\ \mid\ \underbrace{s}_{\text{เงื่อนไข}}\ \big)$$
+$$\pi_{\underbrace{\theta}_{\text{(i)}}}\big(\ \underbrace{a}_{\text{(ii)}}\ \mid\ \underbrace{s}_{\text{(iii)}}\ \big)$$
+
+(i) parameter · (ii) ตัวแปรสุ่ม · (iii) เงื่อนไข
 
 **ในทางโปรแกรมไม่มี operator สำหรับขีดตั้ง** แต่มันตรงกับโครงสร้างโค้ดพอดี:
 
@@ -1425,7 +1443,9 @@ dist.log_prob(0.40)          # ← หนึ่งช่อง  : เลขต�
 
 **$=$ ระหว่างฟังก์ชัน แปลว่า "เท่ากันที่ทุกจุด input"** ถ้าเขียนไม่ย่อคือ
 
-$$\pi_\theta(a \mid s) = \mathcal{N}(a;\ \mu,\ \sigma) \qquad \textbf{สำหรับ } a \textbf{ ทุกค่าที่เป็นไปได้}$$
+$$\pi_\theta(a \mid s) = \mathcal{N}(a;\ \mu,\ \sigma)$$
+
+**สำหรับ $a$ ทุกค่าที่เป็นไปได้**
 
 ตรวจด้วยตัวเลขได้ ($\mu = 0.20$, $\sigma = 0.5$, ดูมิติเดียว):
 
@@ -1489,15 +1509,19 @@ ELU ไม่ได้สร้างความสุ่ม มันแค่
 Gaussian ให้สองอย่างพร้อมกัน ซึ่งหายาก — และทั้งคู่เป็นแค่บวกลบคูณหาร จึงทำ
 12,288 × 20 = 245,760 ครั้งต่อ iteration (= ทุกช่อง 49,152 ช่อง × 5 epoch) ไหว:
 
-$$\underbrace{a = \mu + \sigma\varepsilon}_{\text{สุ่มง่ายมาก}} \qquad\qquad \underbrace{\log\pi = -\tfrac{(a-\mu)^2}{2\sigma^2} - \log\sigma - 0.919}_{\text{ประเมินย้อนหลังง่ายมาก}}$$
+$$\underbrace{a = \mu + \sigma\varepsilon}_{\text{(i)}} \qquad\qquad \underbrace{\log\pi = -\tfrac{(a-\mu)^2}{2\sigma^2} - \log\sigma - 0.919}_{\text{(ii)}}$$
+
+(i) สุ่มง่ายมาก · (ii) ประเมินย้อนหลังง่ายมาก
 
 **แล้วความสามารถ nonlinear ของ NN ถูกใช้เต็มที่ไหม — เต็มที่อยู่แล้ว**
 
-$$\pi_\theta(\cdot\mid s) = \mathcal{N}\big(\underbrace{\mu_\theta(s)}_{\textbf{ตรงนี้ nonlinear เต็มรูปแบบ}},\ \sigma\big)$$
+$$\pi_\theta(\cdot\mid s) = \mathcal{N}\big(\underbrace{\mu_\theta(s)}_{①},\ \sigma\big)$$
+
+① **ตรงนี้ nonlinear เต็มรูปแบบ**
 
 ระฆังไม่ได้จำกัดความซับซ้อนของการตัดสินใจเลย มันจำกัดแค่รูปทรงของ*การกระจายรอบ ๆ
 คำตอบ* · เทียบเป็นภาพ: มือปืนที่เล็งเก่งมาก (NN คิดซับซ้อน) แต่กระสุนกระจายรอบเป้า
-เป็นวงกลม (Gaussian) — ความเก่งอยู่ที่การเล็ง ไม่ได้อยู่ที่รูปทรงการกระจาย
+เป็นวงกลม (Gaussian) — ความเก่งอยู่ที่การเล็ง ไม่ได้อยู่ที่รูปทรงการกระจาย (การเทียบนี้หยาบตรงที่ $\sigma$ มี 8 ค่า ข้อต่อละค่า การกระจายจึงเป็นวงรีตามแกน ไม่ใช่วงกลม เว้นแต่ทุกค่าเท่ากัน)
 
 **ทางเลือกอื่นที่มีจริงในวงการ**
 
@@ -1543,7 +1567,9 @@ $$\pi_\theta(\cdot\mid s) = \mathcal{N}\big(\underbrace{\mu_\theta(s)}_{\textbf{
 
 **แล้ว $s$ หายไปไหนในข้างขวา** — ซ่อนอยู่ใน $\mu$ เขียนเต็มไม่ย่อคือ
 
-$$\pi_\theta(\cdot \mid s) = \mathcal{N}\big(\underbrace{\mu_\theta(s)}_{s \text{ อยู่ตรงนี้}},\ \underbrace{\sigma_\theta}_{\text{ไม่มี } s}\big)$$
+$$\pi_\theta(\cdot \mid s) = \mathcal{N}\big(\underbrace{\mu_\theta(s)}_{①},\ \underbrace{\sigma_\theta}_{②}\big)$$
+
+① $s$ อยู่ตรงนี้ · ② ไม่มี $s$
 
 $s$ เปลี่ยน → $\mu$ เปลี่ยน → ระฆังย้ายตำแหน่ง → ได้การแจกแจงคนละตัว · ส่วน $\sigma$ ไม่มี $s$
 อยู่ในนั้น ระฆังจึงกว้างเท่าเดิมเสมอไม่ว่าจะอยู่ state ไหน
@@ -1723,7 +1749,9 @@ $$\mu = \mu_\theta(s) = W_4\,\text{ELU}\big(W_3\,\text{ELU}(W_2\,\text{ELU}(W_1 
 
 **E4 · ความกว้างการสุ่ม (ไม่ผ่าน NN)**
 
-$$\sigma = \exp(\ell), \qquad \ell \in \mathbb{R}^8 \text{ เป็น \texttt{nn.Parameter}}$$
+$$\sigma = \exp(\ell), \qquad \ell \in \mathbb{R}^8$$
+
+โดย $\ell$ เป็น `nn.Parameter`
 
 รับ $\ell$ `(8,)` → คืน $\sigma$ `(8,)` · [actor_critic.py:157](../tron1-rl-isaaclab/rsl_rl/rsl_rl/modules/actor_critic.py#L157) · ประกาศที่ `:118`
 
@@ -1793,7 +1821,9 @@ sigma = torch.exp(self.logstd)               # ย่อจาก :157  อ่�
 — ไม่มี scheduler ไม่มี anneal ไม่มี `clamp_` · (ที่เขียนทับได้อีกทางเดียวคือ
 `load_state_dict` ตอนโหลด checkpoint — `on_policy_runner.py:369`)
 
-$$\ell_i \;\leftarrow\; \ell_i - \text{lr}\cdot\frac{\partial L}{\partial \ell_i} \qquad \text{(รูป SGD — ดู\textbf{ทิศ} ก่อน ค่อยคุยเรื่องขนาด)}$$
+$$\ell_i \;\leftarrow\; \ell_i - \text{lr}\cdot\frac{\partial L}{\partial \ell_i}$$
+
+(รูป SGD — ดู**ทิศ**ก่อน ค่อยคุยเรื่องขนาด)
 
 คำถามจึงยุบเหลือข้อเดียว: $\partial L / \partial \ell$ คืออะไร · loss มีสามพจน์
 ([ppo.py:274-278](../tron1-rl-isaaclab/rsl_rl/rsl_rl/algorithm/ppo.py#L274-L278))
@@ -1807,7 +1837,9 @@ $$\ell_i \;\leftarrow\; \ell_i - \text{lr}\cdot\frac{\partial L}{\partial \ell_i
 
 **รวมเป็นสูตรเดียวที่ต้องจำ** — ทิศที่ $\ell$ ขยับใน 1 gradient step
 
-$$\ell_i \;\leftarrow\; \ell_i + \text{lr}\cdot\Big[\underbrace{\tfrac{1}{\text{MB}}\textstyle\sum_n \hat{A}_n\rho_n\,(z_{n,i}^2-1)}_{\text{surrogate — เฉลี่ยทั้ง 12,288 ตัวอย่าง}} \;+\; \underbrace{0.01}_{\text{entropy — ไม่ถูกเฉลี่ย}}\Big]$$
+$$\ell_i \;\leftarrow\; \ell_i + \text{lr}\cdot\Big[\underbrace{\tfrac{1}{\text{MB}}\textstyle\sum_n \hat{A}_n\rho_n\,(z_{n,i}^2-1)}_{\text{(i)}} \;+\; \underbrace{0.01}_{\text{(ii)}}\Big]$$
+
+(i) surrogate — เฉลี่ยทั้ง 12,288 ตัวอย่าง · (ii) entropy — ไม่ถูกเฉลี่ย
 
 > **ทำไมพจน์หนึ่งมี $\tfrac{1}{\text{MB}}$ อีกพจน์ไม่มี** — `logstd` เป็นตัวเดียวกันทั้ง
 > minibatch · พจน์ surrogate ต่างกันทุกตัวอย่าง `.mean()` จึงเฉลี่ยจริง · แต่ $H$ ขึ้นกับ
@@ -1966,7 +1998,9 @@ object ตัวนี้ **ไม่ได้คำนวณอะไรเล�
 
 **E6 · สุ่ม**
 
-$$\underbrace{a \sim \pi_\theta(\cdot \mid s)}_{\text{ประโยคที่ 1}} \qquad \underbrace{\Longleftrightarrow}_{\text{ตัวเชื่อม}} \qquad \underbrace{a = \mu + \sigma \odot \varepsilon,\quad \varepsilon \sim \mathcal{N}(0, I_8)}_{\text{ประโยคที่ 2}}$$
+$$\underbrace{a \sim \pi_\theta(\cdot \mid s)}_{\text{(i)}} \qquad \Longleftrightarrow \qquad \underbrace{a = \mu + \sigma \odot \varepsilon,\quad \varepsilon \sim \mathcal{N}(0, I_8)}_{\text{(ii)}}$$
+
+(i) ประโยคที่ 1 · (ii) ประโยคที่ 2 · ลูกศรสองหัวตรงกลางคือตัวเชื่อม
 
 รับ object → คืน $a$ `(B,8)` · [actor_critic.py:161](../tron1-rl-isaaclab/rsl_rl/rsl_rl/modules/actor_critic.py#L161)
 
@@ -2068,7 +2102,9 @@ $\log\pi_\theta(a\mid s)$ ต่างหาก · $a$ ถูก `.detach()` ต
 
 **$\odot$ ทำงานยังไง — ดูด้วยตัวเลข 3 มิติ (ของจริง 8)**
 
-$$\begin{aligned} \mu &= [\,0.20,\ -0.30,\ 0.10\,] \\ \sigma &= [\,0.5,\ \ \ \ \ 0.5,\ \ \ \ 0.5\,] \\ \varepsilon &= [\,0.40,\ -0.20,\ 0.60\,] \quad \leftarrow \text{สุ่มใหม่ทุกครั้ง} \end{aligned}$$
+$$\begin{aligned} \mu &= [\,0.20,\ -0.30,\ 0.10\,] \\ \sigma &= [\,0.5,\ \ \ \ \ 0.5,\ \ \ \ 0.5\,] \\ \varepsilon &= [\,0.40,\ -0.20,\ 0.60\,] \end{aligned}$$
+
+($\varepsilon$ ถูกสุ่มใหม่ทุกครั้ง)
 
 $$\sigma \odot \varepsilon = [\,0.5{\times}0.40,\ \ 0.5{\times}(-0.20),\ \ 0.5{\times}0.60\,] = [\,0.20,\ -0.10,\ 0.30\,]$$
 
@@ -2155,7 +2191,9 @@ $$\mathcal{N}(a_i;\mu_i,\sigma_i) = \frac{1}{\sigma_i\sqrt{2\pi}}\exp\!\left(-\f
 
 **E8 · เข้า log แล้วแตกเป็นสามพจน์ — นี่คือสิ่งที่ torch คำนวณจริง**
 
-$$\log \mathcal{N}(a_i) = \underbrace{-\frac{(a_i-\mu_i)^2}{2\sigma_i^2}}_{\text{พจน์ระยะห่าง}} \;\underbrace{-\ \log\sigma_i}_{\text{พจน์ความกว้าง}} \;\underbrace{-\ \tfrac{1}{2}\log 2\pi}_{=\,-0.9189\ \text{เสมอ}}$$
+$$\log \mathcal{N}(a_i) = \underbrace{-\frac{(a_i-\mu_i)^2}{2\sigma_i^2}}_{\text{(i)}} \;\underbrace{-\ \log\sigma_i}_{\text{(ii)}} \;\underbrace{-\ \tfrac{1}{2}\log 2\pi}_{\text{(iii)}}$$
+
+(i) พจน์ระยะห่าง · (ii) พจน์ความกว้าง · (iii) เท่ากับ −0.9189 เสมอ
 
 รับ $a$ `(B,8)` + object → คืน `(B,8)` **ยังไม่ยุบ** · `torch/distributions/normal.py:88-92`
 
@@ -2183,7 +2221,9 @@ return (
 
 ที่มาของสามพจน์ — แค่ take log ของ E7 ตรง ๆ:
 
-$$\mathcal{N}(a;\mu,\sigma)=\frac{1}{\sigma\sqrt{2\pi}}e^{-\frac{(a-\mu)^2}{2\sigma^2}} \;\xrightarrow{\ \log\ }\; \underbrace{-\frac{(a-\mu)^2}{2\sigma^2}}_{\text{จาก } e^{(\cdot)}} \underbrace{-\log\sigma}_{\text{จาก } 1/\sigma} \underbrace{-\tfrac12\log 2\pi}_{\text{จาก } 1/\sqrt{2\pi}}$$
+$$\mathcal{N}(a;\mu,\sigma)=\frac{1}{\sigma\sqrt{2\pi}}e^{-\frac{(a-\mu)^2}{2\sigma^2}} \;\xrightarrow{\ \log\ }\; \underbrace{-\frac{(a-\mu)^2}{2\sigma^2}}_{\text{(i)}} \underbrace{-\log\sigma}_{\text{(ii)}} \underbrace{-\tfrac12\log 2\pi}_{\text{(iii)}}$$
+
+(i) มาจาก $e^{(\cdot)}$ · (ii) มาจาก $1/\sigma$ · (iii) มาจาก $1/\sqrt{2\pi}$
 
 **E9 · ยุบ 8 มิติ — ตรงนี้ vector กลายเป็น scalar**
 
@@ -2287,9 +2327,9 @@ $$L^{CLIP} = \frac{1}{MB}\sum \max\Big(-\hat{A}\rho,\ -\hat{A}\cdot\text{clip}(\
 
 **E15 · gradient ย้อนกลับถึง $\mu$**
 
-$$\frac{\partial L}{\partial \mu_i} = -\hat{A}\,\rho\,\frac{a_i - \mu_i}{\sigma_i^2} \qquad (\text{กรณีไม่โดน clip})$$
+$$\frac{\partial L}{\partial \mu_i} = -\hat{A}\,\rho\,\frac{a_i - \mu_i}{\sigma_i^2} $$
 
-(สูตรนี้คือความชันของพจน์ของช่องเดียวก่อน `.mean()` ซึ่งอภิธานศัพท์เรียก $L_i$ โดย $i$ ที่นั่นนับช่อง ส่วน $i$ ในบรรทัดนี้นับข้อต่อ · ตัว $L^{CLIP}$ ของ E14 หารด้วย MB อีกชั้น)
+(กรณีที่ไม่โดน clip · สูตรนี้คือความชันของพจน์ของช่องเดียวก่อน `.mean()` ซึ่งอภิธานศัพท์เรียก $L_i$ โดย $i$ ที่นั่นนับช่อง ส่วน $i$ ในบรรทัดนี้นับข้อต่อ · ตัว $L^{CLIP}$ ของ E14 หารด้วย MB อีกชั้น)
 
 จากนั้น chain rule ต่อเข้าไปใน NN ถึง $\theta$ ทุกตัว · `loss.backward()` + `optimizer.step()`
 
@@ -2430,7 +2470,7 @@ $\partial L/\partial\mu_i$ ตรงข้ามกับ $a_i - \mu_i^{\text{ne
 | $\pi_{\text{new}}, a$ | E12 | $\log\pi_{\text{new}}$ | → `(MB,)` | (14) (15) | `ppo.py:212` |
 | สอง $\log\pi$ | E13 | $\rho$ | → `(MB,)` | (21) | `ppo.py:252` |
 | $\rho, \hat{A}$ | E14 | $L$ | `(MB,)` → **scalar** | (29) → (33) | `ppo.py:260` |
-| $L$ | E15 | $\nabla_\theta$ | scalar → 469,905 ตัว ($\theta$, $\phi$, $\ell$) | (24) (35) · โน้ต 07 (G) | `.backward()` |
+| $L$ | E15 | $\nabla L$ | scalar → 469,905 ตัว ($\theta$ ซึ่งรวม $\ell$ แล้ว กับ $\phi$) | (24) (35) · โน้ต 07 (G) | `.backward()` |
 
 **กฎอ่านที่สรุปได้จากตารางนี้**
 
@@ -2604,7 +2644,7 @@ tensorboard — การรันจริงที่มีถึงตอน�
 | **ไม่มี $\sigma$ ไม่มีการสุ่ม** | `act_inference` คืน $\mu$ ตรง ๆ ([actor_critic.py:166-168](../tron1-rl-isaaclab/rsl_rl/rsl_rl/modules/actor_critic.py#L166-L168)) — ข้าม E4–E9 ทั้งหมด | 2.4, 2.6 |
 
 **เทียบ A กับ D:** รูป A คือ *ตอนเรียน* รูป D คือ *ตอนสอบ* — กล่องที่หายไปคือทุกอย่าง
-ที่มีไว้เพื่อ "รู้ว่าทำได้ดีแค่ไหน" ซึ่งไม่จำเป็นอีกเมื่อหยุดเรียนแล้ว
+ที่มีไว้เพื่อ "รู้ว่าทำได้ดีแค่ไหน" ซึ่งไม่จำเป็นอีกเมื่อหยุดเรียนแล้ว · การเทียบนี้หยุดตรงที่ตอน deploy ไม่มีใครให้คะแนนเหมือนการสอบ และสิ่งที่หายไปมีมากกว่าตัววัดผล คือ $\sigma$ กับการสุ่มก็หายไปด้วย
 
 ### E — สองขั้นจาก policy ถึง action (`diagrams/tron1-policy-objects.html`)
 

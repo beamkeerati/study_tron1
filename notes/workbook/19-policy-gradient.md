@@ -135,13 +135,13 @@ $$J(p) = (1 - p) \times 0.75 + p \times (-0.125)$$
 การ derive ข้างบนดู step เดียว episode มีหลาย step และ action ของ step นี้ส่งผลถึง reward ของ step ถัดไปด้วย ผลสำหรับทั้ง episode มีชื่อว่า policy gradient theorem (Sutton & Barto §13.2) เล่มนี้ไม่พิสูจน์มัน สิ่งที่ทฤษฎีบทบอกคือรูปข้างบนยังใช้ได้กับทุก step โดยตัวเลข $f$ ของแต่ละ step ต้องวัดว่า action นั้นดีแค่ไหน*สำหรับอนาคตทั้งหมด* ไม่ใช่เฉพาะ step เดียว ตัวเลขที่ใช้ได้มีหลายตัว และตัวที่ PPO ใช้คือ advantage ของบทที่ 9
 
 > [!KEY] policy gradient
-> $$\nabla_\theta J(\theta) = \mathbb{E}\Big[\nabla_\theta \log\pi_\theta(a_t \mid s_t)\ A^{\pi}(s_t, a_t)\Big] \tag{23}$$
+> $$\nabla_\theta J(\theta) = \mathbb{E}_{\pi}\Big[\nabla_\theta \log\pi_\theta(a_t \mid s_t)\ A^{\pi}(s_t, a_t)\Big] \tag{23}$$
 >
 > | | |
 > | --- | --- |
 > | $\nabla_\theta \log\pi_\theta(a_t \mid s_t)$ | score function ทิศที่ทำให้ $a_t$ ออกบ่อยขึ้น |
 > | $A^{\pi}(s_t, a_t)$ | advantage ตามสมการ (8) คือ $a_t$ ดีกว่าที่คาดเท่าไร |
-> | $\mathbb{E}$ | เฉลี่ยเหนือสถานะและ action ที่ policy ตัวนี้พบ |
+> | $\mathbb{E}_{\pi}$ | เฉลี่ยเหนือสถานะและ action ที่ policy ตัวนี้พบ โดย $\pi$ ในสมการนี้คือ $\pi_\theta$ |
 
 สมการนี้อ่านได้ว่า
 
